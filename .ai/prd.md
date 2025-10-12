@@ -21,6 +21,7 @@ Uczący się B1/B2 potrzebują powtarzalnej sekwencji odsłuchów z wieloma gło
 3.2 Import
 5) Format pliku: linia-po-linii `EN zdanie ::: PL zdanie`.
 6) Walidacja: pojedynczy separator, niepustość EN/PL; limity: ≤100 fraz/notatnik, ≤2000 znaków/fraza.
+6.1) Użytkownik może utworzyć maksymalnie 500 notatników.
 7) Normalizacja wejścia: cudzysłowy typograficzne, znaki zero-width, podwójne spacje, podstawowa normalizacja znaków problematycznych.
 8) Raport importu: lista odrzuconych linii z powodem.
 
@@ -141,12 +142,12 @@ Kryteria akceptacji:
 4. Bezpieczeństwo: 0 przypadków dostępu cross-user w testach (403/404 bez wycieku metadanych); klucz TTS niewidoczny w kliencie w 100% żądań.
 
 ## Dodatkowa dokumentacja
- 8 plików dokumentacji implementacji w folderze .ai/implementation-details:
-tokenizacja.md - reguły tokenizacji i normalizacji tekstu EN/PL
-import.md - specyfikacja importu plików z formatem EN ::: PL
-tts_audio_pipeline.md - pipeline generowania audio przez Google TTS
-player.md - specyfikacja playera (sekwencja, klik-to-seek, highlight)
-storage.md - struktura katalogów i zasady zarządzania plikami
-export_zip.md - eksport do ZIP (funkcja przyszłościowa)
-prefetching.md - strategia prefetchingu audio (funkcja przyszłościowa)
-security.md - bezpieczeństwo i prywatność
+8 plików dokumentacji implementacji w folderze .ai/implementation-details:
+- tokenizacja.md - reguły tokenizacji i normalizacji tekstu EN/PL
+- import.md - specyfikacja importu plików z formatem EN ::: PL
+- tts_audio_pipeline.md - pipeline generowania audio przez Google TTS
+- player.md - specyfikacja playera (sekwencja, klik-to-seek, highlight)
+- storage.md - struktura katalogów i zasady zarządzania plikami
+- export_zip.md - eksport do ZIP (funkcja przyszłościowa)
+- prefetching.md - strategia prefetchingu audio (funkcja przyszłościowa)
+- security.md - bezpieczeństwo i prywatność

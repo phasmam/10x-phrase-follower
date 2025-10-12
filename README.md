@@ -1,94 +1,124 @@
-# 10x Astro Starter
+# Phrase Follower
 
-A modern, opinionated starter template for building fast, accessible, and AI-friendly web applications.
+![Version](https://img.shields.io/badge/version-0.0.1-blue)
+![Status](https://img.shields.io/badge/status-MVP_in_progress-yellow)
+![Node](https://img.shields.io/badge/node-22.14.0-339933?logo=node.js)
+![Astro](https://img.shields.io/badge/astro-5.13.7-FF5D01?logo=astro)
+![React](https://img.shields.io/badge/react-19-61DAFB?logo=react)
+![License](https://img.shields.io/badge/license-Unspecified-lightgrey)
 
-## Tech Stack
+A minimal MVP to help learners practice English phrases via sequential EN→PL playback with multiple English voices, precise click-to-seek per word, optional highlighting, and low-cost Google Text-to-Speech.
 
-- [Astro](https://astro.build/) v5.5.5 - Modern web framework for building fast, content-focused websites
-- [React](https://react.dev/) v19.0.0 - UI library for building interactive components
-- [TypeScript](https://www.typescriptlang.org/) v5 - Type-safe JavaScript
-- [Tailwind CSS](https://tailwindcss.com/) v4.0.17 - Utility-first CSS framework
+---
 
-## Prerequisites
+## Table of contents
+- [1. Project name](#1-project-name)
+- [2. Project description](#2-project-description)
+- [3. Tech stack](#3-tech-stack)
+- [4. Getting started locally](#4-getting-started-locally)
+- [5. Available scripts](#5-available-scripts)
+- [6. Project scope](#6-project-scope)
+- [7. Project status](#7-project-status)
+- [8. License](#8-license)
 
-- Node.js v22.14.0 (as specified in `.nvmrc`)
-- npm (comes with Node.js)
+---
 
-## Getting Started
+## 1. Project name
+Phrase Follower
 
-1. Clone the repository:
+## 2. Project description
+Phrase Follower is an Astro-based web app that streamlines learning English phrases through an optimized playback loop:
+- EN1 → EN2 → EN3 → PL sequence with 800 ms pauses between segments and phrases
+- Multiple English voices plus one Polish voice per user
+- Click-to-seek per word in the active segment and optional token-based highlighting
+- Import phrases via simple `EN sentence ::: PL sentence` files
+- Generate and store MP3 per phrase × voice using Google TTS (cost-conscious settings)
 
+See the Product Requirements Document for full details: [.ai/prd.md](./.ai/prd.md)
+
+## 3. Tech stack
+- Astro 5 (Node adapter)
+- TypeScript 5
+- React 19
+- Tailwind CSS 4
+- shadcn/ui
+- Node.js 22.14.0
+- Supporting deps: `@astrojs/react`, `@astrojs/sitemap`, `lucide-react`, `clsx`, `class-variance-authority`
+
+## 4. Getting started locally
+Prerequisites:
+- Node.js 22.14.0 (see `.nvmrc`)
+- Git
+
+Install and run:
 ```bash
-git clone https://github.com/przeprogramowani/10x-astro-starter.git
-cd 10x-astro-starter
-```
+# 1) Use the project Node version
+nvm use 22.14.0
 
-2. Install dependencies:
-
-```bash
+# 2) Install dependencies
 npm install
-```
 
-3. Run the development server:
-
-```bash
+# 3) Start the dev server (Astro defaults to http://localhost:4321)
 npm run dev
 ```
 
-4. Build for production:
-
+Build and preview:
 ```bash
 npm run build
+npm run preview
 ```
 
-## Available Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
-- `npm run lint:fix` - Fix ESLint issues
-
-## Project Structure
-
-```md
-.
-├── src/
-│   ├── layouts/    # Astro layouts
-│   ├── pages/      # Astro pages
-│   │   └── api/    # API endpoints
-│   ├── components/ # UI components (Astro & React)
-│   └── assets/     # Static assets
-├── public/         # Public assets
+Quality:
+```bash
+npm run lint        # report issues
+npm run lint:fix    # fix issues where possible
+npm run format      # format with Prettier
 ```
 
-## AI Development Support
+TTS setup (for audio generation):
+- Add your Google TTS API key in the app's Settings screen. The key is validated on save and never exposed to the client.
+- Configure three EN voices (ordered) and one PL voice per your preference. Duplicates within a language are disallowed.
 
-This project is configured with AI development tools to enhance the development experience, providing guidelines for:
+## 5. Available scripts
+- `dev`: Run the Astro dev server.
+- `build`: Build the production site.
+- `preview`: Preview the production build locally.
+- `astro`: Direct access to the Astro CLI.
+- `lint`: Lint TypeScript/React/Astro sources.
+- `lint:fix`: Lint with autofix enabled.
+- `format`: Format the repository with Prettier.
 
-- Project structure
-- Coding practices
-- Frontend development
-- Styling with Tailwind
-- Accessibility best practices
-- Astro and React guidelines
+## 6. Project scope
+MVP capabilities (high-level):
+- Notebooks: create via import, rename, delete (removes related MP3s); per-user privacy with login required
+- Phrases within notebooks: add, reorder, delete (deletes MP3s); tabular view with audio status `complete/failed/missing`
+- Import: line-by-line `EN ::: PL` with validation; normalization (quotes, zero-width chars, spaces); limits: ≤100 phrases/notebook, ≤2000 chars/phrase; up to 500 notebooks per user; clear rejection report
+- TTS & voices: per-user Google TTS key (server-only); 3×EN ordered + 1×PL; no duplicates within a language
+- Audio generation: `Generate` triggers MP3 per phrase × voice at 22.05 kHz / 64 kbps mono; full rebuild replaces old MP3; failed segments marked; global error message on failure
+- Playback: EN1 → EN2 → EN3 → PL with 800 ms pauses; speeds 0.75/0.9/1.0/1.25; click-to-seek on words; highlight on/off (token = word + adjacent punctuation); heuristically synced
+- Error UX: consistent messages (import rejections listed; generate shows "Nie udało się wygenerować audio. Spróbuj ponownie.")
 
-### Cursor IDE
+Out of scope for MVP:
+- PWA/offline, hotkeys, hover-jump
+- EN↔PL translation features beyond imports
+- Public API, SSO, telemetry
+- Manual word-level sync editing
+- ZIP export and prefetching (planned)
 
-The project includes AI rules in `.cursor/rules/` directory that help Cursor IDE understand the project structure and provide better code suggestions.
+Assumptions and constraints:
+- Online-only, single-tenant; TTS secrets remain server-side
+- Storage layout (informational): `storage/audio/{notebookId}/{phraseId}/{voice}.mp3`; `storage/meta/...`
+- Deletions are hard deletes; no auto-retries; regeneration is manual
 
-### GitHub Copilot
+Planned next steps:
+- ZIP export of concatenated EN(1..3)→PL with pauses (size < 30 MB, auto-clean)
+- Prefetching strategy for current/next phrase with bounded concurrency
 
-AI instructions for GitHub Copilot are available in `.github/copilot-instructions.md`
+## 7. Project status
+- Version: 0.0.1 (pre-release)
+- Status: MVP in progress; not production-ready
+- CI: not configured in this repository
+- Documentation: primary spec in [.ai/prd.md](./.ai/prd.md)
 
-### Windsurf
-
-The `.windsurfrules` file contains AI configuration for Windsurf.
-
-## Contributing
-
-Please follow the AI guidelines and coding practices defined in the AI configuration files when contributing to this project.
-
-## License
-
-MIT
+## 8. License
+No license has been specified yet. Consider adding a LICENSE file (e.g., MIT). Until then, all rights are reserved by default.

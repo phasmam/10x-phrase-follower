@@ -9,15 +9,6 @@ Zredukować opóźnienia startu i przejść, zapewniając płynne odtwarzanie be
 - Limit równoległości: 6.
 - Anulowanie: przy ręcznej zmianie frazy anuluj trwające pobrania poprzedniej frazy.
 
-## Pseudokod
-enterPhrase(i):
-  cancelAllDownloads()
-  queue = segments(i) + firstSegment(i+1)
-  downloadParallel(queue, limit=6)
-
-onPhraseChange(newI):
-  cancelAllDownloads()
-  enterPhrase(newI)
 
 ## Błędy
 - Timeout pojedynczego segmentu → sygnalizuj i kontynuuj z pozostałymi.
