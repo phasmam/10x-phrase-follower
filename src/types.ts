@@ -1,10 +1,4 @@
-import type {
-  Tables,
-  TablesInsert,
-  TablesUpdate,
-  Enums,
-  Json,
-} from "./db/database.types";
+import type { Tables, TablesInsert, TablesUpdate, Enums, Json } from "./db/database.types";
 
 /**
  * Shared DTO and Command Model types for the API, derived from Supabase DB models.
@@ -29,10 +23,10 @@ export type JobType = Enums<"job_type_enum">;
 // ------------------------------------
 export type UUID = string;
 
-export type Paginated<T> = {
+export interface Paginated<T> {
   items: T[];
   next_cursor: string | null;
-};
+}
 
 export type ApiErrorCode =
   | "validation_error"
@@ -47,13 +41,13 @@ export type ApiErrorCode =
   | "internal"
   | "tts_timeout";
 
-export type ApiErrorResponse = {
+export interface ApiErrorResponse {
   error: {
     code: ApiErrorCode;
     message: string;
     details?: Json;
   };
-};
+}
 
 // ------------------------------------
 // Users
@@ -65,12 +59,7 @@ export type UserDTO = Pick<Tables<"users">, "id" | "created_at">;
 // ------------------------------------
 export type NotebookDTO = Pick<
   Tables<"notebooks">,
-  | "id"
-  | "name"
-  | "current_build_id"
-  | "last_generate_job_id"
-  | "created_at"
-  | "updated_at"
+  "id" | "name" | "current_build_id" | "last_generate_job_id" | "created_at" | "updated_at"
 >;
 
 export type CreateNotebookCommand = Pick<TablesInsert<"notebooks">, "name">;
@@ -84,99 +73,84 @@ export type NotebookListResponse = Paginated<NotebookDTO>;
 // ------------------------------------
 /**
  * Tokenization structure stored in `phrases.tokens` (DB Json), but exposed strongly via DTOs.
+ * start/end are character indices in the text, not time-based.
  * Example element: { text: "I'm", start: 0, end: 2 }
  */
-export type PhraseToken = {
+export interface PhraseToken {
   text: string;
-  start: number;
-  end: number;
-};
+  start: number; // Character index start position
+  end: number; // Character index end position
+}
 
-export type PhraseTokens = {
+export interface PhraseTokens {
   en: PhraseToken[];
   pl: PhraseToken[];
-};
+}
 
 export type PhraseDTO = Pick<
   Tables<"phrases">,
-  | "id"
-  | "position"
-  | "en_text"
-  | "pl_text"
-  | "created_at"
-  | "updated_at"
+  "id" | "position" | "en_text" | "pl_text" | "created_at" | "updated_at"
 > & {
   // Strongly typed version of DB Json
   tokens: PhraseTokens | null;
 };
 
-export type CreatePhraseCommand = Pick<
-  TablesInsert<"phrases">,
-  "position" | "en_text" | "pl_text"
-> & {
+export type CreatePhraseCommand = Pick<TablesInsert<"phrases">, "position" | "en_text" | "pl_text"> & {
   tokens?: PhraseTokens | null;
 };
 
-export type UpdatePhraseCommand = Partial<
-  Pick<TablesUpdate<"phrases">, "position" | "en_text" | "pl_text">
-> & {
+export type UpdatePhraseCommand = Partial<Pick<TablesUpdate<"phrases">, "position" | "en_text" | "pl_text">> & {
   tokens?: PhraseTokens | null;
 };
 
 export type PhraseListResponse = Paginated<PhraseDTO>;
 
-export type ReorderPhrasesCommand = {
-  moves: Array<{
+export interface ReorderPhrasesCommand {
+  moves: {
     phrase_id: UUID;
     position: number;
-  }>;
-};
+  }[];
+}
 
-export type ReorderPhrasesResultDTO = {
+export interface ReorderPhrasesResultDTO {
   updated: number;
-};
+}
 
 // ------------------------------------
 // Import
 // ------------------------------------
-export type ImportNotebookCommand = {
+export interface ImportNotebookCommand {
   name: string;
   lines: string[];
   normalize: boolean;
-};
+}
 
-export type ImportLogDTO = Pick<
-  Tables<"import_logs">,
-  "id" | "line_no" | "raw_text" | "reason" | "created_at"
->;
+export type ImportLogDTO = Pick<Tables<"import_logs">, "id" | "line_no" | "raw_text" | "reason" | "created_at">;
 
-export type ImportNotebookResultDTO = {
+export interface ImportNotebookResultDTO {
   notebook: NotebookDTO;
   import: {
     accepted: number;
     rejected: number;
     logs: ImportLogDTO[];
   };
-};
+}
 
 export type ImportLogsListResponse = Paginated<ImportLogDTO>;
 
 // ------------------------------------
 // User Voices (TTS selection)
 // ------------------------------------
-export type UserVoiceDTO = Pick<
-  Tables<"user_voices">,
-  "id" | "slot" | "language" | "voice_id" | "created_at"
->;
+export type UserVoiceDTO = Pick<Tables<"user_voices">, "id" | "slot" | "language" | "voice_id" | "created_at">;
 
-export type UpsertUserVoiceBySlotCommand = {
+export interface UpsertUserVoiceBySlotCommand {
   language: string;
   voice_id: string;
-};
+}
 
-export type UserVoicesListResponse = {
+export interface UserVoicesListResponse {
   slots: UserVoiceDTO[];
-};
+}
 
 // ------------------------------------
 // TTS Credentials
@@ -186,18 +160,18 @@ export type TtsCredentialsStateDTO = Pick<
   "is_configured" | "last_validated_at" | "key_fingerprint"
 >;
 
-export type TestTtsCredentialsCommand = {
+export interface TestTtsCredentialsCommand {
   google_api_key: string;
-};
+}
 
-export type TestTtsCredentialsResultDTO = {
+export interface TestTtsCredentialsResultDTO {
   ok: boolean;
   voice_sampled: string;
-};
+}
 
-export type SaveTtsCredentialsCommand = {
+export interface SaveTtsCredentialsCommand {
   google_api_key: string;
-};
+}
 
 // ------------------------------------
 // Jobs (Generate / Rebuild)
@@ -216,23 +190,16 @@ export type JobDTO = Pick<
   | "created_at"
 >;
 
-export type GenerateRebuildJobCommand = {
-  timeout_sec: number;
-};
+export interface GenerateRebuildJobCommand {
+  timeout_sec?: number | null;
+}
 
-export type GenerateRebuildAcceptedDTO = {
+export interface GenerateRebuildAcceptedDTO {
   job: Pick<
     Tables<"jobs">,
-    | "id"
-    | "type"
-    | "state"
-    | "notebook_id"
-    | "started_at"
-    | "ended_at"
-    | "timeout_sec"
-    | "created_at"
+    "id" | "type" | "state" | "notebook_id" | "started_at" | "ended_at" | "timeout_sec" | "created_at"
   >;
-};
+}
 
 export type JobListResponse = Paginated<JobDTO>;
 
@@ -241,10 +208,7 @@ export type CancelJobResponseDTO = Pick<Tables<"jobs">, "id" | "state">;
 // ------------------------------------
 // Builds
 // ------------------------------------
-export type BuildDTO = Pick<
-  Tables<"builds">,
-  "id" | "job_id" | "notebook_id" | "created_at"
->;
+export type BuildDTO = Pick<Tables<"builds">, "id" | "job_id" | "notebook_id" | "created_at">;
 
 export type BuildListResponse = Paginated<BuildDTO>;
 
@@ -253,12 +217,13 @@ export type BuildListResponse = Paginated<BuildDTO>;
 // ------------------------------------
 /**
  * Word timing structure persisted as Json in DB but exposed strongly in DTOs.
+ * Time-based positions in milliseconds for audio playback synchronization.
  */
-export type WordTiming = {
+export interface WordTiming {
   word: string;
-  start_ms: number;
-  end_ms: number;
-};
+  start_ms: number; // Start time in milliseconds
+  end_ms: number; // End time in milliseconds
+}
 
 export type AudioSegmentDTO = Pick<
   Tables<"audio_segments">,
@@ -286,53 +251,47 @@ export type AudioSegmentListResponse = Paginated<AudioSegmentDTO>;
 // ------------------------------------
 // Notebook Audio Status (aggregated / MV)
 // ------------------------------------
-export type NotebookAudioStatusDTO = {
+export interface NotebookAudioStatusDTO {
   notebook_id: UUID;
   build_id: UUID;
   complete_count: number;
   failed_count: number;
   missing_count: number;
   updated_at: string;
-};
+}
 
 // ------------------------------------
 // Playback Manifest (virtual)
 // ------------------------------------
-export type PlaybackManifestSegment =
-  | {
-      slot: VoiceSlot;
-      status: Extract<AudioStatus, "complete">;
-      url: string;
-      duration_ms?: number | null;
-      word_timings?: WordTiming[] | null;
-    }
-  | {
-      slot: VoiceSlot;
-      status: Exclude<AudioStatus, "complete">;
-    };
+/**
+ * Playback manifest segment - only includes complete segments with URLs.
+ * Failed/missing segments are omitted from the manifest.
+ */
+export interface PlaybackManifestSegment {
+  slot: VoiceSlot;
+  status: Extract<AudioStatus, "complete">;
+  url: string;
+  duration_ms?: number | null;
+  word_timings?: WordTiming[] | null;
+}
 
-export type PlaybackManifestItem = {
-  phrase: Pick<
-    PhraseDTO,
-    "id" | "position" | "en_text" | "pl_text" | "tokens"
-  >;
+export interface PlaybackManifestItem {
+  phrase: Pick<PhraseDTO, "id" | "position" | "en_text" | "pl_text" | "tokens">;
   segments: PlaybackManifestSegment[];
-};
+}
 
-export type PlaybackManifestDTO = {
+export interface PlaybackManifestDTO {
   notebook_id: UUID;
   build_id: UUID;
   sequence: PlaybackManifestItem[];
   expires_at: string;
-};
+}
 
 // ------------------------------------
 // Health
 // ------------------------------------
-export type HealthStatusDTO = {
+export interface HealthStatusDTO {
   status: "ok";
   db: "ok" | "degraded" | "down";
   time: string;
-};
-
-
+}

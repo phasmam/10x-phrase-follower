@@ -364,6 +364,8 @@
 { "timeout_sec": 1800 }
 ```
 
+**Note:** `timeout_sec` is optional and can be null (server will use default timeout).
+
 * **Response 202**
 
 ```json
@@ -485,6 +487,8 @@
 }
 ```
 
+**Note:** The `error_details` field exists in the database but is internal and not exposed through the API.
+
 #### GET `/api/audio-segments/:audioSegmentId`
 
 * **Desc:** Audio segment detail.
@@ -518,7 +522,7 @@
 
 #### GET `/api/notebooks/:notebookId/playback-manifest`
 
-* **Desc:** Returns ordered phrases and, for each, the sequence EN1→EN2→EN3→PL with **signed URLs** for active segments. Missing/failed segments are omitted; the sequence preserves order per PRD.
+* **Desc:** Returns ordered phrases and, for each, the sequence EN1→EN2→EN3→PL with **signed URLs** for active segments. Missing/failed segments are **omitted** from the response; the sequence preserves order per PRD.
 * **Query:** `phrase_ids=uuid,uuid,...` (optional subset), `speed=0.75|0.9|1|1.25` (affects player hints only), `highlight=on|off` (hint)
 * **Response 200**
 
@@ -538,7 +542,6 @@
       "segments": [
         { "slot":"EN1", "status":"complete", "url":"https://signed...", "duration_ms":1730, "word_timings":[...] },
         { "slot":"EN2", "status":"complete", "url":"https://signed..." },
-        { "slot":"EN3", "status":"failed" },
         { "slot":"PL",  "status":"complete", "url":"https://signed..." }
       ]
     }
@@ -546,6 +549,8 @@
   "expires_at":"2025-10-13T10:05:00Z"
 }
 ```
+
+**Note:** Only segments with `status: "complete"` are included. Failed or missing segments are omitted entirely.
 
 ---
 
@@ -595,7 +600,7 @@
 
 * `en_text` and `pl_text` length 1..2000.
 * `position` integer; uniqueness per notebook enforced by DB unique `(notebook_id, position)`.
-* `tokens` JSON schema (optional) to align with click-to-seek (arrays per language with `text`, `start_ms`, `end_ms`); the API stores as-is.
+* `tokens` JSON schema (optional) to align with click-to-seek (arrays per language with `text`, `start`, `end` where start/end are character indices, not time-based); the API stores as-is.
 
 **User Voices**
 
@@ -627,7 +632,7 @@
 
   * `duration_ms` null or 1..10_000_000.
   * `size_bytes` null or ≥0.
-  * `sample_rate_hz = 22050`, `bitrate_kbps = 64`.
+  * `sample_rate_hz = 22050` (default), `bitrate_kbps = 64` (default).
   * `status ∈ {complete, failed, missing}`; `error_code` optional (`quota|invalid_key|tts_timeout|network|text_too_long|...`).
 
 **Import**
@@ -639,9 +644,10 @@
 
 **Playback Manifest**
 
-* Order segments strictly EN1→EN2→EN3→PL per phrase, skipping missing/failed.
-* Include word timings if present.
+* Order segments strictly EN1→EN2→EN3→PL per phrase, omitting missing/failed entirely from the response.
+* Include word timings if present (time-based in milliseconds).
 * Generate short-lived signed URLs.
+* Only segments with `status: "complete"` are included in the manifest.
 
 ### 4.3 Business flows → API
 
