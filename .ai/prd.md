@@ -140,14 +140,3 @@ Kryteria akceptacji:
 2. Odtwarzanie: auto-advance ≤ 150 ms ponad zadaną pauzę 800 ms; brak słyszalnych przerw; highlight desync ≤ ~80 ms dla 95% słów.
 3. Generowanie: 0 duplikatów MP3 po regeneracjach dla notatnika; statusy failed/missing poprawnie prezentowane.
 4. Bezpieczeństwo: 0 przypadków dostępu cross-user w testach (403/404 bez wycieku metadanych); klucz TTS niewidoczny w kliencie w 100% żądań.
-
-## Dodatkowa dokumentacja
-8 plików dokumentacji implementacji w folderze .ai/implementation-details:
-- tokenizacja.md - reguły tokenizacji i normalizacji tekstu EN/PL
-- import.md - specyfikacja importu plików z formatem EN ::: PL
-- tts_audio_pipeline.md - pipeline generowania audio przez Google TTS
-- player.md - specyfikacja playera (sekwencja, klik-to-seek, highlight)
-- storage.md - struktura katalogów i zasady zarządzania plikami
-- export_zip.md - eksport do ZIP (funkcja przyszłościowa)
-- prefetching.md - strategia prefetchingu audio (funkcja przyszłościowa)
-- security.md - bezpieczeństwo i prywatność
