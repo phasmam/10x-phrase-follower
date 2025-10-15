@@ -1,10 +1,11 @@
 import type { APIRoute } from "astro";
 import type { UserDTO } from "../../../types";
+import type { LocalsWithAuth } from "../../../lib/types";
 import { ApiErrors, withErrorHandling, requireAuth } from "../../../lib/errors";
 
 export const prerender = false;
 
-const getUserProfile = async ({ locals }: { locals: any }): Promise<Response> => {
+const getUserProfile = async ({ locals }: { locals: LocalsWithAuth }): Promise<Response> => {
   requireAuth(locals.userId);
 
   // Query user profile through RLS

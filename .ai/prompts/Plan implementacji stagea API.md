@@ -12,9 +12,9 @@ Jesteś doświadczonym architektem oprogramowania. Twoim zadaniem jest przygotow
 
 ### Kontekst do wykonania:
 
-* **Etap do opracowania**: {{ETAP_ID}} — wklej dokładny fragment z @stages-plan.md (sekcja Etap N wraz z „Cel”, „Zakres”).
-* **Załóż ścisłą zgodność z**: RLS, konwencjami API (idempotency, paginacja, katalog błędów), limitami i walidacjami z PRD.
-* **Nie duplikuj definicji** — odwołuj się do referencji (@…).
+- **Etap do opracowania**: {{ETAP_ID}} — wklej dokładny fragment z @stages-plan.md (sekcja Etap N wraz z „Cel”, „Zakres”).
+- **Załóż ścisłą zgodność z**: RLS, konwencjami API (idempotency, paginacja, katalog błędów), limitami i walidacjami z PRD.
+- **Nie duplikuj definicji** — odwołuj się do referencji (@…).
 
 ### Przebieg pracy
 
@@ -39,54 +39,54 @@ Następnie przygotuj **Plan Wdrożenia Etapu** w Markdown — tylko ta część 
 
 ## 1) Przegląd etapu
 
-* Cel biznesowy i zakres (odwołanie: @stages-plan.md / @prd.md)
-* Zależności między komponentami (Auth/RLS/Storage/Jobs)
+- Cel biznesowy i zakres (odwołanie: @stages-plan.md / @prd.md)
+- Zależności między komponentami (Auth/RLS/Storage/Jobs)
 
 ## 2) Zakres API w tym etapie
 
-* Tabela: Endpoint | Operacja | Status (nowy/modyfikowany/bez zmian) | Walidacje kluczowe | Kody błędów
-* Linki do kontraktów: @api-plan.md sekcja …
+- Tabela: Endpoint | Operacja | Status (nowy/modyfikowany/bez zmian) | Walidacje kluczowe | Kody błędów
+- Linki do kontraktów: @api-plan.md sekcja …
 
 ## 3) Model danych i RLS
 
-* Tabele/kolumny używane, relacje krytyczne
-* Indeksy wymagane (nowe/istniejące)
-* RLS i dodatkowe asercje własności przy mutacjach
+- Tabele/kolumny używane, relacje krytyczne
+- Indeksy wymagane (nowe/istniejące)
+- RLS i dodatkowe asercje własności przy mutacjach
 
 ## 4) Typy i kontrakty
 
-* Lista DTO/Command/Response (nazwy + odwołania do @types/@database.types.ts)
-* Reguły serializacji (ISO-8601, UUID, ETag/If-None-Match gdy dotyczy)
+- Lista DTO/Command/Response (nazwy + odwołania do @types/@database.types.ts)
+- Reguły serializacji (ISO-8601, UUID, ETag/If-None-Match gdy dotyczy)
 
 ## 5) Walidacja i limity
 
-* Schematy payloadów (pola wymagane/opcjonalne)
-* Limity z PRD i @api-plan.md
+- Schematy payloadów (pola wymagane/opcjonalne)
+- Limity z PRD i @api-plan.md
 
 ## 6) Przepływy (E2E) w ramach etapu
 
-* ASCII flow(y) danych i kontroli
-* Punkty transakcyjne i idempotency (np. `Idempotency-Key`)
+- ASCII flow(y) danych i kontroli
+- Punkty transakcyjne i idempotency (np. `Idempotency-Key`)
 
 ## 7) Bezpieczeństwo
 
-* JWT i CORS, polityka podpisywania URL, sekrety tylko po stronie serwera
-* Zagrożenia i mitigacje (rate limiting, 401/403/404 bez wycieku metadanych)
+- JWT i CORS, polityka podpisywania URL, sekrety tylko po stronie serwera
+- Zagrożenia i mitigacje (rate limiting, 401/403/404 bez wycieku metadanych)
 
 ## 8) Obsługa błędów
 
-* Katalog błędów (HTTP + `error.code`), mapowanie wyjątków
-* Scenariusze edge-case per endpoint
+- Katalog błędów (HTTP + `error.code`), mapowanie wyjątków
+- Scenariusze edge-case per endpoint
 
 ## 9) Wydajność
 
-* Zapytania krytyczne, użycie indeksów, budżet latencji
-* Batchowanie, paginacja, MV (jeśli dotyczy) i fallback
+- Zapytania krytyczne, użycie indeksów, budżet latencji
+- Batchowanie, paginacja, MV (jeśli dotyczy) i fallback
 
 ## 10) Testy jednostkowe
 
-* wymień UCsy, które należy przetestować
-* nie proponuj smoke testów i e2e testów.
+- wymień UCsy, które należy przetestować
+- nie proponuj smoke testów i e2e testów.
 
 ## 11) Kroki wdrożenia (kolejność)
 
@@ -94,11 +94,9 @@ Następnie przygotuj **Plan Wdrożenia Etapu** w Markdown — tylko ta część 
 2. …
 3. …
 
-
 **Wymagania stałe:**
 
-* Kody statusu: 200/201/400/401/404/409/422/500 (oraz ewentualne `402 quota_exceeded` jeśli przewidziano w @api-plan.md).
-* Zgodność z RLS i regułami implementacji (@shared.mdc, @backend.mdc, @astro.mdc).
-* Dostosowanie do stacku (Astro/TS/React/Tailwind/Supabase).
-* Plik wyjściowy: **`stage-implementation-plan.md`**.
-
+- Kody statusu: 200/201/400/401/404/409/422/500 (oraz ewentualne `402 quota_exceeded` jeśli przewidziano w @api-plan.md).
+- Zgodność z RLS i regułami implementacji (@shared.mdc, @backend.mdc, @astro.mdc).
+- Dostosowanie do stacku (Astro/TS/React/Tailwind/Supabase).
+- Plik wyjściowy: **`stage-implementation-plan.md`**.

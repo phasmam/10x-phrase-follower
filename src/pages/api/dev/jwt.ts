@@ -24,7 +24,7 @@ export const GET: APIRoute = async () => {
 
   try {
     const token = await getDevJwt();
-    
+
     if (!token) {
       return new Response(
         JSON.stringify({
@@ -56,8 +56,9 @@ export const GET: APIRoute = async () => {
       }
     );
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error("DEV_JWT generation error:", error);
-    
+
     return new Response(
       JSON.stringify({
         error: {

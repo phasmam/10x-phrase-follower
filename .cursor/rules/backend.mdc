@@ -1,6 +1,6 @@
 ---
 description: 
-globs: src/db/*.ts,src/middleware/*.ts,src/lib/*.ts
+globs: src/db/*.ts,src/middleware/*.ts,src/lib/*.ts,src/pages/api/**/*.ts
 alwaysApply: false
 ---
 ### Backend and Database
@@ -9,6 +9,31 @@ alwaysApply: false
 - Follow Supabase guidelines for security and performance.
 - Use Zod schemas to validate data exchanged with the backend.
 - Use supabase from context.locals in Astro routes instead of importing supabaseClient directly
-- Use SupabaseClient type from `src/db/supabase.client.ts`, not from `@supabase/supabase-js`
-- add `export const prerender = false` for files with endoints
-- write http methods as BIG, e.g. POST instead od post
+- Use SupabaseClient type from `@supabase/supabase-js` with Database type from `src/db/database.types.ts`
+- Add `export const prerender = false` for files with endpoints
+- Write HTTP methods as BIG, e.g. POST instead of post
+
+### TypeScript and Linting
+
+- Avoid using `any` type - use proper type definitions or type assertions
+- Create proper interfaces for custom locals properties (e.g., LocalsWithAuth)
+- Use APIContext type for Astro API route handlers
+- Import types from correct locations (Database from database.types.ts, SupabaseClient from @supabase/supabase-js)
+- Ensure all imports are properly typed and from correct modules
+- Use type assertions with proper interfaces instead of `any`
+
+### Code Quality
+
+- Handle errors and edge cases at the beginning of functions
+- Use early returns for error conditions to avoid deeply nested if statements
+- Place the happy path last in the function for improved readability
+- Avoid unnecessary else statements; use if-return pattern instead
+- Use guard clauses to handle preconditions and invalid states early
+- Implement proper error logging and user-friendly error messages
+
+### File Management
+
+- Regenerate database types using `npx supabase gen types typescript --local > src/db/database.types.ts`
+- Ensure proper line endings (LF) for cross-platform compatibility
+- Fix linting errors immediately when they appear
+- Use ESLint auto-fix when possible: `npx eslint --fix <file>`

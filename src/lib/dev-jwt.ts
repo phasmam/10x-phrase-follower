@@ -28,7 +28,7 @@ export class DevJwtGenerator {
    */
   async generateToken(): Promise<string> {
     const now = Math.floor(Date.now() / 1000);
-    
+
     const token = await new SignJWT({
       sub: DEFAULT_USER_ID,
       aud: "authenticated",
@@ -70,6 +70,7 @@ export class DevJwtGenerator {
  */
 export async function getDevJwt(): Promise<string | null> {
   if (import.meta.env.NODE_ENV !== "development") {
+    // eslint-disable-next-line no-console
     console.warn("getDevJwt() is only available in development mode");
     return null;
   }
@@ -78,6 +79,7 @@ export async function getDevJwt(): Promise<string | null> {
     const generator = new DevJwtGenerator();
     return await generator.generateToken();
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error("Failed to generate DEV_JWT:", error);
     return null;
   }

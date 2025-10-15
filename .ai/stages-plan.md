@@ -3,8 +3,8 @@
 **Cel:** izolacja danych i bezklikalny dev-flow.
 **Zakres:**
 
-* **Produkcja/e2e:** autoryzacja Bearer JWT, RLS włączone na wszystkich tabelach, CORS do origin aplikacji, brak użycia service-role w ścieżkach UI, health endpoint.
-* **DEV (Opcja B):** krótkotrwały **DEV_JWT** podpisany `SUPABASE_JWT_SECRET` z `sub=DEFAULT_USER_ID`, automatycznie dodawany do requestów (`Authorization: Bearer …`). Tryb wyłącznie przy `NODE_ENV=development`.
+- **Produkcja/e2e:** autoryzacja Bearer JWT, RLS włączone na wszystkich tabelach, CORS do origin aplikacji, brak użycia service-role w ścieżkach UI, health endpoint.
+- **DEV (Opcja B):** krótkotrwały **DEV_JWT** podpisany `SUPABASE_JWT_SECRET` z `sub=DEFAULT_USER_ID`, automatycznie dodawany do requestów (`Authorization: Bearer …`). Tryb wyłącznie przy `NODE_ENV=development`.
   **Akceptacja (PRD/UC-01):** użytkownik widzi wyłącznie własne zasoby; obcy zasób → 404/403; health endpoint żyje.
   **Dodatkowo (DoD):** w e2e/prod requesty bez ważnego Bearer JWT są odrzucane (401/403), a mechanizm DEV_JWT nie trafia do buildów.
 
@@ -30,8 +30,8 @@
 
 # Post-MVP (lista)
 
-* **Export MP3/ZIP** (zgodnie z PRD „plany na przyszłość”).
-* Idempotency-Key na POST-ach.
-* Rate limiting (szczególnie `generate` i `tts:test`).
-* Katalog błędów + telemetria/metryki jobów.
-* Częściowa regeneracja (per fraza).
+- **Export MP3/ZIP** (zgodnie z PRD „plany na przyszłość”).
+- Idempotency-Key na POST-ach.
+- Rate limiting (szczególnie `generate` i `tts:test`).
+- Katalog błędów + telemetria/metryki jobów.
+- Częściowa regeneracja (per fraza).

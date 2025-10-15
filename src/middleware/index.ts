@@ -34,7 +34,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   if (authHeader?.startsWith("Bearer ")) {
     const token = authHeader.substring(7);
-    
+
     try {
       // In development, check for DEV_JWT
       if (import.meta.env.NODE_ENV === "development" && token.startsWith("dev_")) {
@@ -48,13 +48,17 @@ export const onRequest = defineMiddleware(async (context, next) => {
         }
       } else {
         // Verify Supabase JWT
-        const { data: { user }, error } = await supabaseClient.auth.getUser(token);
+        const {
+          data: { user },
+          error,
+        } = await supabaseClient.auth.getUser(token);
         if (!error && user) {
           userId = user.id;
         }
       }
     } catch (error) {
       // Invalid token - will be handled by individual endpoints
+      // eslint-disable-next-line no-console
       console.warn("JWT verification failed:", error);
     }
   }

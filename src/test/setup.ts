@@ -1,16 +1,16 @@
-import { vi } from 'vitest';
+import { vi } from "vitest";
 
 // Mock environment variables
-vi.stubGlobal('import.meta.env', {
-  NODE_ENV: 'test',
-  SUPABASE_URL: 'https://test.supabase.co',
-  SUPABASE_KEY: 'test-anon-key',
-  SUPABASE_JWT_SECRET: 'test-jwt-secret',
-  PUBLIC_APP_URL: 'http://localhost:4321',
+vi.stubGlobal("import.meta.env", {
+  NODE_ENV: "test",
+  SUPABASE_URL: "https://test.supabase.co",
+  SUPABASE_KEY: "test-anon-key",
+  SUPABASE_JWT_SECRET: "test-jwt-secret",
+  PUBLIC_APP_URL: "http://localhost:4321",
 });
 
 // Mock Supabase client
-vi.mock('../db/supabase.client', () => ({
+vi.mock("../db/supabase.client", () => ({
   supabaseClient: {
     auth: {
       getUser: vi.fn(),
@@ -24,5 +24,5 @@ vi.mock('../db/supabase.client', () => ({
       })),
     })),
   },
-  DEFAULT_USER_ID: '0a1f3212-c55f-4a62-bc0f-4121a7a72283',
+  DEFAULT_USER_ID: "0a1f3212-c55f-4a62-bc0f-4121a7a72283",
 }));
