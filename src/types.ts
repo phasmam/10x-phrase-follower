@@ -29,6 +29,8 @@ export interface Paginated<T> {
 }
 
 export type ApiErrorCode =
+  | "unauthorized"
+  | "forbidden"
   | "validation_error"
   | "invalid_key"
   | "quota_exceeded"

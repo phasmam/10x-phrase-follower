@@ -9,7 +9,10 @@
     "astro": "astro",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@astrojs/node": "^9.4.3",
@@ -33,8 +36,10 @@
   "devDependencies": {
     "@eslint/compat": "1.2.7",
     "@eslint/js": "9.23.0",
+    "@types/node": "^24.7.2",
     "@typescript-eslint/eslint-plugin": "8.28.0",
     "@typescript-eslint/parser": "8.28.0",
+    "@vitest/ui": "^3.2.4",
     "eslint": "9.23.0",
     "eslint-config-prettier": "10.1.1",
     "eslint-import-resolver-typescript": "4.2.5",
@@ -49,7 +54,8 @@
     "lint-staged": "15.5.0",
     "prettier-plugin-astro": "0.14.1",
     "supabase": "^2.48.3",
-    "typescript-eslint": "8.28.0"
+    "typescript-eslint": "8.28.0",
+    "vitest": "^3.2.4"
   },
   "lint-staged": {
     "*.{ts,tsx,astro}": [
