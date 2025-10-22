@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
-import type { PhraseListResponse, CreatePhraseCommand } from "../../../../types";
-import type { LocalsWithAuth } from "../../../../lib/types";
-import { withErrorHandling, requireAuth, ApiErrors } from "../../../../lib/errors";
+import type { PhraseListResponse, CreatePhraseCommand } from "../../../../../types";
+import type { LocalsWithAuth } from "../../../../../lib/types";
+import { withErrorHandling, requireAuth, ApiErrors } from "../../../../../lib/errors";
 import {
   validateUUID,
   validatePaginationParams,
@@ -10,7 +10,9 @@ import {
   validateInteger,
   validateNonEmptyText,
   validateRateLimit,
-} from "../../../../lib/validation.service";
+} from "../../../../../lib/validation.service";
+import { createClient } from "@supabase/supabase-js";
+import { DEFAULT_USER_ID } from "../../../../../db/supabase.client";
 
 export const prerender = false;
 
@@ -26,6 +28,22 @@ const getPhrases = async ({
 }): Promise<Response> => {
   requireAuth(locals.userId);
 
+  // In development, use service role key to bypass RLS
+  let supabase = locals.supabase;
+  if (import.meta.env.NODE_ENV === "development" && locals.userId === DEFAULT_USER_ID) {
+    const supabaseUrl = import.meta.env.SUPABASE_URL;
+    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (supabaseServiceKey) {
+      supabase = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+    }
+  }
+
   const { notebookId } = params;
 
   // Validate UUID format
@@ -36,7 +54,7 @@ const getPhrases = async ({
   const { sort, order } = validateSortParams(url, ["position", "created_at"], "position");
 
   // First verify the notebook exists and belongs to the user
-  const { data: notebook, error: notebookError } = await locals.supabase
+  const { data: notebook, error: notebookError } = await supabase
     .from("notebooks")
     .select("id")
     .eq("id", notebookId)
@@ -48,7 +66,7 @@ const getPhrases = async ({
   }
 
   // Build query
-  let query = locals.supabase
+  let query = supabase
     .from("phrases")
     .select("id, position, en_text, pl_text, tokens, created_at, updated_at")
     .eq("notebook_id", notebookId)
@@ -101,6 +119,22 @@ const createPhrase = async ({
 }): Promise<Response> => {
   requireAuth(locals.userId);
 
+  // In development, use service role key to bypass RLS
+  let supabase = locals.supabase;
+  if (import.meta.env.NODE_ENV === "development" && locals.userId === DEFAULT_USER_ID) {
+    const supabaseUrl = import.meta.env.SUPABASE_URL;
+    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (supabaseServiceKey) {
+      supabase = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+    }
+  }
+
   const { notebookId } = params;
 
   // Validate UUID format
@@ -128,7 +162,7 @@ const createPhrase = async ({
   }
 
   // First verify the notebook exists and belongs to the user
-  const { data: notebook, error: notebookError } = await locals.supabase
+  const { data: notebook, error: notebookError } = await supabase
     .from("notebooks")
     .select("id")
     .eq("id", notebookId)
@@ -140,7 +174,7 @@ const createPhrase = async ({
   }
 
   // Create phrase
-  const { data, error } = await locals.supabase
+  const { data, error } = await supabase
     .from("phrases")
     .insert({
       id: crypto.randomUUID(),

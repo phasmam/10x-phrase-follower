@@ -59,6 +59,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Set user context
   context.locals.userId = userId;
 
+  // In development, set a custom header to bypass RLS
+  if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
+    context.request.headers.set("x-dev-user-id", userId);
+  }
+
   // Call next() to get the response
   const response = await next();
 

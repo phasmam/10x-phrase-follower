@@ -10,6 +10,8 @@ import {
   validateNonEmptyText,
   validateRateLimit,
 } from "../../../lib/validation.service";
+import { createClient } from "@supabase/supabase-js";
+import { DEFAULT_USER_ID } from "../../../db/supabase.client";
 
 export const prerender = false;
 
@@ -17,8 +19,23 @@ export const prerender = false;
 const getNotebooks = async (context: APIContext): Promise<Response> => {
   const { locals, url } = context;
   const userId = (locals as LocalsWithAuth).userId;
-  const supabase = (locals as LocalsWithAuth).supabase;
+  let supabase = (locals as LocalsWithAuth).supabase;
   requireAuth(userId);
+
+  // In development, use service role key to bypass RLS
+  if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
+    const supabaseUrl = import.meta.env.SUPABASE_URL;
+    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (supabaseServiceKey) {
+      supabase = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+    }
+  }
 
   // Validate query parameters
   const { limit, cursor } = validatePaginationParams(url);
@@ -76,8 +93,23 @@ const getNotebooks = async (context: APIContext): Promise<Response> => {
 const createNotebook = async (context: APIContext): Promise<Response> => {
   const { locals, request } = context;
   const userId = (locals as LocalsWithAuth).userId;
-  const supabase = (locals as LocalsWithAuth).supabase;
+  let supabase = (locals as LocalsWithAuth).supabase;
   requireAuth(userId);
+
+  // In development, use service role key to bypass RLS
+  if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
+    const supabaseUrl = import.meta.env.SUPABASE_URL;
+    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (supabaseServiceKey) {
+      supabase = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+    }
+  }
 
   // Rate limiting for notebook creation
   validateRateLimit(`create_notebook:${userId}`, 10, 60000); // 10 per minute
