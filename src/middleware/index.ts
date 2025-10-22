@@ -8,24 +8,17 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Set up Supabase client
   context.locals.supabase = supabaseClient;
 
-  // CORS headers
-  const origin = context.request.headers.get("origin");
-  const allowedOrigins = [
-    "http://localhost:4321", // Astro dev server
-    "http://localhost:3000", // Alternative dev port
-    import.meta.env.PUBLIC_APP_URL, // Production URL
-  ].filter(Boolean);
-
-  if (origin && allowedOrigins.includes(origin)) {
-    context.response.headers.set("Access-Control-Allow-Origin", origin);
-  }
-  context.response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-  context.response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, Idempotency-Key");
-  context.response.headers.set("Access-Control-Allow-Credentials", "true");
-
   // Handle preflight requests
   if (context.request.method === "OPTIONS") {
-    return new Response(null, { status: 200 });
+    return new Response(null, {
+      status: 200,
+      headers: {
+        "Access-Control-Allow-Origin": context.request.headers.get("origin") || "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, Idempotency-Key",
+        "Access-Control-Allow-Credentials": "true",
+      },
+    });
   }
 
   // Extract and verify JWT token
@@ -66,5 +59,22 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Set user context
   context.locals.userId = userId;
 
-  return next();
+  // Call next() to get the response
+  const response = await next();
+
+  // Add CORS headers to the response
+  const origin = context.request.headers.get("origin");
+  const allowedOrigins = [
+    "http://localhost:3000", // Alternative dev port
+    import.meta.env.PUBLIC_APP_URL, // Production URL
+  ].filter(Boolean);
+
+  if (origin && allowedOrigins.includes(origin)) {
+    response.headers.set("Access-Control-Allow-Origin", origin);
+  }
+  response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, Idempotency-Key");
+  response.headers.set("Access-Control-Allow-Credentials", "true");
+
+  return response;
 });

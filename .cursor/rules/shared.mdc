@@ -50,3 +50,17 @@ When modifying the directory structure, always update this section.
 - Use guard clauses to handle preconditions and invalid states early.
 - Implement proper error logging and user-friendly error messages.
 - Consider using custom error types or error factories for consistent error handling.
+
+
+### Executing endpoints
+- don't use curl
+- user runs service on the Windows
+- use Invoke-WebRequest -Uri
+- service is exposed on http://localhost:3000
+- avoid http://localhost:4321
+
+#### Authorization
+##### Gathering token
+```
+Invoke-WebRequest -Uri "http://localhost:3000/api/dev/jwt" -Headers @{"Accept"="application/json"} | Select-Object -ExpandProperty Content
+```
