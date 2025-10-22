@@ -1,0 +1,23 @@
+---
+import AppLayout from "../layouts/AppLayout.astro";
+import ImportView from "../components/ImportView";
+import AuthGuard from "../components/AuthGuard";
+---
+
+<AppLayout title="Import - 10x Phrase Follower" currentPath="/import">
+  <AuthGuard client:load>
+    <div class="space-y-6">
+      <div class="flex items-center justify-between">
+        <h1 class="text-3xl font-bold text-foreground">Import Notebook</h1>
+        <a 
+          href="/notebooks" 
+          class="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          ← Back to Notebooks
+        </a>
+      </div>
+      
+      <ImportView client:load />
+    </div>
+  </AuthGuard>
+</AppLayout>
