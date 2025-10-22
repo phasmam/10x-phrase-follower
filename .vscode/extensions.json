@@ -1,4 +1,6 @@
 {
-  "recommendations": ["denoland.vscode-deno"],
+  "recommendations": [
+    "denoland.vscode-deno"
+  ],
   "unwantedRecommendations": []
 }
