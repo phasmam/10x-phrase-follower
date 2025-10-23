@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { useApi } from "../lib/hooks/useApi";
 import { ToastProvider, useToast } from "./ui/toast";
-import type { PhraseDTO, PhraseListResponse, NotebookDTO } from "../types";
+import GenerateAudioButton from "./GenerateAudioButton";
+import type { PhraseDTO, PhraseListResponse, NotebookDTO, JobDTO } from "../types";
 
 interface NotebookViewProps {
   notebookId: string;
@@ -13,6 +14,7 @@ interface NotebookState {
   phrases: PhraseDTO[];
   isLoading: boolean;
   error: string | null;
+  activeJob: JobDTO | null;
 }
 
 // Internal component that uses toast
@@ -24,6 +26,7 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
     phrases: [],
     isLoading: true,
     error: null,
+    activeJob: null,
   });
 
   // Load notebook and phrases
@@ -156,6 +159,14 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
     }
   };
 
+  // Handle job creation
+  const handleJobCreated = (job: JobDTO) => {
+    setState(prev => ({
+      ...prev,
+      activeJob: job,
+    }));
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="text-center py-12">
@@ -227,6 +238,18 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
         </div>
       )}
 
+      {/* Active job status */}
+      {state.activeJob && (
+        <div className="p-3 rounded-md bg-blue-50 border border-blue-200 dark:bg-blue-950 dark:border-blue-800">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              Audio generation in progress... This may take a few minutes.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Phrases table */}
       <div className="bg-card border border-border rounded-lg">
         <div className="p-4 border-b border-border">
@@ -236,9 +259,10 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
               <span className="text-xs text-muted-foreground">
                 Reorder temporarily disabled
               </span>
-              <Button disabled className="opacity-50">
-                Generate Audio (Coming Soon)
-              </Button>
+              <GenerateAudioButton 
+                notebookId={notebookId}
+                onJobCreated={handleJobCreated}
+              />
             </div>
           </div>
         </div>

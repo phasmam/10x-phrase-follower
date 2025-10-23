@@ -1,0 +1,56 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+import AuthGuard from '../components/AuthGuard';
+import TtsKeyForm from '../components/TtsKeyForm';
+import VoiceSlotEditor from '../components/VoiceSlotEditor';
+import ConfigStatusBadge from '../components/ConfigStatusBadge';
+---
+
+<AppLayout title="Settings - TTS Configuration">
+  <AuthGuard client:load>
+    <main class="container mx-auto px-4 py-8">
+      <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="mb-8">
+          <h1 class="text-3xl font-bold text-foreground mb-2">TTS Configuration</h1>
+          <p class="text-muted-foreground">
+            Configure your Google TTS credentials and voice settings for audio generation.
+          </p>
+        </div>
+
+        <!-- TTS Key Configuration -->
+        <div class="mb-8">
+          <div class="bg-card border border-border rounded-lg p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-xl font-semibold text-foreground">Google TTS Credentials</h2>
+              <ConfigStatusBadge />
+            </div>
+            <TtsKeyForm client:load />
+          </div>
+        </div>
+
+        <!-- Voice Slot Configuration -->
+        <div class="mb-8">
+          <div class="bg-card border border-border rounded-lg p-6">
+            <h2 class="text-xl font-semibold text-foreground mb-4">Voice Slots Configuration</h2>
+            <p class="text-sm text-muted-foreground mb-6">
+              Configure voice settings for each slot. EN1-EN3 are fixed to English and must use different voice IDs, PL is fixed to Polish.
+            </p>
+            <VoiceSlotEditor client:load />
+          </div>
+        </div>
+
+        <!-- Help Section -->
+        <div class="bg-muted/50 border border-border rounded-lg p-6">
+          <h3 class="text-lg font-semibold text-foreground mb-3">Need Help?</h3>
+          <div class="space-y-2 text-sm text-muted-foreground">
+            <p>• Get your Google TTS API key from the <a href="https://console.cloud.google.com/" target="_blank" class="text-primary hover:underline">Google Cloud Console</a></p>
+            <p>• Make sure to enable the Text-to-Speech API in your Google Cloud project</p>
+            <p>• Test your credentials before saving to ensure they work correctly</p>
+            <p>• Voice slots EN1-EN3 must be different to avoid repetition in audio sequences</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </AuthGuard>
+</AppLayout>

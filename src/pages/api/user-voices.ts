@@ -1,5 +1,7 @@
 import type { APIContext } from "astro";
+import { createClient } from "@supabase/supabase-js";
 import { createApiError } from "../../lib/errors";
+import { DEFAULT_USER_ID } from "../../db/supabase.client";
 import type { UserVoicesListResponse } from "../../types";
 
 export const prerender = false;
@@ -16,7 +18,22 @@ function getUserId(context: APIContext): string {
 export async function GET(context: APIContext) {
   try {
     const userId = getUserId(context);
-    const supabase = context.locals.supabase;
+    let supabase = context.locals.supabase;
+
+    // In development mode, use service role key to bypass RLS
+    if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
+      const supabaseUrl = import.meta.env.SUPABASE_URL;
+      const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+      
+      if (supabaseServiceKey) {
+        supabase = createClient(supabaseUrl, supabaseServiceKey, {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+          },
+        });
+      }
+    }
 
     // Get all voice slots for the user
     const { data: voices, error } = await supabase

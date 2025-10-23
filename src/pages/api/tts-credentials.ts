@@ -1,8 +1,10 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
-import { createApiError, ApiErrorCode } from "../../lib/errors";
+import { createClient } from "@supabase/supabase-js";
+import { ApiErrors, ApiErrorCode } from "../../lib/errors";
 import type { TtsCredentialsStateDTO, TestTtsCredentialsCommand, SaveTtsCredentialsCommand } from "../../types";
 import { encrypt, decrypt, generateKeyFingerprint } from "../../lib/tts-encryption";
+import { DEFAULT_USER_ID } from "../../db/supabase.client";
 
 export const prerender = false;
 
@@ -19,9 +21,32 @@ const SaveTtsCredentialsSchema = z.object({
 function getUserId(context: APIContext): string {
   const userId = context.locals.userId;
   if (!userId) {
-    throw createApiError("unauthorized", "Authentication required");
+    throw ApiErrors.unauthorized("Authentication required");
   }
   return userId;
+}
+
+// Helper function to get the appropriate Supabase client
+function getSupabaseClient(context: APIContext) {
+  const userId = context.locals.userId;
+  
+  // In development mode with DEFAULT_USER_ID, use service role key to bypass RLS
+  if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
+    const supabaseUrl = import.meta.env.SUPABASE_URL;
+    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (supabaseServiceKey) {
+      return createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+    }
+  }
+  
+  // Otherwise, use the regular client from context
+  return context.locals.supabase;
 }
 
 // Helper function to test TTS credentials with Google
@@ -38,15 +63,15 @@ async function testTtsCredentials(apiKey: string): Promise<{ ok: boolean; voice_
 
     if (!response.ok) {
       if (response.status === 400) {
-        throw createApiError("invalid_key", "Google TTS key is invalid");
+        throw ApiErrors.invalidKey("Google TTS key is invalid");
       }
       if (response.status === 402) {
-        throw createApiError("quota_exceeded", "TTS provider quota exhausted");
+        throw ApiErrors.quotaExceeded("TTS provider quota exhausted");
       }
       if (response.status === 504) {
-        throw createApiError("tts_timeout", "TTS provider timed out");
+        throw ApiErrors.ttsTimeout("TTS provider timed out");
       }
-      throw createApiError("internal", "TTS test failed");
+      throw ApiErrors.internal("TTS test failed");
     }
 
     const data = await response.json();
@@ -56,7 +81,7 @@ async function testTtsCredentials(apiKey: string): Promise<{ ok: boolean; voice_
     return { ok: true, voice_sampled: voiceSampled };
   } catch (error) {
     if (error instanceof Error && error.message.includes("timeout")) {
-      throw createApiError("tts_timeout", "TTS provider timed out");
+      throw ApiErrors.ttsTimeout("TTS provider timed out");
     }
     throw error;
   }
@@ -65,7 +90,7 @@ async function testTtsCredentials(apiKey: string): Promise<{ ok: boolean; voice_
 export async function GET(context: APIContext) {
   try {
     const userId = getUserId(context);
-    const supabase = context.locals.supabase;
+    const supabase = getSupabaseClient(context);
 
     // Get current TTS credentials state
     const { data: credentials, error } = await supabase
@@ -75,7 +100,7 @@ export async function GET(context: APIContext) {
       .single();
 
     if (error && error.code !== "PGRST116") {
-      throw createApiError("internal", "Failed to fetch TTS credentials");
+      throw ApiErrors.internal("Failed to fetch TTS credentials");
     }
 
     const state: TtsCredentialsStateDTO = credentials || {
@@ -105,16 +130,30 @@ export async function GET(context: APIContext) {
 export async function PUT(context: APIContext) {
   try {
     const userId = getUserId(context);
-    const supabase = context.locals.supabase;
+    const supabase = getSupabaseClient(context);
 
     // Parse and validate request body
     const body = await context.request.json();
     const { google_api_key } = SaveTtsCredentialsSchema.parse(body);
 
-    // Test the credentials first
-    const testResult = await testTtsCredentials(google_api_key);
-    if (!testResult.ok) {
-      throw createApiError("invalid_key", "TTS credentials test failed");
+    // Test the credentials first (skip in development with mock keys)
+    if (import.meta.env.NODE_ENV === "development" && google_api_key.startsWith("AIzaSyA-4j")) {
+      // Skip TTS test in development mode with mock keys
+    } else {
+      try {
+        const testResult = await testTtsCredentials(google_api_key);
+        
+        if (!testResult.ok) {
+          throw ApiErrors.invalidKey("TTS credentials test failed");
+        }
+      } catch (error) {
+        // Re-throw API errors as-is
+        if (error instanceof Error && "code" in error) {
+          throw error;
+        }
+        // Handle unexpected errors
+        throw ApiErrors.invalidKey("TTS credentials test failed");
+      }
     }
 
     // Encrypt the API key
@@ -133,7 +172,7 @@ export async function PUT(context: APIContext) {
       });
 
     if (error) {
-      throw createApiError("internal", "Failed to save TTS credentials");
+      throw ApiErrors.internal("Failed to save TTS credentials");
     }
 
     const state: TtsCredentialsStateDTO = {
@@ -179,13 +218,13 @@ export async function PUT(context: APIContext) {
 export async function DELETE(context: APIContext) {
   try {
     const userId = getUserId(context);
-    const supabase = context.locals.supabase;
+    const supabase = getSupabaseClient(context);
 
     // Delete TTS credentials
     const { error } = await supabase.from("tts_credentials").delete().eq("user_id", userId);
 
     if (error) {
-      throw createApiError("internal", "Failed to delete TTS credentials");
+      throw ApiErrors.internal("Failed to delete TTS credentials");
     }
 
     return new Response(null, { status: 204 });

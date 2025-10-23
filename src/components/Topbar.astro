@@ -1,5 +1,6 @@
 ---
 import { Button } from "./ui/button";
+import ConfigStatusBadge from "./ConfigStatusBadge";
 
 interface Props {
   currentPath?: string;
@@ -49,15 +50,14 @@ const isDev = import.meta.env.NODE_ENV === "development";
 
       <!-- Right side navigation -->
       <div class="flex items-center space-x-4">
-        <!-- TTS Config Status Badge (placeholder for now) -->
+        <!-- TTS Config Status Badge -->
         <div class="flex items-center">
-          <span class="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">
-            TTS: Not configured
-          </span>
+          <ConfigStatusBadge client:load />
         </div>
 
         <!-- Settings gear icon -->
-        <Button variant="ghost" size="sm" className="p-2">
+        <Button variant="ghost" size="sm" className="p-2" asChild>
+          <a href="/settings">
           <svg 
             class="h-4 w-4" 
             fill="none" 
@@ -77,6 +77,7 @@ const isDev = import.meta.env.NODE_ENV === "development";
               d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
             ></path>
           </svg>
+          </a>
         </Button>
 
         <!-- User menu (placeholder for now) -->

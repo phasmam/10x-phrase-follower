@@ -1,6 +1,8 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
+import { createClient } from "@supabase/supabase-js";
 import { createApiError } from "../../../lib/errors";
+import { DEFAULT_USER_ID } from "../../../db/supabase.client";
 import type { UpsertUserVoiceBySlotCommand, UserVoiceDTO } from "../../../types";
 
 export const prerender = false;
@@ -65,7 +67,22 @@ async function checkDuplicateEnVoices(
 export async function PUT(context: APIContext) {
   try {
     const userId = getUserId(context);
-    const supabase = context.locals.supabase;
+    let supabase = context.locals.supabase;
+
+    // In development mode, use service role key to bypass RLS
+    if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
+      const supabaseUrl = import.meta.env.SUPABASE_URL;
+      const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+      
+      if (supabaseServiceKey) {
+        supabase = createClient(supabaseUrl, supabaseServiceKey, {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+          },
+        });
+      }
+    }
 
     // Parse and validate path parameter
     const slot = context.params.slot;
@@ -88,19 +105,23 @@ export async function PUT(context: APIContext) {
     const { data: voice, error } = await supabase
       .from("user_voices")
       .upsert({
+        id: crypto.randomUUID(),
         user_id: userId,
         slot: validatedSlot,
         language,
         voice_id,
+      }, {
+        onConflict: 'user_id,slot'
       })
       .select("id, slot, language, voice_id, created_at")
       .single();
 
     if (error) {
+      console.error("Database error:", error);
       if (error.code === "23505") {
         throw createApiError("conflict", "Voice configuration conflict");
       }
-      throw createApiError("internal", "Failed to save voice configuration");
+      throw createApiError("internal", `Failed to save voice configuration: ${error.message}`);
     }
 
     const response: UserVoiceDTO = voice;
