@@ -297,3 +297,70 @@ export interface HealthStatusDTO {
   db: "ok" | "degraded" | "down";
   time: string;
 }
+
+// ------------------------------------
+// Player-specific types (ViewModel)
+// ------------------------------------
+/**
+ * Frontend ViewModel types for the player interface.
+ * These are derived from DTOs but optimized for UI state management.
+ */
+
+export interface PhraseVM {
+  id: UUID;
+  position: number;
+  en: string;
+  pl: string;
+  tokens: {
+    en: Token[];
+    pl: Token[];
+  };
+}
+
+export interface Token {
+  text: string;
+  charStart: number;
+  charEnd: number;
+  timing?: {
+    startMs: number;
+    endMs: number;
+  };
+}
+
+export interface Segment {
+  slot: VoiceSlot;
+  url: string;
+  durationMs?: number | null;
+  timings?: Token["timing"][];
+}
+
+export type PlaybackSpeed = 0.75 | 0.9 | 1 | 1.25;
+
+export interface PlayerState {
+  playing: boolean;
+  currentPhraseIndex: number;
+  currentSlot: VoiceSlot | null;
+  speed: PlaybackSpeed;
+  highlight: boolean;
+  clockMs: number;
+}
+
+export interface PlaybackSequenceItem {
+  phrase: PhraseVM;
+  segments: Segment[];
+}
+
+export interface PlaybackManifestVM {
+  notebookId: UUID;
+  buildId: UUID | null;
+  sequence: PlaybackSequenceItem[];
+  expiresAt: string;
+}
+
+export type HighlightMode = "on" | "off";
+
+export interface TokenTimingsHint {
+  word: string;
+  startMs: number;
+  endMs: number;
+}

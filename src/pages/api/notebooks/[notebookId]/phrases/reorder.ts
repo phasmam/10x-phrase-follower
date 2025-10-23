@@ -1,10 +1,10 @@
 import type { APIRoute, APIContext } from "astro";
-import type { ReorderPhrasesCommand, ReorderPhrasesResultDTO } from "../../../../types";
-import type { LocalsWithAuth } from "../../../../lib/types";
-import { withErrorHandling, requireAuth, ApiErrors } from "../../../../lib/errors";
+import type { ReorderPhrasesCommand, ReorderPhrasesResultDTO } from "../../../../../types";
+import type { LocalsWithAuth } from "../../../../../lib/types";
+import { withErrorHandling, requireAuth, ApiErrors } from "../../../../../lib/errors";
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "../../../../db/database.types";
-import { DEFAULT_USER_ID } from "../../../../db/supabase.client";
+import type { Database } from "../../../../../db/database.types";
+import { DEFAULT_USER_ID } from "../../../../../db/supabase.client";
 
 export const prerender = false;
 

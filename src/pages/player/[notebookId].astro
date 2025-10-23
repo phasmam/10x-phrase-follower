@@ -1,0 +1,49 @@
+---
+import Layout from "../../layouts/AppLayout.astro";
+import PlayerShell from "../../components/PlayerShell.tsx";
+import { supabaseClient } from "../../db/supabase.client";
+
+export const prerender = false;
+
+// Get notebook ID from params
+const { notebookId } = Astro.params;
+const startPhraseId = Astro.url.searchParams.get("start_phrase_id");
+
+// Validate notebook ID format (UUID)
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+if (!notebookId || !uuidRegex.test(notebookId)) {
+  return Astro.redirect("/notebooks");
+}
+
+// Validate start_phrase_id if provided
+if (startPhraseId && !uuidRegex.test(startPhraseId)) {
+  return Astro.redirect(`/player/${notebookId}`);
+}
+
+// Check authentication
+const { data: { user }, error } = await supabaseClient.auth.getUser();
+
+if (error || !user) {
+  return Astro.redirect("/login");
+}
+
+// Verify notebook ownership
+const { data: notebook, error: notebookError } = await supabaseClient
+  .from("notebooks")
+  .select("id, name")
+  .eq("id", notebookId)
+  .single();
+
+if (notebookError || !notebook) {
+  return Astro.redirect("/notebooks");
+}
+---
+
+<Layout title={`Player - ${notebook.name}`}>
+  <main class="min-h-screen bg-gray-900 text-white">
+    <PlayerShell 
+      notebookId={notebookId} 
+      startPhraseId={startPhraseId || undefined}
+    />
+  </main>
+</Layout>

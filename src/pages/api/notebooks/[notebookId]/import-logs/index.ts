@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
-import type { ImportLogsListResponse } from "../../../../types";
-import type { LocalsWithAuth } from "../../../../lib/types";
-import { withErrorHandling, requireAuth, ApiErrors } from "../../../../lib/errors";
+import type { ImportLogsListResponse } from "../../../../../types";
+import type { LocalsWithAuth } from "../../../../../lib/types";
+import { withErrorHandling, requireAuth, ApiErrors } from "../../../../../lib/errors";
 
 export const prerender = false;
 

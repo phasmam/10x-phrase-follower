@@ -1,7 +1,7 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
 import { createApiError } from "../../../../lib/errors";
-import type { JobListResponse } from "../../../../lib/types";
+import type { JobListResponse } from "../../../../types";
 
 export const prerender = false;
 

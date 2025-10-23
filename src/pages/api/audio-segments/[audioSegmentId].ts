@@ -1,5 +1,5 @@
 import type { APIContext } from "astro";
-import { createApiError } from "../../../lib/errors";
+import { ApiErrors } from "../../../lib/errors";
 import type { AudioSegmentDTO } from "../../../types";
 
 export const prerender = false;
@@ -8,7 +8,7 @@ export const prerender = false;
 function getUserId(context: APIContext): string {
   const userId = context.locals.userId;
   if (!userId) {
-    throw createApiError("unauthorized", "Authentication required");
+    throw ApiErrors.unauthorized("Authentication required");
   }
   return userId;
 }
@@ -21,7 +21,7 @@ export async function GET(context: APIContext) {
     // Parse and validate path parameter
     const audioSegmentId = context.params.audioSegmentId;
     if (!audioSegmentId) {
-      throw createApiError("validation_error", "Audio segment ID is required");
+      throw ApiErrors.validationError("Audio segment ID is required");
     }
 
     // Get the audio segment (with RLS ensuring user can only access their own segments)
@@ -37,9 +37,9 @@ export async function GET(context: APIContext) {
 
     if (error) {
       if (error.code === "PGRST116") {
-        throw createApiError("not_found", "Audio segment not found");
+        throw ApiErrors.notFound("Audio segment not found");
       }
-      throw createApiError("internal", "Failed to fetch audio segment");
+      throw ApiErrors.internal("Failed to fetch audio segment");
     }
 
     const response: AudioSegmentDTO = segment;

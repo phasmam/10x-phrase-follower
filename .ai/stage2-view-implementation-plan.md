@@ -186,3 +186,10 @@ PlayerPage (route)
 - UC-07/UC-08/UC-09: sekwencja odtwarzania, klik-to-seek, highlight, statusy segmentów (pomijanie brakujących), metryki timingu. :contentReference[oaicite:36]{index=36}
 - Integracje: `/api/notebooks/:id/playback-manifest` (rdzeń), `/api/tts-credentials`, `/api/user-voices`, opcjonalnie `/api/notebooks/:id/audio-status`. :contentReference[oaicite:37]{index=37}
 
+**Załączniki i referencje**:
+
+* PRD: @prd.md  
+* Opis widoku: ui-plan.md  
+* Endpointy: @api-plan.md  
+* Etapy: stages-plan.md  
+* Typy DTO: @types.ts (lokalny plik, źródło prawdy dla kontraktów)

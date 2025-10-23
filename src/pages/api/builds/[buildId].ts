@@ -1,5 +1,5 @@
 import type { APIContext } from "astro";
-import { createApiError } from "../../../lib/errors";
+import { ApiErrors } from "../../../lib/errors";
 import type { BuildDTO } from "../../../types";
 
 export const prerender = false;
@@ -8,7 +8,7 @@ export const prerender = false;
 function getUserId(context: APIContext): string {
   const userId = context.locals.userId;
   if (!userId) {
-    throw createApiError("unauthorized", "Authentication required");
+    throw ApiErrors.unauthorized("Authentication required");
   }
   return userId;
 }
@@ -21,7 +21,7 @@ export async function GET(context: APIContext) {
     // Parse and validate path parameter
     const buildId = context.params.buildId;
     if (!buildId) {
-      throw createApiError("validation_error", "Build ID is required");
+      throw ApiErrors.validationError("Build ID is required");
     }
 
     // Get the build (with RLS ensuring user can only access their own builds)
@@ -33,9 +33,9 @@ export async function GET(context: APIContext) {
 
     if (error) {
       if (error.code === "PGRST116") {
-        throw createApiError("not_found", "Build not found");
+        throw ApiErrors.notFound("Build not found");
       }
-      throw createApiError("internal", "Failed to fetch build");
+      throw ApiErrors.internal("Failed to fetch build");
     }
 
     const response: BuildDTO = build;

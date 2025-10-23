@@ -240,3 +240,10 @@ PlayerPage
 - **UC-09** Statusy audio w tabeli / pomijanie braków → w Playerze `SegmentSequenceBar` pokazuje obecność segmentów (manifest pomija non-complete); odtwarzacz pomija brakujące. :contentReference[oaicite:35]{index=35}
 
 ```
+**Załączniki i referencje**:
+
+* PRD: @prd.md  
+* Opis widoku: ui-plan.md  
+* Endpointy: @api-plan.md  
+* Etapy: stages-plan.md  
+* Typy DTO: @types.ts (lokalny plik, źródło prawdy dla kontraktów)
