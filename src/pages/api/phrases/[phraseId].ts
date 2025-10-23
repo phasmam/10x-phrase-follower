@@ -2,6 +2,8 @@ import type { APIRoute } from "astro";
 import type { UpdatePhraseCommand } from "../../../types";
 import type { LocalsWithAuth } from "../../../lib/types";
 import { withErrorHandling, requireAuth, ApiErrors } from "../../../lib/errors";
+import { createClient } from "@supabase/supabase-js";
+import { DEFAULT_USER_ID } from "../../../db/supabase.client";
 
 export const prerender = false;
 
@@ -15,7 +17,24 @@ const updatePhrase = async ({
   params: { phraseId: string };
   request: Request;
 }): Promise<Response> => {
-  requireAuth(locals.userId);
+  const userId = locals.userId;
+  let supabase = supabase;
+  requireAuth(userId);
+
+  // In development, use service role key to bypass RLS
+  if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
+    const supabaseUrl = import.meta.env.SUPABASE_URL;
+    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (supabaseServiceKey) {
+      supabase = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+    }
+  }
 
   const { phraseId } = params;
 
@@ -71,7 +90,7 @@ const updatePhrase = async ({
     throw ApiErrors.validationError("No valid fields to update");
   }
 
-  const { data, error } = await locals.supabase
+  const { data, error } = await supabase
     .from("phrases")
     .update(updateData)
     .eq("id", phraseId)
@@ -122,7 +141,24 @@ const deletePhrase = async ({
   locals: LocalsWithAuth;
   params: { phraseId: string };
 }): Promise<Response> => {
-  requireAuth(locals.userId);
+  const userId = locals.userId;
+  let supabase = locals.supabase;
+  requireAuth(userId);
+
+  // In development, use service role key to bypass RLS
+  if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
+    const supabaseUrl = import.meta.env.SUPABASE_URL;
+    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (supabaseServiceKey) {
+      supabase = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+    }
+  }
 
   const { phraseId } = params;
 
@@ -132,7 +168,7 @@ const deletePhrase = async ({
   }
 
   // First verify the phrase exists and belongs to the user
-  const { data: phrase, error: phraseError } = await locals.supabase
+  const { data: phrase, error: phraseError } = await supabase
     .from("phrases")
     .select(
       `
@@ -153,7 +189,7 @@ const deletePhrase = async ({
   }
 
   // Delete the phrase
-  const { error } = await locals.supabase.from("phrases").delete().eq("id", phraseId);
+  const { error } = await supabase.from("phrases").delete().eq("id", phraseId);
 
   if (error) {
     // eslint-disable-next-line no-console

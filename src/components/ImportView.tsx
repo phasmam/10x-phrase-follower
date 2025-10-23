@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "./ui/button";
 import { useApi } from "../lib/hooks/useApi";
+import { ToastProvider, useToast } from "./ui/toast";
 import type { ImportNotebookCommand, ImportNotebookResultDTO } from "../types";
 
 interface ImportViewProps {}
@@ -11,8 +12,10 @@ interface ImportState {
   error: string | null;
 }
 
-export default function ImportView({}: ImportViewProps) {
+// Internal component that uses toast
+function ImportViewContent({}: ImportViewProps) {
   const { apiCall, isAuthenticated } = useApi();
+  const { addToast } = useToast();
   const [state, setState] = useState<ImportState>({
     step: "form",
     isLoading: false,
@@ -106,12 +109,28 @@ export default function ImportView({}: ImportViewProps) {
       setImportResult(result);
       setState(prev => ({ ...prev, step: "summary", isLoading: false }));
       
+      // Show success toast
+      addToast({
+        type: "success",
+        title: "Import completed",
+        description: `Successfully imported ${result.import.accepted} phrases.`,
+      });
+      
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Import failed";
+      
       setState(prev => ({ 
         ...prev, 
         isLoading: false, 
-        error: err instanceof Error ? err.message : "Import failed" 
+        error: errorMessage
       }));
+
+      // Show error toast
+      addToast({
+        type: "error",
+        title: "Import failed",
+        description: errorMessage,
+      });
     }
   };
 
@@ -349,5 +368,14 @@ function ImportSummary({ result, onStartOver }: ImportSummaryProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+// Main export with ToastProvider wrapper
+export default function ImportView(props: ImportViewProps) {
+  return (
+    <ToastProvider>
+      <ImportViewContent {...props} />
+    </ToastProvider>
   );
 }

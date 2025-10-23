@@ -1,23 +1,36 @@
-import type { APIRoute } from "astro";
+import type { APIRoute, APIContext } from "astro";
 import type { ReorderPhrasesCommand, ReorderPhrasesResultDTO } from "../../../../types";
 import type { LocalsWithAuth } from "../../../../lib/types";
 import { withErrorHandling, requireAuth, ApiErrors } from "../../../../lib/errors";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "../../../../db/database.types";
+import { DEFAULT_USER_ID } from "../../../../db/supabase.client";
 
 export const prerender = false;
 
 // POST /api/notebooks/:notebookId/phrases:reorder - Bulk reorder phrases
-const reorderPhrases = async ({
-  locals,
-  params,
-  request,
-}: {
-  locals: LocalsWithAuth;
-  params: { notebookId: string };
-  request: Request;
-}): Promise<Response> => {
-  requireAuth(locals.userId);
+const reorderPhrases = async (context: APIContext): Promise<Response> => {
+  const { locals, params, request } = context;
+  const userId = (locals as LocalsWithAuth).userId;
+  let supabase = (locals as LocalsWithAuth).supabase;
+  requireAuth(userId);
 
-  const { notebookId } = params;
+  // In development, use service role key to bypass RLS
+  if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
+    const supabaseUrl = import.meta.env.SUPABASE_URL;
+    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (supabaseServiceKey) {
+      supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+    }
+  }
+
+  const { notebookId } = params as { notebookId: string };
 
   // Validate UUID format
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(notebookId)) {
@@ -67,11 +80,11 @@ const reorderPhrases = async ({
   }
 
   // First verify the notebook exists and belongs to the user
-  const { data: notebook, error: notebookError } = await locals.supabase
+  const { data: notebook, error: notebookError } = await supabase
     .from("notebooks")
     .select("id")
     .eq("id", notebookId)
-    .eq("user_id", locals.userId)
+    .eq("user_id", userId)
     .single();
 
   if (notebookError || !notebook) {
@@ -79,7 +92,7 @@ const reorderPhrases = async ({
   }
 
   // Verify all phrases exist and belong to this notebook
-  const { data: existingPhrases, error: phrasesError } = await locals.supabase
+  const { data: existingPhrases, error: phrasesError } = await supabase
     .from("phrases")
     .select("id")
     .eq("notebook_id", notebookId)
@@ -102,7 +115,7 @@ const reorderPhrases = async ({
     updated_at: new Date().toISOString(),
   }));
 
-  const { error: updateError } = await locals.supabase.from("phrases").upsert(updates, {
+  const { error: updateError } = await supabase.from("phrases").upsert(updates, {
     onConflict: "id",
     ignoreDuplicates: false,
   });
