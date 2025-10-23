@@ -66,7 +66,7 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
     };
 
     loadData();
-  }, [notebookId, isAuthenticated, apiCall]);
+  }, [notebookId, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle phrase deletion
   const handleDeletePhrase = async (phraseId: string) => {

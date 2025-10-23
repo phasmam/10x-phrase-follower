@@ -15,20 +15,25 @@ export default function AuthCard({}: AuthCardProps) {
     setError(null);
 
     try {
-      if (import.meta.env.NODE_ENV === "development") {
-        // In development, any credentials work - just verify DEV_JWT is available
-        const response = await fetch("/api/dev/jwt", {
-          headers: { "Accept": "application/json" },
-        });
+      // Always try development mode first - check if DEV_JWT endpoint is available
+      const response = await fetch("/api/dev/jwt", {
+        headers: { "Accept": "application/json" },
+      });
+      
+      if (response.ok) {
+        // DEV_JWT endpoint is available - we're in development mode
+        const data = await response.json();
         
-        if (response.ok) {
-          // DEV_JWT is working, redirect to notebooks
-          window.location.href = "/notebooks";
-        } else {
-          throw new Error("Development authentication not available");
-        }
+        // Store token in localStorage with expiry
+        const expiry = Date.now() + (data.expires_in * 1000);
+        localStorage.setItem("dev_jwt_token", data.token);
+        localStorage.setItem("dev_user_id", data.user_id);
+        localStorage.setItem("dev_jwt_expiry", expiry.toString());
+        
+        // Redirect to notebooks
+        window.location.href = "/notebooks";
       } else {
-        // TODO: Implement Supabase Auth signIn for production
+        // DEV_JWT endpoint not available - we're in production mode
         throw new Error("Production authentication not yet implemented");
       }
     } catch (err) {
