@@ -1,23 +1,23 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import type { 
-  PlaybackManifestVM, 
-  PlaybackSequenceItem, 
-  PhraseVM, 
-  Segment, 
-  VoiceSlot, 
+import React, { useState, useEffect, useCallback } from "react";
+import type {
+  PlaybackManifestVM,
+  PlaybackSequenceItem,
+  PhraseVM,
+  Segment,
+  VoiceSlot,
   PlaybackSpeed,
-  PlayerState 
-} from '../types';
-import PlayerControls from './PlayerControls';
-import SegmentSequenceBar from './SegmentSequenceBar';
-import PhraseViewer from './PhraseViewer';
-import KeyboardShortcutsHandler from './KeyboardShortcutsHandler';
-import RefreshManifestButton from './RefreshManifestButton';
-import { usePlaybackEngine } from '../lib/hooks/usePlaybackEngine';
-import { useSignedUrlGuard } from '../lib/hooks/useSignedUrlGuard';
-import { useClickToSeek } from '../lib/hooks/useClickToSeek';
-import { useAuth } from '../lib/hooks/useAuth';
-import { useApi } from '../lib/hooks/useApi';
+  PlayerState,
+} from "../types";
+import PlayerControls from "./PlayerControls";
+import SegmentSequenceBar from "./SegmentSequenceBar";
+import PhraseViewer from "./PhraseViewer";
+import KeyboardShortcutsHandler from "./KeyboardShortcutsHandler";
+import RefreshManifestButton from "./RefreshManifestButton";
+import { usePlaybackEngine } from "../lib/hooks/usePlaybackEngine";
+import { useSignedUrlGuard } from "../lib/hooks/useSignedUrlGuard";
+import { useClickToSeek } from "../lib/hooks/useClickToSeek";
+import { useAuth } from "../lib/hooks/useAuth";
+import { useApi } from "../lib/hooks/useApi";
 
 interface PlayerShellProps {
   notebookId: string;
@@ -28,7 +28,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
   // Authentication
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { apiCall } = useApi();
-  
+
   // Core state
   const [manifest, setManifest] = useState<PlaybackManifestVM | null>(null);
   const [phraseIndex, setPhraseIndex] = useState(0);
@@ -43,7 +43,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
   // Find initial phrase index from startPhraseId
   useEffect(() => {
     if (manifest && startPhraseId) {
-      const index = manifest.sequence.findIndex(item => item.phrase.id === startPhraseId);
+      const index = manifest.sequence.findIndex((item) => item.phrase.id === startPhraseId);
       if (index !== -1) {
         setPhraseIndex(index);
       }
@@ -53,7 +53,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
   // Fetch playback manifest
   const fetchManifest = useCallback(async () => {
     if (!isAuthenticated) {
-      setError('Authentication required');
+      setError("Authentication required");
       setLoading(false);
       return;
     }
@@ -61,14 +61,14 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
     try {
       setLoading(true);
       setError(null);
-      
+
       const data = await apiCall<{
         notebook_id: string;
         build_id: string;
         sequence: any[];
         expires_at: string;
-      }>(`/api/notebooks/${notebookId}/playback-manifest?highlight=${highlight ? 'on' : 'off'}&speed=${speed}`);
-      
+      }>(`/api/notebooks/${notebookId}/playback-manifest?highlight=${highlight ? "on" : "off"}&speed=${speed}`);
+
       // Transform DTO to VM
       const manifestVM: PlaybackManifestVM = {
         notebookId: data.notebook_id,
@@ -81,8 +81,8 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
             pl: item.phrase.pl_text,
             tokens: {
               en: item.phrase.tokens?.en || [],
-              pl: item.phrase.tokens?.pl || []
-            }
+              pl: item.phrase.tokens?.pl || [],
+            },
           },
           segments: item.segments.map((segment: any) => ({
             slot: segment.slot,
@@ -90,16 +90,16 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
             durationMs: segment.duration_ms,
             timings: segment.word_timings?.map((wt: any) => ({
               startMs: wt.start_ms,
-              endMs: wt.end_ms
-            }))
-          }))
+              endMs: wt.end_ms,
+            })),
+          })),
         })),
-        expiresAt: data.expires_at
+        expiresAt: data.expires_at,
       };
 
       setManifest(manifestVM);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load playback manifest');
+      setError(err instanceof Error ? err.message : "Failed to load playback manifest");
     } finally {
       setLoading(false);
     }
@@ -111,7 +111,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
   }, [fetchManifest]);
 
   // URL expiry guard
-  const { needsRefresh } = useSignedUrlGuard(manifest?.expiresAt);
+  const { needsRefresh } = useSignedUrlGuard({ expiresAt: manifest?.expiresAt });
 
   // Current phrase and segments
   const currentPhrase = manifest?.sequence[phraseIndex];
@@ -119,32 +119,27 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
   const hasPlayableSegments = currentSegments.length > 0;
 
   // Playback engine
-  const { 
-    onEndSegment, 
-    onEndPhrase, 
-    onAdvanceNext, 
-    onAdvancePrev 
-  } = usePlaybackEngine(
-    manifest, 
-    phraseIndex, 
+  const { onEndSegment, onEndPhrase, onAdvanceNext, onAdvancePrev } = usePlaybackEngine({
+    manifest,
+    phraseIndex,
     speed,
     setCurrentSlot,
     setClockMs,
-    setPhraseIndex
-  );
+    setPhraseIndex,
+  });
 
   // Click-to-seek functionality
-  const { seekToToken } = useClickToSeek(
-    currentPhrase?.tokens,
-    currentSegments.find(s => s.slot === currentSlot)?.timings
-  );
+  const { seekToToken } = useClickToSeek({
+    tokens: currentPhrase?.tokens,
+    timings: currentSegments.find((s) => s.slot === currentSlot)?.timings,
+  });
 
   // Event handlers
   const handlePlay = useCallback(() => {
     if (!hasPlayableSegments) return;
     setPlaying(true);
     if (!currentSlot) {
-      setCurrentSlot('EN1');
+      setCurrentSlot("EN1");
     }
   }, [hasPlayableSegments, currentSlot]);
 
@@ -159,7 +154,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
   }, []);
 
   const handleRestartPhrase = useCallback(() => {
-    setCurrentSlot('EN1');
+    setCurrentSlot("EN1");
     setClockMs(0);
     setPlaying(true);
   }, []);
@@ -169,22 +164,28 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
   }, []);
 
   const handleToggleHighlight = useCallback(() => {
-    setHighlight(prev => !prev);
+    setHighlight((prev) => !prev);
   }, []);
 
-  const handleSeekToToken = useCallback((tokenIndex: number) => {
-    if (currentSlot && seekToToken) {
-      seekToToken(tokenIndex);
-    }
-  }, [currentSlot, seekToToken]);
+  const handleSeekToToken = useCallback(
+    (tokenIndex: number) => {
+      if (currentSlot && seekToToken) {
+        seekToToken(tokenIndex);
+      }
+    },
+    [currentSlot, seekToToken]
+  );
 
-  const handleJumpToSlot = useCallback((slot: VoiceSlot) => {
-    const segment = currentSegments.find(s => s.slot === slot);
-    if (segment) {
-      setCurrentSlot(slot);
-      setClockMs(0);
-    }
-  }, [currentSegments]);
+  const handleJumpToSlot = useCallback(
+    (slot: VoiceSlot) => {
+      const segment = currentSegments.find((s) => s.slot === slot);
+      if (segment) {
+        setCurrentSlot(slot);
+        setClockMs(0);
+      }
+    },
+    [currentSegments]
+  );
 
   const handleRefreshManifest = useCallback(async () => {
     await fetchManifest();
@@ -198,7 +199,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
     onSeekSmall: () => {}, // TODO: Implement small seek
     onSeekLarge: () => {}, // TODO: Implement large seek
     onPrevPhrase: onAdvancePrev,
-    onNextPhrase: onAdvanceNext
+    onNextPhrase: onAdvanceNext,
   };
 
   if (authLoading) {
@@ -241,10 +242,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
         <div className="text-center">
           <div className="text-red-400 text-xl mb-4">⚠️</div>
           <p className="text-red-300 mb-4">{error}</p>
-          <RefreshManifestButton 
-            loading={false} 
-            onRefresh={handleRefreshManifest} 
-          />
+          <RefreshManifestButton loading={false} onRefresh={handleRefreshManifest} />
         </div>
       </div>
     );
@@ -265,7 +263,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
   return (
     <div className="max-w-4xl mx-auto p-6">
       <KeyboardShortcutsHandler {...shortcuts} />
-      
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-2">Audio Player</h1>
@@ -303,7 +301,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
       <div className="mb-8">
         <PhraseViewer
           phrase={currentPhrase}
-          activeLang={currentSlot === 'PL' ? 'pl' : currentSlot ? 'en' : null}
+          activeLang={currentSlot === "PL" ? "pl" : currentSlot ? "en" : null}
           highlight={highlight}
           onSeekToToken={handleSeekToToken}
         />
@@ -312,10 +310,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
       {/* Refresh manifest button */}
       {needsRefresh && (
         <div className="mb-8">
-          <RefreshManifestButton 
-            loading={false} 
-            onRefresh={handleRefreshManifest} 
-          />
+          <RefreshManifestButton loading={false} onRefresh={handleRefreshManifest} />
         </div>
       )}
     </div>
