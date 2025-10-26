@@ -17,6 +17,7 @@ import { usePlaybackEngine } from '../lib/hooks/usePlaybackEngine';
 import { useSignedUrlGuard } from '../lib/hooks/useSignedUrlGuard';
 import { useClickToSeek } from '../lib/hooks/useClickToSeek';
 import { useAuth } from '../lib/hooks/useAuth';
+import { useApi } from '../lib/hooks/useApi';
 
 interface PlayerShellProps {
   notebookId: string;
@@ -25,7 +26,8 @@ interface PlayerShellProps {
 
 export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellProps) {
   // Authentication
-  const { isAuthenticated, isLoading: authLoading, token } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { apiCall } = useApi();
   
   // Core state
   const [manifest, setManifest] = useState<PlaybackManifestVM | null>(null);
@@ -50,7 +52,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
 
   // Fetch playback manifest
   const fetchManifest = useCallback(async () => {
-    if (!token) {
+    if (!isAuthenticated) {
       setError('Authentication required');
       setLoading(false);
       return;
@@ -60,22 +62,12 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`/api/notebooks/${notebookId}/playback-manifest?highlight=${highlight ? 'on' : 'off'}&speed=${speed}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        if (response.status === 403 || response.status === 410) {
-          setError('Manifest URLs have expired. Please refresh the manifest.');
-          return;
-        }
-        throw new Error(`Failed to fetch manifest: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await apiCall<{
+        notebook_id: string;
+        build_id: string;
+        sequence: any[];
+        expires_at: string;
+      }>(`/api/notebooks/${notebookId}/playback-manifest?highlight=${highlight ? 'on' : 'off'}&speed=${speed}`);
       
       // Transform DTO to VM
       const manifestVM: PlaybackManifestVM = {
@@ -111,7 +103,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
     } finally {
       setLoading(false);
     }
-  }, [notebookId, highlight, speed, token]);
+  }, [notebookId, highlight, speed, isAuthenticated, apiCall]);
 
   // Initial manifest fetch
   useEffect(() => {

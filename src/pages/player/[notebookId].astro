@@ -1,7 +1,9 @@
 ---
 import Layout from "../../layouts/AppLayout.astro";
 import PlayerShell from "../../components/PlayerShell.tsx";
+import AuthGuard from "../../components/AuthGuard.tsx";
 import { supabaseClient } from "../../db/supabase.client";
+import { DEFAULT_USER_ID } from "../../db/supabase.client";
 
 export const prerender = false;
 
@@ -20,15 +22,22 @@ if (startPhraseId && !uuidRegex.test(startPhraseId)) {
   return Astro.redirect(`/player/${notebookId}`);
 }
 
-// Check authentication
-const { data: { user }, error } = await supabaseClient.auth.getUser();
-
-if (error || !user) {
-  return Astro.redirect("/login");
+// Development mode: Use service role key to bypass RLS for notebook verification
+let supabase = supabaseClient;
+if (import.meta.env.NODE_ENV === "development") {
+  const supabaseUrl = import.meta.env.SUPABASE_URL;
+  const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (supabaseServiceKey) {
+    const { createClient } = await import("@supabase/supabase-js");
+    supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+  }
 }
 
-// Verify notebook ownership
-const { data: notebook, error: notebookError } = await supabaseClient
+// Verify notebook exists (in development, we bypass ownership checks)
+const { data: notebook, error: notebookError } = await supabase
   .from("notebooks")
   .select("id, name")
   .eq("id", notebookId)
@@ -41,9 +50,11 @@ if (notebookError || !notebook) {
 
 <Layout title={`Player - ${notebook.name}`}>
   <main class="min-h-screen bg-gray-900 text-white">
-    <PlayerShell 
-      notebookId={notebookId} 
-      startPhraseId={startPhraseId || undefined}
-    />
+    <AuthGuard>
+      <PlayerShell 
+        notebookId={notebookId} 
+        startPhraseId={startPhraseId || undefined}
+      />
+    </AuthGuard>
   </main>
 </Layout>
