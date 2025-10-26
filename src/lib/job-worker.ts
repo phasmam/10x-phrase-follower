@@ -136,7 +136,8 @@ export class JobWorker {
   }
 
   private async createBuild(notebookId: string, jobId: string): Promise<string> {
-    const buildId = `build_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Generate a proper UUID for the build ID
+    const buildId = crypto.randomUUID();
     
     const { error } = await this.supabase
       .from("builds")
@@ -153,7 +154,7 @@ export class JobWorker {
     return buildId;
   }
 
-  private async activateNewSegments(notebookId: string, buildId: string): Promise<void> {
+  private async activateNewSegments(notebookId: string, buildId: string, jobId: string): Promise<void> {
     // Start transaction
     const { error: transactionError } = await this.supabase.rpc("begin_transaction");
     if (transactionError) {
