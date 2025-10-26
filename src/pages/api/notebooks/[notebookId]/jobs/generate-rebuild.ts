@@ -149,8 +149,8 @@ export async function POST(context: APIContext) {
     // Process the job immediately
     console.log("Starting job processing...");
     try {
-      const supabaseUrl = process.env.SUPABASE_URL;
-      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      const supabaseUrl = import.meta.env.SUPABASE_URL;
+      const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
       
       console.log("Supabase URL configured:", !!supabaseUrl);
       console.log("Supabase Service Key configured:", !!supabaseServiceKey);

@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+// Using Web Crypto API instead of Node.js crypto
 
 // Encryption configuration
 const ALGORITHM = "AES-GCM";
@@ -8,15 +8,20 @@ const SALT_LENGTH = 32; // 256 bits
 
 // Get encryption key from environment or generate a default for development
 function getEncryptionKey(): Uint8Array {
-  const key = process.env.TTS_ENCRYPTION_KEY;
+  const key = import.meta.env.TTS_ENCRYPTION_KEY;
   if (!key) {
-    if (process.env.NODE_ENV === "production") {
+    if (import.meta.env.MODE === "production") {
       throw new Error("TTS_ENCRYPTION_KEY environment variable is required in production");
     }
     // Use a default key for development (DO NOT USE IN PRODUCTION)
     return new TextEncoder().encode("dev-key-32-chars-long-for-tts-encryption");
   }
-  return new Uint8Array(Buffer.from(key, "hex"));
+  // Convert hex string to Uint8Array
+  const bytes = new Uint8Array(key.length / 2);
+  for (let i = 0; i < key.length; i += 2) {
+    bytes[i / 2] = parseInt(key.substr(i, 2), 16);
+  }
+  return bytes;
 }
 
 // Helper function to derive key from master key and salt
@@ -84,14 +89,24 @@ export async function encrypt(plaintext: string): Promise<Buffer> {
  * @param encryptedData The encrypted key as Buffer
  * @returns Decrypted API key
  */
-export async function decrypt(encryptedData: Buffer): Promise<string> {
+export async function decrypt(encryptedData: Buffer | Uint8Array | string): Promise<string> {
   try {
     const masterKey = getEncryptionKey();
     
+    // Convert to Buffer if needed
+    let buffer: Buffer;
+    if (typeof encryptedData === 'string') {
+      buffer = Buffer.from(encryptedData, 'base64');
+    } else if (encryptedData instanceof Uint8Array) {
+      buffer = Buffer.from(encryptedData);
+    } else {
+      buffer = encryptedData;
+    }
+    
     // Extract components
-    const salt = encryptedData.subarray(0, SALT_LENGTH);
-    const iv = encryptedData.subarray(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
-    const encrypted = encryptedData.subarray(SALT_LENGTH + IV_LENGTH);
+    const salt = buffer.subarray(0, SALT_LENGTH);
+    const iv = buffer.subarray(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
+    const encrypted = buffer.subarray(SALT_LENGTH + IV_LENGTH);
     
     // Derive key from master key and salt
     const derivedKey = await deriveKey(masterKey, salt);
@@ -117,10 +132,13 @@ export async function decrypt(encryptedData: Buffer): Promise<string> {
  * @param apiKey The API key
  * @returns SHA-256 fingerprint with "SHA256:" prefix
  */
-export function generateKeyFingerprint(apiKey: string): string {
-  const hash = createHash("sha256");
-  hash.update(apiKey);
-  return `SHA256:${hash.digest("hex").substring(0, 16)}`;
+export async function generateKeyFingerprint(apiKey: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(apiKey);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return `SHA256:${hashHex.substring(0, 16)}`;
 }
 
 /**
