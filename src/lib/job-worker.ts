@@ -63,15 +63,12 @@ export class JobWorker {
   }
 
   async processJob(jobId: string): Promise<void> {
+    console.log(`Starting job processing for job: ${jobId}`);
     try {
       // Get job details
       const { data: job, error: jobError } = await this.supabase
         .from("jobs")
-        .select(`
-          id, user_id, notebook_id, type, state, timeout_sec,
-          tts_credentials!inner(encrypted_key),
-          user_voices!inner(slot, language, voice_id)
-        `)
+        .select("id, user_id, notebook_id, type, state, timeout_sec")
         .eq("id", jobId)
         .single();
 
@@ -86,8 +83,36 @@ export class JobWorker {
       // Update job state to running
       await this.updateJobState(jobId, "running", new Date().toISOString());
 
+      // Get TTS credentials separately
+      console.log(`Fetching TTS credentials for user: ${job.user_id}`);
+      const { data: ttsCredentials, error: ttsError } = await this.supabase
+        .from("tts_credentials")
+        .select("encrypted_key")
+        .eq("user_id", job.user_id)
+        .single();
+
+      if (ttsError || !ttsCredentials) {
+        console.error("TTS credentials error:", ttsError);
+        throw new Error("TTS credentials not found");
+      }
+      console.log("TTS credentials found");
+
+      // Get user voices separately
+      console.log(`Fetching user voices for user: ${job.user_id}`);
+      const { data: userVoices, error: voicesError } = await this.supabase
+        .from("user_voices")
+        .select("slot, language, voice_id")
+        .eq("user_id", job.user_id)
+        .order("slot");
+
+      if (voicesError || !userVoices || userVoices.length === 0) {
+        console.error("User voices error:", voicesError);
+        throw new Error("User voices not found");
+      }
+      console.log(`Found ${userVoices.length} user voices`);
+
       // Decrypt TTS credentials
-      const apiKey = await decrypt(job.tts_credentials.encrypted_key);
+      const apiKey = await decrypt(ttsCredentials.encrypted_key);
       const ttsService = new TtsService(apiKey);
 
       // Create build
@@ -113,7 +138,7 @@ export class JobWorker {
       // Process each phrase with each voice
       const segments = [];
       for (const phrase of phrases) {
-        for (const voice of job.user_voices) {
+        for (const voice of userVoices) {
           try {
             const text = voice.language === "en" ? phrase.en_text : phrase.pl_text;
             const audioData = await ttsService.synthesize(text, voice.voice_id, voice.language);
@@ -313,8 +338,18 @@ export class JobWorker {
   }
 }
 
+// Singleton to prevent multiple worker instances
+let workerInstance: JobWorker | null = null;
+let workerInterval: NodeJS.Timeout | null = null;
+
 // Export a function to start the worker
 export async function startJobWorker(): Promise<void> {
+  // Prevent multiple instances
+  if (workerInstance) {
+    console.log("Job worker already running");
+    return;
+  }
+
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -322,12 +357,12 @@ export async function startJobWorker(): Promise<void> {
     throw new Error("Missing Supabase configuration");
   }
 
-  const worker = new JobWorker(supabaseUrl, supabaseServiceKey);
+  workerInstance = new JobWorker(supabaseUrl, supabaseServiceKey);
 
   // Process jobs every 30 seconds
-  setInterval(async () => {
+  workerInterval = setInterval(async () => {
     try {
-      await worker.processQueuedJobs();
+      await workerInstance!.processQueuedJobs();
     } catch (error) {
       console.error("Job worker error:", error);
     }

@@ -145,8 +145,39 @@ export async function POST(context: APIContext) {
       throw ApiErrors.internal("Failed to create job");
     }
 
-    // TODO: Start the job worker process here
-    // For now, we'll just return the job - the actual processing would be handled by a background worker
+    // Process the job immediately
+    try {
+      const { JobWorker } = await import("../../../../lib/job-worker");
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      
+      if (supabaseUrl && supabaseServiceKey) {
+        const worker = new JobWorker(supabaseUrl, supabaseServiceKey);
+        // Process the job in the background (non-blocking)
+        worker.processJob(jobId).catch((error) => {
+          console.error("Failed to process job:", error);
+          // Update job state to failed
+          supabase
+            .from("jobs")
+            .update({ 
+              state: "failed", 
+              error: error.message,
+              ended_at: new Date().toISOString()
+            })
+            .eq("id", jobId)
+            .then(() => {
+              console.log(`Job ${jobId} marked as failed: ${error.message}`);
+            })
+            .catch((updateError) => {
+              console.error("Failed to update job state:", updateError);
+            });
+        });
+      } else {
+        console.error("Missing Supabase configuration for job processing");
+      }
+    } catch (error) {
+      console.error("Failed to import or start job processing:", error);
+    }
 
     const response: JobDTO = job;
 
