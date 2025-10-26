@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { ApiErrors } from "../../../../../lib/errors";
 import type { JobDTO } from "../../../../../types";
 import { DEFAULT_USER_ID } from "../../../../../db/supabase.client";
+import { JobWorker } from "../../../../../lib/job-worker";
 
 export const prerender = false;
 
@@ -146,13 +147,19 @@ export async function POST(context: APIContext) {
     }
 
     // Process the job immediately
+    console.log("Starting job processing...");
     try {
-      const { JobWorker } = await import("../../../../lib/job-worker");
       const supabaseUrl = process.env.SUPABASE_URL;
       const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
       
+      console.log("Supabase URL configured:", !!supabaseUrl);
+      console.log("Supabase Service Key configured:", !!supabaseServiceKey);
+      
       if (supabaseUrl && supabaseServiceKey) {
+        console.log("Creating JobWorker instance...");
         const worker = new JobWorker(supabaseUrl, supabaseServiceKey);
+        console.log("JobWorker instance created, starting job processing...");
+        
         // Process the job in the background (non-blocking)
         worker.processJob(jobId).catch((error) => {
           console.error("Failed to process job:", error);
@@ -172,11 +179,13 @@ export async function POST(context: APIContext) {
               console.error("Failed to update job state:", updateError);
             });
         });
+        console.log("Job processing started in background");
       } else {
         console.error("Missing Supabase configuration for job processing");
       }
     } catch (error) {
-      console.error("Failed to import or start job processing:", error);
+      console.error("Failed to start job processing:", error);
+      console.error("Error details:", error);
     }
 
     const response: JobDTO = job;

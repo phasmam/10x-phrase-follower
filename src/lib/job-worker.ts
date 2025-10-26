@@ -65,6 +65,7 @@ export class JobWorker {
   async processJob(jobId: string): Promise<void> {
     console.log(`Starting job processing for job: ${jobId}`);
     try {
+      console.log("Job worker initialized successfully");
       // Get job details
       const { data: job, error: jobError } = await this.supabase
         .from("jobs")
@@ -311,6 +312,7 @@ export class JobWorker {
     } catch (error) {
       // Rollback transaction
       await this.supabase.rpc("rollback_transaction");
+      console.error(`Job processing failed for job ${jobId}:`, error);
       throw error;
     }
   }
