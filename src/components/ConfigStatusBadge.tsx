@@ -12,7 +12,7 @@ interface ConfigStatusBadgeProps {}
 export default function ConfigStatusBadge({}: ConfigStatusBadgeProps) {
   const [credentialsState, setCredentialsState] = useState<TtsCredentialsState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { fetch } = useApi();
+  const { apiCall } = useApi();
 
   useEffect(() => {
     loadCredentialsState();
@@ -20,11 +20,8 @@ export default function ConfigStatusBadge({}: ConfigStatusBadgeProps) {
 
   const loadCredentialsState = async () => {
     try {
-      const response = await fetch('/api/tts-credentials');
-      if (response.ok) {
-        const data = await response.json();
-        setCredentialsState(data);
-      }
+      const data = await apiCall('/api/tts-credentials');
+      setCredentialsState(data);
     } catch (error) {
       console.error('Failed to load TTS credentials state:', error);
     } finally {
