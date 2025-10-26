@@ -15,7 +15,7 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null);
-  const { fetch } = useApi();
+  const { apiCall } = useApi();
 
   // Load voice slots on mount
   useEffect(() => {
@@ -24,33 +24,30 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
 
   const loadVoiceSlots = async () => {
     try {
-      const response = await fetch('/api/user-voices');
-      if (response.ok) {
-        const data = await response.json();
-        // Always show all 4 slots, merge with database data
-        const defaultSlots: VoiceSlot[] = [
-          { slot: 'EN1', language: 'en', voice_id: '' },
-          { slot: 'EN2', language: 'en', voice_id: '' },
-          { slot: 'EN3', language: 'en', voice_id: '' },
-          { slot: 'PL', language: 'pl', voice_id: '' },
-        ];
+      const data = await apiCall('/api/user-voices');
+      // Always show all 4 slots, merge with database data
+      const defaultSlots: VoiceSlot[] = [
+        { slot: 'EN1', language: 'en', voice_id: '' },
+        { slot: 'EN2', language: 'en', voice_id: '' },
+        { slot: 'EN3', language: 'en', voice_id: '' },
+        { slot: 'PL', language: 'pl', voice_id: '' },
+      ];
 
-        if (data.slots && data.slots.length > 0) {
-          // Merge database data with default slots
-          const mergedSlots = defaultSlots.map(defaultSlot => {
-            const dbSlot = data.slots.find(slot => slot.slot === defaultSlot.slot);
-            if (dbSlot) {
-              return {
-                ...dbSlot,
-                language: dbSlot.slot.startsWith('EN') ? 'en' : 'pl'
-              };
-            }
-            return defaultSlot;
-          });
-          setVoiceSlots(mergedSlots);
-        } else {
-          setVoiceSlots(defaultSlots);
-        }
+      if (data.slots && data.slots.length > 0) {
+        // Merge database data with default slots
+        const mergedSlots = defaultSlots.map(defaultSlot => {
+          const dbSlot = data.slots.find(slot => slot.slot === defaultSlot.slot);
+          if (dbSlot) {
+            return {
+              ...dbSlot,
+              language: dbSlot.slot.startsWith('EN') ? 'en' : 'pl'
+            };
+          }
+          return defaultSlot;
+        });
+        setVoiceSlots(mergedSlots);
+      } else {
+        setVoiceSlots(defaultSlots);
       }
     } catch (error) {
       console.error('Failed to load voice slots:', error);
@@ -82,9 +79,8 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
     try {
       // Save each voice slot
       const savePromises = voiceSlots.map(slot => 
-        fetch(`/api/user-voices/${slot.slot}`, {
+        apiCall(`/api/user-voices/${slot.slot}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             language: slot.language,
             voice_id: slot.voice_id
@@ -92,16 +88,12 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
         })
       );
 
-      const results = await Promise.all(savePromises);
-      const allSuccessful = results.every(r => r.ok);
-
-      if (allSuccessful) {
-        setSaveResult({ success: true, message: 'Voice slots saved successfully!' });
-      } else {
-        setSaveResult({ success: false, message: 'Failed to save some voice slots' });
-      }
+      await Promise.all(savePromises);
+      setSaveResult({ success: true, message: 'Voice slots saved successfully!' });
     } catch (error) {
-      setSaveResult({ success: false, message: 'Failed to save voice slots. Please try again.' });
+      console.error('Failed to save voice slots:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save voice slots. Please try again.';
+      setSaveResult({ success: false, message: errorMessage });
     } finally {
       setIsSaving(false);
     }

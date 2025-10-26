@@ -16,7 +16,7 @@ export default function TtsKeyForm({}: TtsKeyFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [credentialsState, setCredentialsState] = useState<TtsCredentialsState | null>(null);
-  const { fetch } = useApi();
+  const { apiCall } = useApi();
 
   // Load current credentials state
   useEffect(() => {
@@ -25,11 +25,8 @@ export default function TtsKeyForm({}: TtsKeyFormProps) {
 
   const loadCredentialsState = async () => {
     try {
-      const response = await fetch('/api/tts-credentials');
-      if (response.ok) {
-        const data = await response.json();
-        setCredentialsState(data);
-      }
+      const data = await apiCall('/api/tts-credentials');
+      setCredentialsState(data);
     } catch (error) {
       console.error('Failed to load TTS credentials state:', error);
     }
@@ -45,26 +42,20 @@ export default function TtsKeyForm({}: TtsKeyFormProps) {
     setTestResult(null);
 
     try {
-      const response = await fetch('/api/tts-credentials/test', {
+      console.log('Making TTS test request...');
+      const data = await apiCall('/api/tts-credentials/test', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ api_key: apiKey, provider: 'google' }),
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setTestResult({ success: true, message: 'TTS credentials are valid!' });
-      } else {
-        setTestResult({ 
-          success: false, 
-          message: data.message || 'TTS credentials test failed' 
-        });
-      }
+      console.log('TTS test response data:', data);
+      setTestResult({ success: true, message: 'TTS credentials are valid!' });
     } catch (error) {
+      console.error('TTS test catch error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to test credentials. Please try again.';
       setTestResult({ 
         success: false, 
-        message: 'Failed to test credentials. Please try again.' 
+        message: errorMessage
       });
     } finally {
       setIsTesting(false);
@@ -85,28 +76,19 @@ export default function TtsKeyForm({}: TtsKeyFormProps) {
     setIsSaving(true);
 
     try {
-      const response = await fetch('/api/tts-credentials', {
+      const data = await apiCall('/api/tts-credentials', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ google_api_key: apiKey }),
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setCredentialsState(data);
-        setTestResult({ success: true, message: 'TTS credentials saved successfully!' });
-        setApiKey(''); // Clear the form
-      } else {
-        setTestResult({ 
-          success: false, 
-          message: data.message || 'Failed to save credentials' 
-        });
-      }
+      setCredentialsState(data);
+      setTestResult({ success: true, message: 'TTS credentials saved successfully!' });
+      setApiKey(''); // Clear the form
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save credentials. Please try again.';
       setTestResult({ 
         success: false, 
-        message: 'Failed to save credentials. Please try again.' 
+        message: errorMessage
       });
     } finally {
       setIsSaving(false);

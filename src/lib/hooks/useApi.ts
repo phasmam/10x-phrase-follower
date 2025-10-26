@@ -10,18 +10,18 @@ interface ApiOptions extends RequestInit {
  */
 export function useApi() {
   const { token, isAuthenticated, userId } = useAuth();
-  
+
   // Fallback: try to get token from localStorage if useAuth doesn't have it
   const getTokenFromStorage = () => {
     if (typeof window === "undefined") return null;
-    
+
     const storedToken = localStorage.getItem("dev_jwt_token");
     const storedExpiry = localStorage.getItem("dev_jwt_expiry");
-    
+
     if (storedToken && storedExpiry) {
       const now = Date.now();
       const expiry = parseInt(storedExpiry, 10);
-      
+
       if (now < expiry) {
         return storedToken;
       } else {
@@ -31,18 +31,15 @@ export function useApi() {
         localStorage.removeItem("dev_jwt_expiry");
       }
     }
-    
+
     return null;
   };
-  
+
   // Use token from useAuth or fallback to localStorage
   const effectiveToken = token || getTokenFromStorage();
   const effectiveIsAuthenticated = isAuthenticated || !!effectiveToken;
 
-  const apiCall = async <T>(
-    endpoint: string, 
-    options: ApiOptions = {}
-  ): Promise<T> => {
+  const apiCall = async <T>(endpoint: string, options: ApiOptions = {}): Promise<T> => {
     const { requireAuth = true, headers = {}, ...restOptions } = options;
 
     // Check authentication requirement
@@ -53,7 +50,7 @@ export function useApi() {
     // Prepare headers
     const requestHeaders: HeadersInit = {
       "Content-Type": "application/json",
-      "Accept": "application/json",
+      Accept: "application/json",
       ...headers,
     };
 
@@ -72,7 +69,7 @@ export function useApi() {
     if (!response.ok) {
       const errorText = await response.text();
       let errorMessage = `HTTP ${response.status}`;
-      
+
       try {
         const errorData = JSON.parse(errorText);
         errorMessage = errorData.error?.message || errorMessage;
@@ -80,7 +77,7 @@ export function useApi() {
         // If not JSON, use status text
         errorMessage = response.statusText || errorMessage;
       }
-      
+
       throw new Error(errorMessage);
     }
 
@@ -89,7 +86,7 @@ export function useApi() {
     if (contentType?.includes("application/json")) {
       return response.json();
     }
-    
+
     // Return text for non-JSON responses
     return response.text() as unknown as T;
   };
