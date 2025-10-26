@@ -1,6 +1,6 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
-import { createApiError } from "../../../../lib/errors";
+import { ApiErrors } from "../../../../lib/errors";
 import type { JobListResponse } from "../../../../types";
 
 export const prerender = false;
@@ -12,7 +12,7 @@ const JobStateSchema = z.enum(["queued", "running", "succeeded", "failed", "canc
 function getUserId(context: APIContext): string {
   const userId = context.locals.userId;
   if (!userId) {
-    throw createApiError("unauthorized", "Authentication required");
+    throw ApiErrors.unauthorized("Authentication required");
   }
   return userId;
 }
@@ -38,7 +38,7 @@ export async function GET(context: APIContext) {
     // Parse and validate path parameter
     const notebookId = context.params.notebookId;
     if (!notebookId) {
-      throw createApiError("validation_error", "Notebook ID is required");
+      throw ApiErrors.validationError("Notebook ID is required");
     }
 
     // Parse query parameters
@@ -64,7 +64,7 @@ export async function GET(context: APIContext) {
     const { data: jobs, error } = await query;
 
     if (error) {
-      throw createApiError("internal", "Failed to fetch jobs");
+      throw ApiErrors.internal("Failed to fetch jobs");
     }
 
     // Check if there are more items

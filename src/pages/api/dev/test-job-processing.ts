@@ -1,6 +1,6 @@
 import { APIContext } from "astro";
 import { createClient } from "@supabase/supabase-js";
-import { JobWorker } from "../../lib/job-worker";
+import { JobWorker } from "../../../lib/job-worker";
 
 const DEFAULT_USER_ID = "0a1f3212-c55f-4a62-bc0f-4121a7a72283";
 

@@ -84,50 +84,176 @@ export class JobWorker {
       // Update job state to running
       await this.updateJobState(jobId, "running", new Date().toISOString());
 
-      // For now, skip TTS processing and just create a mock build
-      // TODO: Fix TTS encryption and implement proper audio generation
-      console.log("Skipping TTS processing for now - creating mock build");
+      // Get TTS credentials for the user
+      const { data: credentials, error: credError } = await this.supabase
+        .from("tts_credentials")
+        .select("encrypted_key, is_configured")
+        .eq("user_id", job.user_id)
+        .single();
+
+      if (credError || !credentials || !credentials.is_configured) {
+        throw new Error("TTS credentials not configured");
+      }
+
+      // Decrypt the TTS API key
+      const { decrypt } = await import("./tts-encryption");
+      const apiKey = await decrypt(credentials.encrypted_key);
+
+      // Get user voices
+      const { data: voices, error: voicesError } = await this.supabase
+        .from("user_voices")
+        .select("slot, language, voice_id")
+        .eq("user_id", job.user_id)
+        .order("slot");
+
+      if (voicesError || !voices || voices.length === 0) {
+        throw new Error("User voices not configured");
+      }
+
+      // Get phrases for the notebook
+      const { data: phrases, error: phrasesError } = await this.supabase
+        .from("phrases")
+        .select("id, en_text, pl_text")
+        .eq("notebook_id", job.notebook_id)
+        .order("position");
+
+      if (phrasesError || !phrases || phrases.length === 0) {
+        throw new Error("No phrases found in notebook");
+      }
+
+      console.log(`Found ${phrases.length} phrases in notebook`);
+      console.log(`Found ${voices.length} voice slots configured`);
 
       // Create build
       const buildId = await this.createBuild(job.notebook_id, jobId);
 
-      // For now, just create a mock build without audio processing
-      console.log("Creating mock build without audio processing");
-      
-      // Get phrases count for logging
-      const { data: phrases, error: phrasesError } = await this.supabase
-        .from("phrases")
-        .select("id")
-        .eq("notebook_id", job.notebook_id);
+      // Initialize TTS service
+      const ttsService = new TtsService(apiKey);
 
-      if (phrasesError) {
-        console.error("Failed to fetch phrases:", phrasesError);
-      } else {
-        console.log(`Found ${phrases?.length || 0} phrases in notebook`);
+      // Process each phrase with each voice slot
+      const audioSegments = [];
+      for (const phrase of phrases) {
+        for (const voice of voices) {
+          try {
+            console.log(`Processing phrase ${phrase.id} with voice ${voice.slot} (${voice.voice_id})`);
+
+            // Determine text based on language
+            const text = voice.language === "en" ? phrase.en_text : phrase.pl_text;
+            if (!text || text.trim() === "") {
+              console.log(`Skipping empty text for phrase ${phrase.id}, voice ${voice.slot}`);
+              continue;
+            }
+
+            // Generate audio using TTS
+            const audioBuffer = await ttsService.synthesize(text, voice.voice_id, voice.language);
+
+            // Upload to storage
+            const fileName = `${phrase.id}/${voice.slot}.mp3`;
+            const { error: uploadError } = await this.storage.from("audio").upload(fileName, audioBuffer, {
+              contentType: "audio/mpeg",
+              cacheControl: "3600",
+            });
+
+            if (uploadError) {
+              console.error(`Failed to upload audio for phrase ${phrase.id}, voice ${voice.slot}:`, uploadError);
+              // Create failed segment with a placeholder path
+              audioSegments.push({
+                id: crypto.randomUUID(),
+                phrase_id: phrase.id,
+                build_id: buildId,
+                voice_slot: voice.slot,
+                status: "failed",
+                error_code: "upload_failed",
+                path: `failed/${phrase.id}/${voice.slot}.mp3`, // Placeholder path for failed uploads
+                size_bytes: null,
+                duration_ms: null,
+                sample_rate_hz: null,
+                bitrate_kbps: null,
+                is_active: false,
+              });
+              continue;
+            }
+
+            // Create successful segment
+            audioSegments.push({
+              id: crypto.randomUUID(),
+              phrase_id: phrase.id,
+              build_id: buildId,
+              voice_slot: voice.slot,
+              status: "complete",
+              error_code: null,
+              path: fileName,
+              size_bytes: audioBuffer.length,
+              duration_ms: null, // Could be calculated from audio buffer
+              sample_rate_hz: 22050,
+              bitrate_kbps: 64,
+              is_active: false, // Will be activated after all segments are created
+            });
+
+            console.log(`Successfully processed phrase ${phrase.id} with voice ${voice.slot}`);
+          } catch (error) {
+            console.error(`Failed to process phrase ${phrase.id} with voice ${voice.slot}:`, error);
+            // Create failed segment
+            audioSegments.push({
+              id: crypto.randomUUID(),
+              phrase_id: phrase.id,
+              build_id: buildId,
+              voice_slot: voice.slot,
+              status: "failed",
+              error_code: error instanceof Error ? error.message : "unknown_error",
+              path: null,
+              size_bytes: null,
+              duration_ms: null,
+              sample_rate_hz: null,
+              bitrate_kbps: null,
+              is_active: false,
+            });
+          }
+        }
       }
+
+      // Insert all audio segments
+      if (audioSegments.length > 0) {
+        const { error: segmentsError } = await this.supabase.from("audio_segments").insert(audioSegments);
+
+        if (segmentsError) {
+          throw new Error(`Failed to insert audio segments: ${segmentsError.message}`);
+        }
+      }
+
+      // Activate new segments and deactivate old ones
+      await this.activateNewSegments(job.notebook_id, buildId, jobId);
+
+      console.log(`Job ${jobId} completed successfully with ${audioSegments.length} audio segments`);
 
       // Update job as succeeded
       await this.updateJobState(jobId, "succeeded", new Date().toISOString());
-
     } catch (error) {
       console.error(`Job ${jobId} failed:`, error);
-      
+
       // Update job as failed
-      await this.updateJobState(jobId, "failed", new Date().toISOString(), 
-        error instanceof Error ? error.message : "Unknown error");
+      await this.updateJobState(
+        jobId,
+        "failed",
+        new Date().toISOString(),
+        error instanceof Error ? error.message : "Unknown error"
+      );
     }
   }
 
-  private async updateJobState(jobId: string, state: string, startedAt?: string, endedAt?: string, error?: string): Promise<void> {
+  private async updateJobState(
+    jobId: string,
+    state: string,
+    startedAt?: string,
+    endedAt?: string,
+    error?: string
+  ): Promise<void> {
     const updateData: any = { state };
     if (startedAt) updateData.started_at = startedAt;
     if (endedAt) updateData.ended_at = endedAt;
     if (error) updateData.error = error;
 
-    const { error: updateError } = await this.supabase
-      .from("jobs")
-      .update(updateData)
-      .eq("id", jobId);
+    const { error: updateError } = await this.supabase.from("jobs").update(updateData).eq("id", jobId);
 
     if (updateError) {
       console.error(`Failed to update job state: ${updateError.message}`);
@@ -138,14 +264,12 @@ export class JobWorker {
   private async createBuild(notebookId: string, jobId: string): Promise<string> {
     // Generate a proper UUID for the build ID
     const buildId = crypto.randomUUID();
-    
-    const { error } = await this.supabase
-      .from("builds")
-      .insert({
-        id: buildId,
-        notebook_id: notebookId,
-        job_id: jobId,
-      });
+
+    const { error } = await this.supabase.from("builds").insert({
+      id: buildId,
+      notebook_id: notebookId,
+      job_id: jobId,
+    });
 
     if (error) {
       throw new Error(`Failed to create build: ${error.message}`);
@@ -155,33 +279,40 @@ export class JobWorker {
   }
 
   private async activateNewSegments(notebookId: string, buildId: string, jobId: string): Promise<void> {
-    // Start transaction
-    const { error: transactionError } = await this.supabase.rpc("begin_transaction");
-    if (transactionError) {
-      throw new Error(`Failed to begin transaction: ${transactionError.message}`);
-    }
-
     try {
-      // Deactivate old segments
+      // Get all phrase IDs for this notebook
+      const { data: phrases, error: phrasesError } = await this.supabase
+        .from("phrases")
+        .select("id")
+        .eq("notebook_id", notebookId);
+
+      if (phrasesError) {
+        throw new Error(`Failed to fetch phrases: ${phrasesError.message}`);
+      }
+
+      if (!phrases || phrases.length === 0) {
+        console.log("No phrases found for notebook, skipping segment activation");
+        return;
+      }
+
+      const phraseIds = phrases.map((p: any) => p.id);
+
+      // Deactivate old segments for this notebook's phrases
       const { error: deactivateError } = await this.supabase
         .from("audio_segments")
         .update({ is_active: false })
-        .eq("phrase_id", 
-          this.supabase
-            .from("phrases")
-            .select("id")
-            .eq("notebook_id", notebookId)
-        );
+        .in("phrase_id", phraseIds);
 
       if (deactivateError) {
         throw new Error(`Failed to deactivate old segments: ${deactivateError.message}`);
       }
 
-      // Activate new segments
+      // Activate new segments for this build
       const { error: activateError } = await this.supabase
         .from("audio_segments")
         .update({ is_active: true })
-        .eq("build_id", buildId);
+        .eq("build_id", buildId)
+        .eq("status", "complete"); // Only activate successful segments
 
       if (activateError) {
         throw new Error(`Failed to activate new segments: ${activateError.message}`);
@@ -197,16 +328,9 @@ export class JobWorker {
         throw new Error(`Failed to update notebook: ${updateNotebookError.message}`);
       }
 
-      // Commit transaction
-      const { error: commitError } = await this.supabase.rpc("commit_transaction");
-      if (commitError) {
-        throw new Error(`Failed to commit transaction: ${commitError.message}`);
-      }
-
+      console.log(`Activated segments for build ${buildId} and updated notebook ${notebookId}`);
     } catch (error) {
-      // Rollback transaction
-      await this.supabase.rpc("rollback_transaction");
-      console.error(`Job processing failed for job ${jobId}:`, error);
+      console.error(`Failed to activate new segments for job ${jobId}:`, error);
       throw error;
     }
   }
@@ -236,7 +360,7 @@ export class JobWorker {
 
 // Singleton to prevent multiple worker instances
 let workerInstance: JobWorker | null = null;
-let workerInterval: NodeJS.Timeout | null = null;
+const workerInterval: NodeJS.Timeout | null = null;
 
 // Export a function to start the worker
 export async function startJobWorker(): Promise<void> {
@@ -256,9 +380,11 @@ export async function startJobWorker(): Promise<void> {
   workerInstance = new JobWorker(supabaseUrl, supabaseServiceKey);
 
   // Process jobs every 30 seconds
-  workerInterval = setInterval(async () => {
+  const workerInterval = setInterval(async () => {
     try {
-      await workerInstance!.processQueuedJobs();
+      if (workerInstance) {
+        await workerInstance.processQueuedJobs();
+      }
     } catch (error) {
       console.error("Job worker error:", error);
     }

@@ -1,5 +1,5 @@
 import type { APIContext } from "astro";
-import { createApiError } from "../../../lib/errors";
+import { ApiErrors } from "../../../lib/errors";
 import type { JobDTO } from "../../../types";
 
 export const prerender = false;
@@ -8,7 +8,7 @@ export const prerender = false;
 function getUserId(context: APIContext): string {
   const userId = context.locals.userId;
   if (!userId) {
-    throw createApiError("unauthorized", "Authentication required");
+    throw ApiErrors.unauthorized("Authentication required");
   }
   return userId;
 }
@@ -21,7 +21,7 @@ export async function GET(context: APIContext) {
     // Parse and validate path parameter
     const jobId = context.params.jobId;
     if (!jobId) {
-      throw createApiError("validation_error", "Job ID is required");
+      throw ApiErrors.validationError("Job ID is required");
     }
 
     // Get the job
@@ -34,9 +34,9 @@ export async function GET(context: APIContext) {
 
     if (error) {
       if (error.code === "PGRST116") {
-        throw createApiError("not_found", "Job not found");
+        throw ApiErrors.notFound("Job not found");
       }
-      throw createApiError("internal", "Failed to fetch job");
+      throw ApiErrors.internal("Failed to fetch job");
     }
 
     const response: JobDTO = job;

@@ -1,7 +1,7 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
-import { createApiError } from "../../../lib/errors";
+import { ApiErrors } from "../../../lib/errors";
 import { DEFAULT_USER_ID } from "../../../db/supabase.client";
 import type { UpsertUserVoiceBySlotCommand, UserVoiceDTO } from "../../../types";
 
@@ -18,7 +18,7 @@ const UpsertUserVoiceSchema = z.object({
 function getUserId(context: APIContext): string {
   const userId = context.locals.userId;
   if (!userId) {
-    throw createApiError("unauthorized", "Authentication required");
+    throw ApiErrors.unauthorized("Authentication required");
   }
   return userId;
 }
@@ -29,10 +29,10 @@ function validateSlotLanguage(slot: string, language: string): void {
   const isPolishSlot = slot === "PL";
   
   if (isEnglishSlot && language !== "en") {
-    throw createApiError("validation_error", `Slot ${slot} requires language 'en'`);
+    throw ApiErrors.validationError(`Slot ${slot} requires language 'en'`);
   }
   if (isPolishSlot && language !== "pl") {
-    throw createApiError("validation_error", `Slot ${slot} requires language 'pl'`);
+    throw ApiErrors.validationError(`Slot ${slot} requires language 'pl'`);
   }
 }
 
@@ -55,12 +55,12 @@ async function checkDuplicateEnVoices(
     .neq("slot", slot); // Exclude current slot
 
   if (error) {
-    throw createApiError("internal", "Failed to check for duplicate voices");
+    throw ApiErrors.internal("Failed to check for duplicate voices");
   }
 
   const duplicateVoice = existingVoices?.find((v: any) => v.voice_id === voiceId);
   if (duplicateVoice) {
-    throw createApiError("conflict", `Voice ${voiceId} is already used in slot ${duplicateVoice.slot}`);
+    throw ApiErrors.conflict(`Voice ${voiceId} is already used in slot ${duplicateVoice.slot}`);
   }
 }
 
@@ -87,7 +87,7 @@ export async function PUT(context: APIContext) {
     // Parse and validate path parameter
     const slot = context.params.slot;
     if (!slot) {
-      throw createApiError("validation_error", "Slot parameter is required");
+      throw ApiErrors.validationError("Slot parameter is required");
     }
     const validatedSlot = SlotParamSchema.parse(slot);
 
@@ -119,9 +119,9 @@ export async function PUT(context: APIContext) {
     if (error) {
       console.error("Database error:", error);
       if (error.code === "23505") {
-        throw createApiError("conflict", "Voice configuration conflict");
+        throw ApiErrors.conflict("Voice configuration conflict");
       }
-      throw createApiError("internal", `Failed to save voice configuration: ${error.message}`);
+      throw ApiErrors.internal(`Failed to save voice configuration: ${error.message}`);
     }
 
     const response: UserVoiceDTO = voice;

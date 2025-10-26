@@ -1,6 +1,6 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
-import { createApiError } from "../../../../lib/errors";
+import { ApiErrors } from "../../../../lib/errors";
 import type { AudioSegmentListResponse } from "../../../../types";
 
 export const prerender = false;
@@ -13,7 +13,7 @@ const AudioStatusSchema = z.enum(["complete", "failed", "missing"]);
 function getUserId(context: APIContext): string {
   const userId = context.locals.userId;
   if (!userId) {
-    throw createApiError("unauthorized", "Authentication required");
+    throw ApiErrors.unauthorized("Authentication required");
   }
   return userId;
 }
@@ -25,7 +25,7 @@ function parseQueryParams(url: URL) {
   const phraseId = url.searchParams.get("phrase_id");
   const voiceSlot = url.searchParams.get("voice_slot");
   const status = url.searchParams.get("status");
-  
+
   return {
     limit,
     cursor,
@@ -43,7 +43,7 @@ export async function GET(context: APIContext) {
     // Parse and validate path parameter
     const notebookId = context.params.notebookId;
     if (!notebookId) {
-      throw createApiError("validation_error", "Notebook ID is required");
+      throw ApiErrors.validationError("Notebook ID is required");
     }
 
     // Parse query parameters
@@ -52,11 +52,13 @@ export async function GET(context: APIContext) {
     // Build query - only get active segments
     let query = supabase
       .from("audio_segments")
-      .select(`
+      .select(
+        `
         id, phrase_id, voice_slot, build_id, path, duration_ms, size_bytes,
         sample_rate_hz, bitrate_kbps, status, error_code, word_timings,
         is_active, created_at, updated_at
-      `)
+      `
+      )
       .eq("is_active", true)
       .order("created_at", { ascending: false })
       .limit(limit + 1); // Get one extra to check if there are more
@@ -80,7 +82,7 @@ export async function GET(context: APIContext) {
     const { data: segments, error } = await query;
 
     if (error) {
-      throw createApiError("internal", "Failed to fetch audio segments");
+      throw ApiErrors.internal("Failed to fetch audio segments");
     }
 
     // Check if there are more items

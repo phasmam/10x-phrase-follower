@@ -1,6 +1,6 @@
 import type { APIContext } from "astro";
 import { createClient } from "@supabase/supabase-js";
-import { createApiError } from "../../lib/errors";
+import { ApiErrors } from "../../lib/errors";
 import { DEFAULT_USER_ID } from "../../db/supabase.client";
 import type { UserVoicesListResponse } from "../../types";
 
@@ -10,7 +10,7 @@ export const prerender = false;
 function getUserId(context: APIContext): string {
   const userId = context.locals.userId;
   if (!userId) {
-    throw createApiError("unauthorized", "Authentication required");
+    throw ApiErrors.unauthorized("Authentication required");
   }
   return userId;
 }
@@ -43,7 +43,7 @@ export async function GET(context: APIContext) {
       .order("slot");
 
     if (error) {
-      throw createApiError("internal", "Failed to fetch user voices");
+      throw ApiErrors.internal("Failed to fetch user voices");
     }
 
     const response: UserVoicesListResponse = {

@@ -160,12 +160,15 @@ export async function PUT(context: APIContext) {
     const encryptedKey = await encrypt(google_api_key);
     const keyFingerprint = generateKeyFingerprint(google_api_key);
 
+    // Convert Buffer to base64 string for storage
+    const encryptedKeyBase64 = encryptedKey.toString('base64');
+
     // Save or update credentials
     const { error } = await supabase
       .from("tts_credentials")
       .upsert({
         user_id: userId,
-        encrypted_key: encryptedKey,
+        encrypted_key: encryptedKeyBase64,
         key_fingerprint: keyFingerprint,
         last_validated_at: new Date().toISOString(),
         is_configured: true,

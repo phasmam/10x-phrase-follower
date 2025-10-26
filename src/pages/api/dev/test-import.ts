@@ -3,7 +3,7 @@ import { APIContext } from "astro";
 export async function GET(context: APIContext) {
   try {
     // Test importing the job worker
-    const { JobWorker } = await import("../../lib/job-worker");
+    const { JobWorker } = await import("../../../lib/job-worker");
     
     return new Response(JSON.stringify({ 
       success: true,

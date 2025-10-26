@@ -1,5 +1,5 @@
 import type { APIContext } from "astro";
-import { createApiError } from "../../../../lib/errors";
+import { ApiErrors } from "../../../../lib/errors";
 import type { BuildListResponse } from "../../../../types";
 
 export const prerender = false;
@@ -8,7 +8,7 @@ export const prerender = false;
 function getUserId(context: APIContext): string {
   const userId = context.locals.userId;
   if (!userId) {
-    throw createApiError("unauthorized", "Authentication required");
+    throw ApiErrors.unauthorized("Authentication required");
   }
   return userId;
 }
@@ -29,7 +29,7 @@ export async function GET(context: APIContext) {
     // Parse and validate path parameter
     const notebookId = context.params.notebookId;
     if (!notebookId) {
-      throw createApiError("validation_error", "Notebook ID is required");
+      throw ApiErrors.validationError("Notebook ID is required");
     }
 
     // Parse query parameters
@@ -51,7 +51,7 @@ export async function GET(context: APIContext) {
     const { data: builds, error } = await query;
 
     if (error) {
-      throw createApiError("internal", "Failed to fetch builds");
+      throw ApiErrors.internal("Failed to fetch builds");
     }
 
     // Check if there are more items

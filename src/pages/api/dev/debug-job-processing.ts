@@ -1,6 +1,6 @@
 import { APIContext } from "astro";
 import { createClient } from "@supabase/supabase-js";
-import { JobWorker } from "../../lib/job-worker";
+import { JobWorker } from "../../../lib/job-worker";
 
 const DEFAULT_USER_ID = "0a1f3212-c55f-4a62-bc0f-4121a7a72283";
 
@@ -51,17 +51,13 @@ export async function POST(context: APIContext) {
       .eq("user_id", DEFAULT_USER_ID)
       .order("slot");
 
-    // Get phrases for the first notebook
-    let phrases = [];
-    if (jobs && jobs.length > 0) {
-      const { data: phrasesData, error: phrasesError } = await supabase
-        .from("phrases")
-        .select("*")
-        .eq("notebook_id", jobs[0].notebook_id)
-        .order("position");
-      
-      phrases = phrasesData || [];
-    }
+    // Get phrases for all notebooks
+    const { data: phrasesData, error: phrasesError } = await supabase
+      .from("phrases")
+      .select("*")
+      .order("position");
+    
+    const phrases = phrasesData || [];
 
     return new Response(JSON.stringify({ 
       success: true,

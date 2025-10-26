@@ -1,16 +1,25 @@
-// Using Web Crypto API instead of Node.js crypto
+// Encryption/Decryption Test Script
+// This script tests the encryption and decryption process step by step
+// Run with: node src/test-encryption.js
 
-// Encryption configuration
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Copy the encryption functions from tts-encryption.ts
 const ALGORITHM = "AES-GCM";
 const KEY_LENGTH = 32; // 256 bits
 const IV_LENGTH = 12; // 96 bits for GCM
 const SALT_LENGTH = 32; // 256 bits
 
 // Get encryption key from environment or generate a default for development
-function getEncryptionKey(): Uint8Array {
-  const key = import.meta.env.TTS_ENCRYPTION_KEY;
+function getEncryptionKey() {
+  const key = process.env.TTS_ENCRYPTION_KEY;
   if (!key) {
-    if (import.meta.env.MODE === "production") {
+    if (process.env.NODE_ENV === "production") {
       throw new Error("TTS_ENCRYPTION_KEY environment variable is required in production");
     }
     // Use a default key for development (DO NOT USE IN PRODUCTION)
@@ -25,7 +34,7 @@ function getEncryptionKey(): Uint8Array {
 }
 
 // Helper function to derive key from master key and salt
-async function deriveKey(masterKey: Uint8Array, salt: Uint8Array): Promise<CryptoKey> {
+async function deriveKey(masterKey, salt) {
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
     masterKey,
@@ -48,12 +57,8 @@ async function deriveKey(masterKey: Uint8Array, salt: Uint8Array): Promise<Crypt
   );
 }
 
-/**
- * Encrypts a TTS API key using AES-GCM
- * @param plaintext The API key to encrypt
- * @returns Encrypted key as Buffer
- */
-export async function encrypt(plaintext: string): Promise<Buffer> {
+// Encrypt function
+async function encrypt(plaintext) {
   try {
     const masterKey = getEncryptionKey();
     const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
@@ -84,36 +89,17 @@ export async function encrypt(plaintext: string): Promise<Buffer> {
   }
 }
 
-/**
- * Decrypts a TTS API key using AES-GCM
- * @param encryptedData The encrypted key as Buffer
- * @returns Decrypted API key
- */
-export async function decrypt(encryptedData: Buffer | Uint8Array | string | any): Promise<string> {
+// Decrypt function
+async function decrypt(encryptedData) {
   try {
     const masterKey = getEncryptionKey();
     
     // Convert to Buffer if needed
-    let buffer: Buffer;
+    let buffer;
     if (typeof encryptedData === 'string') {
-      // Check if it's hex encoded (starts with \x)
-      if (encryptedData.startsWith('\\x')) {
-        // Remove \x prefix and convert hex to buffer
-        const hexString = encryptedData.replace(/\\x/g, '');
-        buffer = Buffer.from(hexString, 'hex');
-      } else {
-        // Try base64 first, then hex
-        try {
-          buffer = Buffer.from(encryptedData, 'base64');
-        } catch {
-          buffer = Buffer.from(encryptedData, 'hex');
-        }
-      }
+      buffer = Buffer.from(encryptedData, 'base64');
     } else if (encryptedData instanceof Uint8Array) {
       buffer = Buffer.from(encryptedData);
-    } else if (typeof encryptedData === 'object' && encryptedData.type === 'Buffer' && Array.isArray(encryptedData.data)) {
-      // Handle JSON Buffer format
-      buffer = Buffer.from(encryptedData.data);
     } else {
       buffer = encryptedData;
     }
@@ -142,31 +128,52 @@ export async function decrypt(encryptedData: Buffer | Uint8Array | string | any)
   }
 }
 
-/**
- * Generates a fingerprint for the API key (for display purposes only)
- * @param apiKey The API key
- * @returns SHA-256 fingerprint with "SHA256:" prefix
- */
-export async function generateKeyFingerprint(apiKey: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(apiKey);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  return `SHA256:${hashHex.substring(0, 16)}`;
-}
-
-/**
- * Validates that the encryption/decryption is working correctly
- * @returns Promise<boolean> True if validation passes
- */
-export async function validateEncryption(): Promise<boolean> {
+// Test function
+async function testEncryption() {
+  console.log("=== Encryption/Decryption Test ===");
+  console.log("Testing encryption and decryption process...");
+  
   try {
-    const testKey = "test-api-key-12345";
-    const encrypted = await encrypt(testKey);
+    // Test with a sample API key
+    const testApiKey = "AIzaSyA-4j1234567890abcdefghijklmnopqrstuvwxyz";
+    
+    console.log(`\n--- Step 1: Encryption ---`);
+    console.log(`Original API key: ${testApiKey.substring(0, 10)}...`);
+    
+    const encrypted = await encrypt(testApiKey);
+    console.log(`Encrypted data type: ${typeof encrypted}`);
+    console.log(`Encrypted data length: ${encrypted.length} bytes`);
+    console.log(`Encrypted data (first 50 chars): ${encrypted.toString('hex').substring(0, 50)}...`);
+    
+    // Save encrypted data to file for inspection
+    const encryptedPath = path.join(__dirname, "test-encrypted.bin");
+    fs.writeFileSync(encryptedPath, encrypted);
+    console.log(`Encrypted data saved to: ${encryptedPath}`);
+    
+    console.log(`\n--- Step 2: Decryption ---`);
+    console.log(`Attempting to decrypt the encrypted data...`);
+    
     const decrypted = await decrypt(encrypted);
-    return decrypted === testKey;
-  } catch {
-    return false;
+    console.log(`Decrypted API key: ${decrypted.substring(0, 10)}...`);
+    
+    console.log(`\n--- Step 3: Verification ---`);
+    if (decrypted === testApiKey) {
+      console.log(`✅ SUCCESS! Encryption/Decryption working correctly!`);
+      console.log(`Original: ${testApiKey}`);
+      console.log(`Decrypted: ${decrypted}`);
+      console.log(`Match: ${decrypted === testApiKey}`);
+    } else {
+      console.log(`❌ FAILED! Decrypted data doesn't match original!`);
+      console.log(`Original: ${testApiKey}`);
+      console.log(`Decrypted: ${decrypted}`);
+    }
+    
+  } catch (error) {
+    console.error(`\n❌ FAILED!`);
+    console.error(`Error: ${error.message}`);
+    console.error(`Full error:`, error);
   }
 }
+
+// Run the test
+testEncryption().catch(console.error);

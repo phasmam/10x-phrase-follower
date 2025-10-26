@@ -1,6 +1,6 @@
 import { APIContext } from "astro";
 import { createClient } from "@supabase/supabase-js";
-import { decrypt } from "../../lib/tts-encryption";
+import { decrypt } from "../../../lib/tts-encryption";
 
 const DEFAULT_USER_ID = "0a1f3212-c55f-4a62-bc0f-4121a7a72283";
 

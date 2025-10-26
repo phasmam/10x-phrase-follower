@@ -1,6 +1,6 @@
 import type { APIContext } from "astro";
 import { createClient } from "@supabase/supabase-js";
-import { createApiError } from "../../../lib/errors";
+import { ApiErrors } from "../../../lib/errors";
 import { DEFAULT_USER_ID } from "../../../db/supabase.client";
 import type { CancelJobResponseDTO } from "../../../types";
 
@@ -10,7 +10,7 @@ export const prerender = false;
 function getUserId(context: APIContext): string {
   const userId = context.locals.userId;
   if (!userId) {
-    throw createApiError("unauthorized", "Authentication required");
+    throw ApiErrors.unauthorized("Authentication required");
   }
   return userId;
 }
@@ -45,7 +45,7 @@ export async function POST(context: APIContext) {
     // Parse and validate path parameter
     const jobId = context.params.jobId;
     if (!jobId) {
-      throw createApiError("validation_error", "Job ID is required");
+      throw ApiErrors.validationError("Job ID is required");
     }
 
     // Get the current job state
@@ -58,14 +58,14 @@ export async function POST(context: APIContext) {
 
     if (fetchError) {
       if (fetchError.code === "PGRST116") {
-        throw createApiError("not_found", "Job not found");
+        throw ApiErrors.notFound("Job not found");
       }
-      throw createApiError("internal", "Failed to fetch job");
+      throw ApiErrors.internal("Failed to fetch job");
     }
 
     // Check if job can be canceled
     if (job.state === "succeeded" || job.state === "failed" || job.state === "canceled" || job.state === "timeout") {
-      throw createApiError("cannot_cancel", "Cannot cancel job in current state");
+      throw ApiErrors.cannotCancel("Cannot cancel job in current state");
     }
 
     // Update job state to canceled
@@ -80,7 +80,7 @@ export async function POST(context: APIContext) {
       .single();
 
     if (updateError) {
-      throw createApiError("internal", "Failed to cancel job");
+      throw ApiErrors.internal("Failed to cancel job");
     }
 
     const response: CancelJobResponseDTO = updatedJob;

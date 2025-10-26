@@ -1,6 +1,6 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
-import { createApiError } from "../../../../lib/errors";
+import { ApiErrors } from "../../../../lib/errors";
 import type { PlaybackManifestDTO } from "../../../../types";
 import { createClient } from "@supabase/supabase-js";
 import { DEFAULT_USER_ID } from "../../../../db/supabase.client";
@@ -15,7 +15,7 @@ const HighlightSchema = z.enum(["on", "off"]);
 function getUserId(context: APIContext): string {
   const userId = context.locals.userId;
   if (!userId) {
-    throw createApiError("unauthorized", "Authentication required");
+    throw ApiErrors.unauthorized("Authentication required");
   }
   return userId;
 }
@@ -97,7 +97,7 @@ export async function GET(context: APIContext) {
     // Parse and validate path parameter
     const notebookId = context.params.notebookId;
     if (!notebookId) {
-      throw createApiError("validation_error", "Notebook ID is required");
+      throw ApiErrors.validationError("Notebook ID is required");
     }
 
     // Parse query parameters
@@ -112,9 +112,9 @@ export async function GET(context: APIContext) {
 
     if (notebookError) {
       if (notebookError.code === "PGRST116") {
-        throw createApiError("not_found", "Notebook not found");
+        throw ApiErrors.notFound("Notebook not found");
       }
-      throw createApiError("internal", "Failed to fetch notebook");
+      throw ApiErrors.internal("Failed to fetch notebook");
     }
 
     if (!notebook.current_build_id) {
@@ -145,7 +145,7 @@ export async function GET(context: APIContext) {
     const { data: phrases, error: phrasesError } = await phrasesQuery;
 
     if (phrasesError) {
-      throw createApiError("internal", "Failed to fetch phrases");
+      throw ApiErrors.internal("Failed to fetch phrases");
     }
 
     if (!phrases || phrases.length === 0) {
@@ -174,7 +174,7 @@ export async function GET(context: APIContext) {
       .in("phrase_id", phrases.map(p => p.id));
 
     if (segmentsError) {
-      throw createApiError("internal", "Failed to fetch audio segments");
+      throw ApiErrors.internal("Failed to fetch audio segments");
     }
 
     // Generate signed URLs for complete segments
