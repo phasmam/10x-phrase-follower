@@ -57,7 +57,7 @@ const isDev = import.meta.env.NODE_ENV === "development";
 
         <!-- Settings gear icon -->
         <Button variant="ghost" size="sm" className="p-2" asChild>
-          <a href="/settings">
+          <a href="/settings" class="text-muted-foreground hover:text-foreground transition-colors">
           <svg 
             class="h-4 w-4" 
             fill="none" 
@@ -87,7 +87,7 @@ const isDev = import.meta.env.NODE_ENV === "development";
               DEV
             </span>
           )}
-          <Button variant="ghost" size="sm">
+          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
             <svg 
               class="h-4 w-4 mr-2" 
               fill="none" 

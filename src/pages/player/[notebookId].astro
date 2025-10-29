@@ -49,7 +49,7 @@ if (notebookError || !notebook) {
 ---
 
 <Layout title={`Player - ${notebook.name}`}>
-  <main class="min-h-screen bg-gray-900 text-white">
+  <main class="min-h-screen">
     <AuthGuard client:load>
       <PlayerShell 
         notebookId={notebookId} 
