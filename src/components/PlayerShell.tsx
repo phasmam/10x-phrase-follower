@@ -119,7 +119,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
   const hasPlayableSegments = currentSegments.length > 0;
 
   // Playback engine
-  const { onEndSegment, onEndPhrase, onAdvanceNext, onAdvancePrev } = usePlaybackEngine({
+  const { onEndSegment, onEndPhrase, onAdvanceNext, onAdvancePrev, playSegment } = usePlaybackEngine({
     manifest,
     phraseIndex,
     speed,
@@ -128,9 +128,20 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
     setPhraseIndex,
   });
 
+  // Handle playing state - start audio playback when playing becomes true
+  useEffect(() => {
+    if (playing && currentSegments.length > 0 && !currentSlot) {
+      // Find the first available segment to start with (EN1)
+      const firstSegment = currentSegments.find((s) => s.slot === "EN1" && s.status === "complete");
+      if (firstSegment) {
+        playSegment("EN1", firstSegment.url);
+      }
+    }
+  }, [playing, currentSegments, currentSlot, playSegment]);
+
   // Click-to-seek functionality
   const { seekToToken } = useClickToSeek({
-    tokens: currentPhrase?.tokens,
+    tokens: currentPhrase?.phrase.tokens,
     timings: currentSegments.find((s) => s.slot === currentSlot)?.timings,
   });
 
@@ -300,7 +311,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
       {/* Phrase viewer */}
       <div className="mb-8">
         <PhraseViewer
-          phrase={currentPhrase}
+          phrase={currentPhrase?.phrase}
           activeLang={currentSlot === "PL" ? "pl" : currentSlot ? "en" : null}
           highlight={highlight}
           onSeekToToken={handleSeekToToken}

@@ -309,8 +309,8 @@ export interface HealthStatusDTO {
 export interface PhraseVM {
   id: UUID;
   position: number;
-  en: string;
-  pl: string;
+  en_text: string;
+  pl_text: string;
   tokens: {
     en: Token[];
     pl: Token[];
@@ -329,6 +329,7 @@ export interface Token {
 
 export interface Segment {
   slot: VoiceSlot;
+  status: "complete" | "failed" | "missing";
   url: string;
   durationMs?: number | null;
   timings?: Token["timing"][];

@@ -167,8 +167,8 @@ export class JobWorker {
                 path: `failed/${phrase.id}/${voice.slot}.mp3`, // Placeholder path for failed uploads
                 size_bytes: null,
                 duration_ms: null,
-                sample_rate_hz: null,
-                bitrate_kbps: null,
+                sample_rate_hz: 22050, // Use default value instead of null
+                bitrate_kbps: 64, // Use default value instead of null
                 is_active: false,
               });
               continue;
@@ -204,8 +204,8 @@ export class JobWorker {
               path: null,
               size_bytes: null,
               duration_ms: null,
-              sample_rate_hz: null,
-              bitrate_kbps: null,
+              sample_rate_hz: 22050, // Use default value instead of null
+              bitrate_kbps: 64, // Use default value instead of null
               is_active: false,
             });
           }

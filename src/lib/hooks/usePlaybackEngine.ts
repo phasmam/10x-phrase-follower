@@ -156,6 +156,7 @@ export function usePlaybackEngine({
     onEndSegment: handleSegmentEnd,
     onEndPhrase: handlePhraseEnd,
     onAdvanceNext,
-    onAdvancePrev
+    onAdvancePrev,
+    playSegment
   };
 }
