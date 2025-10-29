@@ -24,6 +24,17 @@ export function usePlaybackEngine({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const currentSegmentRef = useRef<VoiceSlot | null>(null);
+  const manifestRef = useRef<PlaybackManifestVM | null>(manifest);
+  const phraseIndexRef = useRef<number>(phraseIndex);
+
+  // Keep refs in sync with latest values to avoid stale closures
+  useEffect(() => {
+    manifestRef.current = manifest;
+  }, [manifest]);
+
+  useEffect(() => {
+    phraseIndexRef.current = phraseIndex;
+  }, [phraseIndex]);
 
   // Clean up timeouts
   const clearTimeouts = useCallback(() => {
@@ -33,63 +44,94 @@ export function usePlaybackEngine({
     }
   }, []);
 
-  // Handle segment end logic
-  const handleSegmentEnd = useCallback(() => {
-    if (!manifest || phraseIndex >= manifest.sequence.length) return;
+  const pausePlayback = useCallback(() => {
+    clearTimeouts();
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+  }, [clearTimeouts]);
 
-    const currentPhrase = manifest.sequence[phraseIndex];
+  const resumePlayback = useCallback(async () => {
+    if (audioRef.current) {
+      try {
+        await audioRef.current.play();
+      } catch (error) {
+        console.error('Failed to resume audio:', error);
+      }
+    }
+  }, []);
+
+  const stopPlayback = useCallback(() => {
+    clearTimeouts();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      try {
+        audioRef.current.currentTime = 0;
+      } catch {}
+    }
+    currentSegmentRef.current = null;
+    setCurrentSlot(null);
+    setClockMs(0);
+  }, [clearTimeouts, setCurrentSlot, setClockMs]);
+
+  // Handle segment end logic using refs for fresh state
+  const handleSegmentEnd = useCallback(() => {
+    const currentManifest = manifestRef.current;
+    const idx = phraseIndexRef.current;
+
+    if (!currentManifest || idx >= currentManifest.sequence.length) return;
+
+    const currentPhrase = currentManifest.sequence[idx];
     const currentSlot = currentSegmentRef.current;
-    
     if (!currentSlot) return;
 
     const currentSlotIndex = SLOT_SEQUENCE.indexOf(currentSlot);
     const nextSlot = SLOT_SEQUENCE[currentSlotIndex + 1];
-    
-    // Check if there's a next slot in current phrase
+
     const nextSegment = currentPhrase.segments.find(s => s.slot === nextSlot);
-    
+
     if (nextSegment) {
-      // Play next segment after pause
       timeoutRef.current = setTimeout(() => {
         playSegment(nextSlot, nextSegment.url);
       }, PAUSE_DURATION_MS);
     } else {
-      // No more segments in current phrase, advance to next phrase
       timeoutRef.current = setTimeout(() => {
         handlePhraseEnd();
       }, PAUSE_DURATION_MS);
     }
-  }, [manifest, phraseIndex]);
+  }, []);
 
-  // Handle phrase end logic
+  // Handle phrase end logic using refs for fresh state
   const handlePhraseEnd = useCallback(() => {
-    if (!manifest || phraseIndex >= manifest.sequence.length - 1) {
-      // No more phrases, stop playback
+    const currentManifest = manifestRef.current;
+    const idx = phraseIndexRef.current;
+
+    if (!currentManifest || idx >= currentManifest.sequence.length - 1) {
       setCurrentSlot(null);
       setClockMs(0);
       return;
     }
 
-    // Advance to next phrase
-    const nextPhraseIndex = phraseIndex + 1;
+    const nextPhraseIndex = idx + 1;
     setPhraseIndex(nextPhraseIndex);
-    
-    // Start next phrase from EN1
-    const nextPhrase = manifest.sequence[nextPhraseIndex];
+
+    const nextPhrase = currentManifest.sequence[nextPhraseIndex];
     const en1Segment = nextPhrase.segments.find(s => s.slot === 'EN1');
-    
+
     if (en1Segment) {
       timeoutRef.current = setTimeout(() => {
         playSegment('EN1', en1Segment.url);
       }, PAUSE_DURATION_MS);
     }
-  }, [manifest, phraseIndex, setPhraseIndex, setCurrentSlot, setClockMs]);
+  }, [setPhraseIndex, setCurrentSlot, setClockMs]);
 
   // Play audio segment
   const playSegment = useCallback(async (slot: VoiceSlot, url: string) => {
+    console.log('playSegment called:', { slot, url });
+
     if (!audioRef.current) {
       audioRef.current = new Audio();
-      
+
       // Set up event listeners
       audioRef.current.addEventListener('ended', handleSegmentEnd);
       audioRef.current.addEventListener('timeupdate', () => {
@@ -102,37 +144,42 @@ export function usePlaybackEngine({
     const audio = audioRef.current;
     audio.src = url;
     audio.playbackRate = speed;
-    
+
+    console.log('Audio element configured:', { src: audio.src, playbackRate: audio.playbackRate });
+
     try {
       await audio.play();
+      console.log('Audio playback started successfully');
       currentSegmentRef.current = slot;
       setCurrentSlot(slot);
     } catch (error) {
       console.error('Failed to play audio segment:', error);
-      // Continue to next segment on error
       handleSegmentEnd();
     }
   }, [speed, setCurrentSlot, setClockMs, handleSegmentEnd]);
 
   // Advance to next phrase
   const onAdvanceNext = useCallback(() => {
-    if (!manifest || phraseIndex >= manifest.sequence.length - 1) return;
-    
+    const currentManifest = manifestRef.current;
+    const idx = phraseIndexRef.current;
+    if (!currentManifest || idx >= currentManifest.sequence.length - 1) return;
+
     clearTimeouts();
     setCurrentSlot(null);
     setClockMs(0);
-    setPhraseIndex(phraseIndex + 1);
-  }, [manifest, phraseIndex, setPhraseIndex, setCurrentSlot, setClockMs, clearTimeouts]);
+    setPhraseIndex(idx + 1);
+  }, [setPhraseIndex, setCurrentSlot, setClockMs, clearTimeouts]);
 
   // Advance to previous phrase
   const onAdvancePrev = useCallback(() => {
-    if (phraseIndex <= 0) return;
-    
+    const idx = phraseIndexRef.current;
+    if (idx <= 0) return;
+
     clearTimeouts();
     setCurrentSlot(null);
     setClockMs(0);
-    setPhraseIndex(phraseIndex - 1);
-  }, [phraseIndex, setPhraseIndex, setCurrentSlot, setClockMs, clearTimeouts]);
+    setPhraseIndex(idx - 1);
+  }, [setPhraseIndex, setCurrentSlot, setClockMs, clearTimeouts]);
 
   // Clean up on unmount
   useEffect(() => {
@@ -157,6 +204,9 @@ export function usePlaybackEngine({
     onEndPhrase: handlePhraseEnd,
     onAdvanceNext,
     onAdvancePrev,
+    pausePlayback,
+    resumePlayback,
+    stopPlayback,
     playSegment
   };
 }

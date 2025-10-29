@@ -50,10 +50,11 @@ if (notebookError || !notebook) {
 
 <Layout title={`Player - ${notebook.name}`}>
   <main class="min-h-screen bg-gray-900 text-white">
-    <AuthGuard>
+    <AuthGuard client:load>
       <PlayerShell 
         notebookId={notebookId} 
         startPhraseId={startPhraseId || undefined}
+        client:load
       />
     </AuthGuard>
   </main>

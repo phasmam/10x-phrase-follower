@@ -86,6 +86,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
           },
           segments: item.segments.map((segment: any) => ({
             slot: segment.slot,
+            status: segment.status,
             url: segment.url,
             durationMs: segment.duration_ms,
             timings: segment.word_timings?.map((wt: any) => ({
@@ -119,7 +120,16 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
   const hasPlayableSegments = currentSegments.length > 0;
 
   // Playback engine
-  const { onEndSegment, onEndPhrase, onAdvanceNext, onAdvancePrev, playSegment } = usePlaybackEngine({
+  const {
+    onEndSegment,
+    onEndPhrase,
+    onAdvanceNext,
+    onAdvancePrev,
+    playSegment,
+    pausePlayback,
+    resumePlayback,
+    stopPlayback,
+  } = usePlaybackEngine({
     manifest,
     phraseIndex,
     speed,
@@ -132,7 +142,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
   useEffect(() => {
     if (playing && currentSegments.length > 0 && !currentSlot) {
       // Find the first available segment to start with (EN1)
-      const firstSegment = currentSegments.find((s) => s.slot === "EN1" && s.status === "complete");
+      const firstSegment = currentSegments.find((s) => s.slot === "EN1" && s.url);
       if (firstSegment) {
         playSegment("EN1", firstSegment.url);
       }
@@ -148,25 +158,27 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
   // Event handlers
   const handlePlay = useCallback(() => {
     if (!hasPlayableSegments) return;
-    setPlaying(true);
-    if (!currentSlot) {
-      setCurrentSlot("EN1");
+    if (currentSlot) {
+      resumePlayback();
+      setPlaying(true);
+      return;
     }
-  }, [hasPlayableSegments, currentSlot]);
+    setPlaying(true);
+  }, [hasPlayableSegments, currentSlot, resumePlayback]);
 
   const handlePause = useCallback(() => {
     setPlaying(false);
-  }, []);
+    pausePlayback();
+  }, [pausePlayback]);
 
   const handleStop = useCallback(() => {
     setPlaying(false);
-    setCurrentSlot(null);
-    setClockMs(0);
-  }, []);
+    stopPlayback();
+  }, [stopPlayback]);
 
   const handleRestartPhrase = useCallback(() => {
-    setCurrentSlot("EN1");
     setClockMs(0);
+    setCurrentSlot(null);
     setPlaying(true);
   }, []);
 

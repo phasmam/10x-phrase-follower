@@ -1,4 +1,5 @@
 import { useAuth } from "./useAuth";
+import { useCallback, useMemo } from "react";
 
 interface ApiOptions extends RequestInit {
   requireAuth?: boolean;
@@ -39,7 +40,7 @@ export function useApi() {
   const effectiveToken = token || getTokenFromStorage();
   const effectiveIsAuthenticated = isAuthenticated || !!effectiveToken;
 
-  const apiCall = async <T>(endpoint: string, options: ApiOptions = {}): Promise<T> => {
+  const apiCall = useCallback(async <T>(endpoint: string, options: ApiOptions = {}): Promise<T> => {
     const { requireAuth = true, headers = {}, ...restOptions } = options;
 
     // Check authentication requirement
@@ -48,15 +49,15 @@ export function useApi() {
     }
 
     // Prepare headers
-    const requestHeaders: HeadersInit = {
+    const requestHeaders: Record<string, string> = {
       "Content-Type": "application/json",
       Accept: "application/json",
-      ...headers,
+      ...headers as Record<string, string>,
     };
 
     // Add authorization header if token is available
     if (effectiveToken) {
-      requestHeaders.Authorization = `Bearer ${effectiveToken}`;
+      requestHeaders["Authorization"] = `Bearer ${effectiveToken}`;
     }
 
     // Make the request
@@ -89,7 +90,7 @@ export function useApi() {
 
     // Return text for non-JSON responses
     return response.text() as unknown as T;
-  };
+  }, [effectiveToken, effectiveIsAuthenticated]);
 
-  return { apiCall, isAuthenticated: effectiveIsAuthenticated, token: effectiveToken, userId };
+  return useMemo(() => ({ apiCall, isAuthenticated: effectiveIsAuthenticated, token: effectiveToken, userId }), [apiCall, effectiveIsAuthenticated, effectiveToken, userId]);
 }
