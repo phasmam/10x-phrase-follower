@@ -308,6 +308,8 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
           onRestart={handleRestartPhrase}
           onSpeedChange={handleSpeedChange}
           onToggleHighlight={handleToggleHighlight}
+          onPrevPhrase={onAdvancePrev}
+          onNextPhrase={onAdvanceNext}
         />
       </div>
 

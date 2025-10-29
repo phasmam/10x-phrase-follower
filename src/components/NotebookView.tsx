@@ -256,13 +256,9 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Phrases</h2>
             <div className="flex items-center gap-2">
-              <a
-                href={`/player/${notebookId}`}
-                className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
-                title="Open Player"
-              >
-                Open Player
-              </a>
+              <Button asChild size="sm" variant="default">
+                <a href={`/player/${notebookId}`} title="Open Player">Open Player</a>
+              </Button>
               <span className="text-xs text-muted-foreground">
                 Reorder temporarily disabled
               </span>

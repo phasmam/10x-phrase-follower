@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from './ui/button';
-import { Play, Pause, Square, RotateCcw, Volume2, VolumeX } from 'lucide-react';
+import { Play, Pause, Square, RotateCcw, Volume2, VolumeX, SkipBack, SkipForward } from 'lucide-react';
 import type { PlaybackSpeed } from '../types';
 
 interface PlayerControlsProps {
@@ -14,6 +14,8 @@ interface PlayerControlsProps {
   onRestart: () => void;
   onSpeedChange: (speed: PlaybackSpeed) => void;
   onToggleHighlight: () => void;
+  onPrevPhrase: () => void;
+  onNextPhrase: () => void;
 }
 
 const speedOptions: { value: PlaybackSpeed; label: string }[] = [
@@ -33,7 +35,9 @@ export default function PlayerControls({
   onStop,
   onRestart,
   onSpeedChange,
-  onToggleHighlight
+  onToggleHighlight,
+  onPrevPhrase,
+  onNextPhrase
 }: PlayerControlsProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-gray-800 rounded-lg p-4">
@@ -44,7 +48,6 @@ export default function PlayerControls({
           disabled={!hasPlayable}
           variant="default"
           size="lg"
-          className="bg-blue-600 hover:bg-blue-700"
         >
           {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
           <span className="ml-2">{playing ? 'Pause' : 'Play'}</span>
@@ -52,9 +55,8 @@ export default function PlayerControls({
 
         <Button
           onClick={onStop}
-          variant="outline"
+          variant="secondary"
           size="lg"
-          className="border-gray-600 hover:bg-gray-700"
         >
           <Square className="h-5 w-5" />
           <span className="ml-2">Stop</span>
@@ -63,13 +65,33 @@ export default function PlayerControls({
         <Button
           onClick={onRestart}
           disabled={!hasPlayable}
-          variant="outline"
+          variant="secondary"
           size="lg"
-          className="border-gray-600 hover:bg-gray-700"
         >
           <RotateCcw className="h-5 w-5" />
           <span className="ml-2">Restart</span>
         </Button>
+
+        {/* Phrase navigation */}
+        <div className="ml-2 flex items-center gap-2">
+          <Button
+            onClick={onPrevPhrase}
+            variant="secondary"
+            size="lg"
+          >
+            <SkipBack className="h-5 w-5" />
+            <span className="ml-2">Prev</span>
+          </Button>
+
+          <Button
+            onClick={onNextPhrase}
+            variant="secondary"
+            size="lg"
+          >
+            <SkipForward className="h-5 w-5" />
+            <span className="ml-2">Next</span>
+          </Button>
+        </div>
       </div>
 
       {/* Speed control */}
@@ -80,13 +102,8 @@ export default function PlayerControls({
             <Button
               key={option.value}
               onClick={() => onSpeedChange(option.value)}
-              variant={speed === option.value ? "default" : "outline"}
+              variant={speed === option.value ? 'default' : 'secondary'}
               size="sm"
-              className={
-                speed === option.value
-                  ? "bg-blue-600 hover:bg-blue-700"
-                  : "border-gray-600 hover:bg-gray-700"
-              }
             >
               {option.label}
             </Button>
@@ -98,13 +115,8 @@ export default function PlayerControls({
       <div className="flex items-center gap-2">
         <Button
           onClick={onToggleHighlight}
-          variant={highlight ? "default" : "outline"}
+          variant={'default'}
           size="sm"
-          className={
-            highlight
-              ? "bg-green-600 hover:bg-green-700"
-              : "border-gray-600 hover:bg-gray-700"
-          }
         >
           {highlight ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
           <span className="ml-2">Highlight</span>
