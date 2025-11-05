@@ -71,6 +71,15 @@ export const ApiErrors = {
 
   // Internal errors
   internal: (message = "Internal server error", details?: unknown) => new ApiError("internal", message, 500, details),
+
+  // Authentication errors
+  invalidCredentials: (message = "Invalid credentials") => new ApiError("invalid_credentials", message, 401),
+
+  // Rate limiting errors
+  tooManyRequests: (message = "Too many requests") => new ApiError("too_many_requests", message, 429),
+
+  // Request validation errors
+  invalidBody: (message = "Invalid request body") => new ApiError("invalid_body", message, 400),
 };
 
 /**

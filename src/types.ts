@@ -41,7 +41,10 @@ export type ApiErrorCode =
   | "limit_exceeded"
   | "cannot_cancel"
   | "internal"
-  | "tts_timeout";
+  | "tts_timeout"
+  | "invalid_credentials"
+  | "too_many_requests"
+  | "invalid_body";
 
 export interface ApiErrorResponse {
   error: {
@@ -287,6 +290,24 @@ export interface PlaybackManifestDTO {
   build_id: UUID;
   sequence: PlaybackManifestItem[];
   expires_at: string;
+}
+
+// ------------------------------------
+// Auth
+// ------------------------------------
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  access_token: string;
+  expires_in: number;
+  refresh_token: string;
+  user: {
+    id: string;
+    email: string;
+  };
 }
 
 // ------------------------------------

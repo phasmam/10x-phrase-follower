@@ -1,43 +1,119 @@
 import React, { useState } from "react";
 import { Button } from "./ui/button";
+import { supabaseClient } from "../db/supabase.client";
 
 interface AuthCardProps {}
+
+interface ValidationError {
+  field: string;
+  message: string;
+}
 
 export default function AuthCard({}: AuthCardProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
+
+  // Client-side validation
+  const validateForm = (): boolean => {
+    const errors: ValidationError[] = [];
+
+    // Email validation
+    if (!email.trim()) {
+      errors.push({ field: "email", message: "Email is required" });
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.push({ field: "email", message: "Invalid email format" });
+    }
+
+    // Password validation
+    if (!password) {
+      errors.push({ field: "password", message: "Password is required" });
+    } else if (password.length < 8) {
+      errors.push({ field: "password", message: "Password must be at least 8 characters" });
+    }
+
+    setValidationErrors(errors);
+    return errors.length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError(null);
+    setValidationErrors([]);
+
+    // Client-side validation
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
-      // Always try development mode first - check if DEV_JWT endpoint is available
-      const response = await fetch("/api/dev/jwt", {
+      // Try development mode first - check if DEV_JWT endpoint is available
+      const devResponse = await fetch("/api/dev/jwt", {
         headers: { "Accept": "application/json" },
       });
-      
-      if (response.ok) {
+
+      if (devResponse.ok) {
         // DEV_JWT endpoint is available - we're in development mode
-        const data = await response.json();
-        
+        const data = await devResponse.json();
+
         // Store token in localStorage with expiry
-        const expiry = Date.now() + (data.expires_in * 1000);
+        const expiry = Date.now() + data.expires_in * 1000;
         localStorage.setItem("dev_jwt_token", data.token);
         localStorage.setItem("dev_user_id", data.user_id);
         localStorage.setItem("dev_jwt_expiry", expiry.toString());
-        
+
         // Redirect to notebooks
         window.location.href = "/notebooks";
-      } else {
-        // DEV_JWT endpoint not available - we're in production mode
-        throw new Error("Production authentication not yet implemented");
+        return;
       }
+
+      // DEV_JWT endpoint not available (>= 400) - fallback to Supabase Auth
+      const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+        email: email.trim(),
+        password: password,
+      });
+
+      if (authError) {
+        // Handle Supabase auth errors
+        if (authError.status === 429) {
+          setError("Zbyt wiele prób. Spróbuj ponownie później.");
+        } else if (authError.status === 400 || authError.status === 401) {
+          setError("Nieprawidłowe dane logowania.");
+        } else {
+          setError("Wystąpił błąd serwera. Spróbuj ponownie.");
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (!authData.session || !authData.user) {
+        setError("Wystąpił błąd serwera. Spróbuj ponownie.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Store Supabase session tokens
+      const { session, user } = authData;
+      const expiresAt = session.expires_at ? session.expires_at * 1000 : Date.now() + 3600000;
+
+      localStorage.setItem("sb_access_token", session.access_token);
+      localStorage.setItem("sb_refresh_token", session.refresh_token);
+      localStorage.setItem("sb_expires_at", expiresAt.toString());
+      localStorage.setItem("sb_user_id", user.id);
+
+      // Redirect to notebooks
+      window.location.href = "/notebooks";
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      // Network or unexpected errors
+      if (err instanceof Error && err.message.includes("fetch")) {
+        setError("Wystąpił błąd serwera. Spróbuj ponownie.");
+      } else {
+        setError(err instanceof Error ? err.message : "Login failed");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -68,11 +144,25 @@ export default function AuthCard({}: AuthCardProps) {
               id="email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setValidationErrors(validationErrors.filter((err) => err.field !== "email"));
+              }}
               required
-              className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+              className={`w-full px-3 py-2 border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent ${
+                validationErrors.some((err) => err.field === "email")
+                  ? "border-destructive"
+                  : "border-input"
+              }`}
               placeholder="Enter your email"
             />
+            {validationErrors
+              .filter((err) => err.field === "email")
+              .map((err, idx) => (
+                <p key={idx} className="text-sm text-destructive">
+                  {err.message}
+                </p>
+              ))}
           </div>
 
           <div className="space-y-2">
@@ -83,18 +173,29 @@ export default function AuthCard({}: AuthCardProps) {
               id="password"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setValidationErrors(validationErrors.filter((err) => err.field !== "password"));
+              }}
               required
-              className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+              minLength={8}
+              className={`w-full px-3 py-2 border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent ${
+                validationErrors.some((err) => err.field === "password")
+                  ? "border-destructive"
+                  : "border-input"
+              }`}
               placeholder="Enter your password"
             />
+            {validationErrors
+              .filter((err) => err.field === "password")
+              .map((err, idx) => (
+                <p key={idx} className="text-sm text-destructive">
+                  {err.message}
+                </p>
+              ))}
           </div>
 
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className="w-full"
-          >
+          <Button type="submit" disabled={isLoading || !email || !password} className="w-full">
             {isLoading ? "Signing in..." : "Sign In"}
           </Button>
         </form>

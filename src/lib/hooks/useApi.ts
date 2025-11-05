@@ -16,6 +16,26 @@ export function useApi() {
   const getTokenFromStorage = () => {
     if (typeof window === "undefined") return null;
 
+    // Check for Supabase token first (production)
+    const sbAccessToken = localStorage.getItem("sb_access_token");
+    const sbExpiresAt = localStorage.getItem("sb_expires_at");
+
+    if (sbAccessToken && sbExpiresAt) {
+      const now = Date.now();
+      const expiresAt = parseInt(sbExpiresAt, 10);
+
+      if (now < expiresAt) {
+        return sbAccessToken;
+      } else {
+        // Token expired, clear storage
+        localStorage.removeItem("sb_access_token");
+        localStorage.removeItem("sb_refresh_token");
+        localStorage.removeItem("sb_expires_at");
+        localStorage.removeItem("sb_user_id");
+      }
+    }
+
+    // Check for DEV_JWT token (development)
     const storedToken = localStorage.getItem("dev_jwt_token");
     const storedExpiry = localStorage.getItem("dev_jwt_expiry");
 

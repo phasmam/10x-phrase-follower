@@ -1,6 +1,7 @@
 ---
 import { Button } from "./ui/button";
 import ConfigStatusBadge from "./ConfigStatusBadge";
+import LogoutButton from "./LogoutButton";
 
 interface Props {
   currentPath?: string;
@@ -80,29 +81,14 @@ const isDev = import.meta.env.NODE_ENV === "development";
           </a>
         </Button>
 
-        <!-- User menu (placeholder for now) -->
+        <!-- User menu -->
         <div class="flex items-center space-x-2">
           {isDev && (
             <span class="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
               DEV
             </span>
           )}
-          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-            <svg 
-              class="h-4 w-4 mr-2" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path 
-                stroke-linecap="round" 
-                stroke-linejoin="round" 
-                stroke-width="2" 
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              ></path>
-            </svg>
-            User
-          </Button>
+          <LogoutButton client:load />
         </div>
       </div>
     </div>
