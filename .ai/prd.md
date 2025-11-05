@@ -48,6 +48,10 @@ Kryteria akceptacji:
 - Given user niezalogowany, when otwiera aplikację, then widzi ekran logowania.
 - Given user A zalogowany, when otwiera URL zasobu usera B, then dostaje 404/403 bez metadanych.
 - Given wylogowanie lub wygaśnięcie sesji, when odświeżam widok, then następuje przekierowanie do logowania.
+- Logowanie odbywają się na dedykowanej stronie.
+- Logowanie wymaga podania adresu email i hasła.
+- Użytkownik może się wylogować z systemu poprzez przycisk w prawym górnym rogu w głównym @Layout.astro.
+- Wsparcie dla trybu developerskiego: w NODE_ENV=development działa endpoint /api/dev/jwt, który zwraca krótkotrwały token dev_ dla stałego DEFAULT_USER_ID, zapisywany w localStorage i przekazywany jako Authorization: Bearer.
 
 UC-02 Konfiguracja klucza Google TTS
 Opis: Jako użytkownik chcę zapisać swój klucz TTS po teście walidacyjnym.
