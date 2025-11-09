@@ -72,25 +72,53 @@ export default function AuthCard({}: AuthCardProps) {
       }
 
       // DEV_JWT endpoint not available (>= 400) - fallback to Supabase Auth
+      // eslint-disable-next-line no-console
+      console.log("DEV_JWT not available, attempting Supabase authentication");
+      
+      if (!supabaseClient) {
+        setError("Konfiguracja autentykacji nie jest dostępna. Skontaktuj się z administratorem.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if Supabase client is using placeholder (not configured)
+      // Try to access the client's URL through its internal properties
+      const clientUrl = (supabaseClient as any).supabaseUrl || 
+                        import.meta.env.PUBLIC_SUPABASE_URL || 
+                        import.meta.env.SUPABASE_URL;
+      
+      if (!clientUrl || clientUrl.includes("placeholder")) {
+        setError("Supabase nie jest skonfigurowany. Ustaw PUBLIC_SUPABASE_URL i PUBLIC_SUPABASE_KEY w zmiennych środowiskowych i zbuduj aplikację ponownie (npm run build).");
+        setIsLoading(false);
+        return;
+      }
+
       const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
         email: email.trim(),
         password: password,
       });
 
       if (authError) {
+        // eslint-disable-next-line no-console
+        console.error("Supabase auth error:", authError);
+        
         // Handle Supabase auth errors
         if (authError.status === 429) {
           setError("Zbyt wiele prób. Spróbuj ponownie później.");
         } else if (authError.status === 400 || authError.status === 401) {
           setError("Nieprawidłowe dane logowania.");
         } else {
-          setError("Wystąpił błąd serwera. Spróbuj ponownie.");
+          // Show more specific error message if available
+          const errorMessage = authError.message || "Wystąpił błąd serwera. Spróbuj ponownie.";
+          setError(errorMessage);
         }
         setIsLoading(false);
         return;
       }
 
       if (!authData.session || !authData.user) {
+        // eslint-disable-next-line no-console
+        console.error("Supabase auth succeeded but no session/user returned", { authData });
         setError("Wystąpił błąd serwera. Spróbuj ponownie.");
         setIsLoading(false);
         return;
@@ -105,14 +133,32 @@ export default function AuthCard({}: AuthCardProps) {
       localStorage.setItem("sb_expires_at", expiresAt.toString());
       localStorage.setItem("sb_user_id", user.id);
 
+      // eslint-disable-next-line no-console
+      console.log("Login successful, redirecting to notebooks");
+
       // Redirect to notebooks
       window.location.href = "/notebooks";
     } catch (err) {
       // Network or unexpected errors
-      if (err instanceof Error && err.message.includes("fetch")) {
-        setError("Wystąpił błąd serwera. Spróbuj ponownie.");
+      // eslint-disable-next-line no-console
+      console.error("Login error:", err);
+      
+      if (err instanceof Error) {
+        // Check for specific error types
+        if (err.message.includes("fetch") || err.message.includes("network") || err.message.includes("Failed to fetch")) {
+          // Check if it's a placeholder URL error
+          if (err.message.includes("placeholder") || err.message.includes("ERR_NAME_NOT_RESOLVED")) {
+            setError("Supabase nie jest skonfigurowany. Ustaw PUBLIC_SUPABASE_URL i PUBLIC_SUPABASE_KEY w zmiennych środowiskowych i zbuduj aplikację ponownie (npm run build).");
+          } else {
+            setError("Błąd połączenia z serwerem. Sprawdź połączenie internetowe.");
+          }
+        } else if (err.message.includes("Supabase")) {
+          setError("Błąd konfiguracji autentykacji. Skontaktuj się z administratorem.");
+        } else {
+          setError(err.message || "Wystąpił błąd serwera. Spróbuj ponownie.");
+        }
       } else {
-        setError(err instanceof Error ? err.message : "Login failed");
+        setError("Wystąpił błąd serwera. Spróbuj ponownie.");
       }
     } finally {
       setIsLoading(false);
@@ -149,6 +195,7 @@ export default function AuthCard({}: AuthCardProps) {
                 setValidationErrors(validationErrors.filter((err) => err.field !== "email"));
               }}
               required
+              autoComplete="email"
               className={`w-full px-3 py-2 border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent ${
                 validationErrors.some((err) => err.field === "email")
                   ? "border-destructive"
@@ -179,6 +226,7 @@ export default function AuthCard({}: AuthCardProps) {
               }}
               required
               minLength={8}
+              autoComplete="current-password"
               className={`w-full px-3 py-2 border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent ${
                 validationErrors.some((err) => err.field === "password")
                   ? "border-destructive"
