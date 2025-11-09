@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useApi } from '../lib/hooks/useApi';
+import { useAuth } from '../lib/hooks/useAuth';
 
 interface TtsCredentialsState {
   is_configured: boolean;
@@ -12,11 +13,18 @@ interface ConfigStatusBadgeProps {}
 export default function ConfigStatusBadge({}: ConfigStatusBadgeProps) {
   const [credentialsState, setCredentialsState] = useState<TtsCredentialsState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { apiCall } = useApi();
+  const { apiCall, isAuthenticated } = useApi();
+  const { isAuthenticated: authIsAuthenticated, isLoading: authIsLoading } = useAuth();
 
   useEffect(() => {
-    loadCredentialsState();
-  }, []);
+    // Only load credentials when authenticated and auth is done loading
+    if (!authIsLoading && (isAuthenticated || authIsAuthenticated)) {
+      loadCredentialsState();
+    } else if (!authIsLoading && !isAuthenticated && !authIsAuthenticated) {
+      // Not authenticated, don't show loading state
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, authIsAuthenticated, authIsLoading]);
 
   const loadCredentialsState = async () => {
     try {
