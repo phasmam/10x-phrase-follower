@@ -69,6 +69,13 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
         expires_at: string;
       }>(`/api/notebooks/${notebookId}/playback-manifest?highlight=${highlight ? "on" : "off"}&speed=${speed}`);
 
+      console.log("[PlayerShell] Playback manifest loaded:", data);
+      console.log("[PlayerShell] Sequence items:", data.sequence?.length || 0);
+      if (data.sequence && data.sequence.length > 0) {
+        console.log("[PlayerShell] First phrase segments:", data.sequence[0]?.segments?.length || 0);
+        console.log("[PlayerShell] First phrase segments details:", data.sequence[0]?.segments);
+      }
+
       // Transform DTO to VM
       const manifestVM: PlaybackManifestVM = {
         notebookId: data.notebook_id,
@@ -98,8 +105,10 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
         expiresAt: data.expires_at,
       };
 
+      console.log("[PlayerShell] Manifest VM created:", manifestVM);
       setManifest(manifestVM);
     } catch (err) {
+      console.error("[PlayerShell] Failed to fetch playback manifest:", err);
       setError(err instanceof Error ? err.message : "Failed to load playback manifest");
     } finally {
       setLoading(false);
@@ -143,8 +152,17 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
     if (playing && currentSegments.length > 0 && !currentSlot) {
       // Find the first available segment to start with (EN1)
       const firstSegment = currentSegments.find((s) => s.slot === "EN1" && s.url);
-      if (firstSegment) {
+      if (firstSegment && firstSegment.url) {
+        console.log("[PlayerShell] Starting playback with segment:", {
+          slot: firstSegment.slot,
+          url: firstSegment.url,
+        });
         playSegment("EN1", firstSegment.url);
+      } else {
+        console.warn(
+          "[PlayerShell] No playable segment found. Available segments:",
+          currentSegments.map((s) => ({ slot: s.slot, hasUrl: !!s.url, status: s.status }))
+        );
       }
     }
   }, [playing, currentSegments, currentSlot, playSegment]);

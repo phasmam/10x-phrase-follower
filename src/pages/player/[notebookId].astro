@@ -2,8 +2,6 @@
 import Layout from "../../layouts/AppLayout.astro";
 import PlayerShell from "../../components/PlayerShell.tsx";
 import AuthGuard from "../../components/AuthGuard.tsx";
-import { supabaseClient } from "../../db/supabase.client";
-import { DEFAULT_USER_ID } from "../../db/supabase.client";
 
 export const prerender = false;
 
@@ -22,33 +20,13 @@ if (startPhraseId && !uuidRegex.test(startPhraseId)) {
   return Astro.redirect(`/player/${notebookId}`);
 }
 
-// Development mode: Use service role key to bypass RLS for notebook verification
-let supabase = supabaseClient;
-if (import.meta.env.NODE_ENV === "development") {
-  const supabaseUrl = import.meta.env.SUPABASE_URL;
-  const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-  
-  if (supabaseServiceKey) {
-    const { createClient } = await import("@supabase/supabase-js");
-    supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
-  }
-}
-
-// Verify notebook exists (in development, we bypass ownership checks)
-const { data: notebook, error: notebookError } = await supabase
-  .from("notebooks")
-  .select("id, name")
-  .eq("id", notebookId)
-  .single();
-
-if (notebookError || !notebook) {
-  return Astro.redirect("/notebooks");
-}
+// Note: We skip server-side notebook verification here because:
+// 1. The Authorization header isn't available during SSR for client-side auth
+// 2. The client-side PlayerShell component will handle authentication and error display
+// 3. RLS policies will enforce access control when the API is called
 ---
 
-<Layout title={`Player - ${notebook.name}`}>
+<Layout title="Player - 10x Phrase Follower">
   <main class="min-h-screen">
     <AuthGuard client:load>
       <PlayerShell 

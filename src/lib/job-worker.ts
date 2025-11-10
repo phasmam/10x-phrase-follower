@@ -147,15 +147,26 @@ export class JobWorker {
             // Generate audio using TTS
             const audioBuffer = await ttsService.synthesize(text, voice.voice_id, voice.language);
 
-            // Upload to storage
-            const fileName = `${phrase.id}/${voice.slot}.mp3`;
-            const { error: uploadError } = await this.storage.from("audio").upload(fileName, audioBuffer, {
-              contentType: "audio/mpeg",
-              cacheControl: "3600",
-            });
+            // Upload to storage using structured path: audio/{userId}/{notebookId}/{phraseId}/{voice}.mp3
+            const storagePath = `${job.user_id}/${job.notebook_id}/${phrase.id}`;
+            const fileName = `${storagePath}/${voice.slot}.mp3`;
+            console.log(
+              `[job-worker] Uploading audio to storage: bucket=audio, path=${fileName}, size=${audioBuffer.length} bytes`
+            );
+
+            const { data: uploadData, error: uploadError } = await this.storage
+              .from("audio")
+              .upload(fileName, audioBuffer, {
+                contentType: "audio/mpeg",
+                cacheControl: "3600",
+                upsert: true, // Overwrite if exists
+              });
 
             if (uploadError) {
-              console.error(`Failed to upload audio for phrase ${phrase.id}, voice ${voice.slot}:`, uploadError);
+              console.error(
+                `[job-worker] Failed to upload audio for phrase ${phrase.id}, voice ${voice.slot}:`,
+                uploadError
+              );
               // Create failed segment with a placeholder path
               audioSegments.push({
                 id: crypto.randomUUID(),
@@ -164,7 +175,7 @@ export class JobWorker {
                 voice_slot: voice.slot,
                 status: "failed",
                 error_code: "upload_failed",
-                path: `failed/${phrase.id}/${voice.slot}.mp3`, // Placeholder path for failed uploads
+                path: `failed/${job.user_id}/${job.notebook_id}/${phrase.id}/${voice.slot}.mp3`, // Placeholder path for failed uploads
                 size_bytes: null,
                 duration_ms: null,
                 sample_rate_hz: 22050, // Use default value instead of null
@@ -172,6 +183,30 @@ export class JobWorker {
                 is_active: false,
               });
               continue;
+            }
+
+            console.log(
+              `[job-worker] Upload successful for phrase ${phrase.id}, voice ${voice.slot}. Upload data:`,
+              uploadData
+            );
+
+            // Verify the file exists in storage
+            const { data: fileCheck, error: checkError } = await this.storage.from("audio").list(storagePath, {
+              limit: 10,
+              offset: 0,
+            });
+
+            if (checkError) {
+              console.warn(`[job-worker] Could not verify file existence for phrase ${phrase.id}:`, checkError);
+            } else {
+              const uploadedFile = fileCheck?.find((f) => f.name === `${voice.slot}.mp3`);
+              if (!uploadedFile) {
+                console.error(`[job-worker] WARNING: File ${fileName} was uploaded but not found in storage listing!`);
+              } else {
+                console.log(
+                  `[job-worker] Verified file exists in storage: ${fileName}, size: ${uploadedFile.metadata?.size || "unknown"}`
+                );
+              }
             }
 
             // Create successful segment
@@ -190,18 +225,21 @@ export class JobWorker {
               is_active: false, // Will be activated after all segments are created
             });
 
-            console.log(`Successfully processed phrase ${phrase.id} with voice ${voice.slot}`);
+            console.log(`[job-worker] Successfully processed phrase ${phrase.id} with voice ${voice.slot}`);
           } catch (error) {
-            console.error(`Failed to process phrase ${phrase.id} with voice ${voice.slot}:`, error);
-            // Create failed segment
+            const errorMessage = error instanceof Error ? error.message : "unknown_error";
+            const errorDetails = error instanceof Error ? error.stack : String(error);
+            console.error(`Failed to process phrase ${phrase.id} with voice ${voice.slot}:`, errorMessage);
+            console.error(`Error details:`, errorDetails);
+            // Create failed segment with placeholder path (path is NOT NULL in schema)
             audioSegments.push({
               id: crypto.randomUUID(),
               phrase_id: phrase.id,
               build_id: buildId,
               voice_slot: voice.slot,
               status: "failed",
-              error_code: error instanceof Error ? error.message : "unknown_error",
-              path: null,
+              error_code: errorMessage,
+              path: `failed/${job.user_id}/${job.notebook_id}/${phrase.id}/${voice.slot}.mp3`, // Placeholder path for failed TTS
               size_bytes: null,
               duration_ms: null,
               sample_rate_hz: 22050, // Use default value instead of null

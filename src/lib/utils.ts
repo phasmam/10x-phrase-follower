@@ -37,7 +37,7 @@ export function getSupabaseClient(context: APIContext): ReturnType<typeof create
     }
   }
 
-  // In production, create an authenticated client with the user's token
+  // For authenticated users, create a client with their token for RLS
   // This is required for RLS policies to work (they check auth.uid())
   if (userId) {
     const authHeader = context.request.headers.get("authorization");
@@ -48,8 +48,9 @@ export function getSupabaseClient(context: APIContext): ReturnType<typeof create
 
       if (supabaseUrl && supabaseAnonKey) {
         // Create an authenticated client with the user's token
-        // The Authorization header allows PostgREST to extract the JWT and make auth.uid() available to RLS policies
-        return createClient(supabaseUrl, supabaseAnonKey, {
+        // The Authorization header in global.headers allows PostgREST to extract the JWT
+        // and make auth.uid() available to RLS policies
+        const client = createClient(supabaseUrl, supabaseAnonKey, {
           global: {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -60,6 +61,17 @@ export function getSupabaseClient(context: APIContext): ReturnType<typeof create
             autoRefreshToken: false,
           },
         });
+        
+        // Also set the token directly in the auth state for RLS
+        // This ensures the client is properly authenticated
+        client.auth.setSession({
+          access_token: token,
+          refresh_token: '',
+        }).catch(() => {
+          // Ignore errors - the global header should still work
+        });
+        
+        return client;
       }
     }
   }

@@ -287,7 +287,7 @@ export interface PlaybackManifestItem {
 
 export interface PlaybackManifestDTO {
   notebook_id: UUID;
-  build_id: UUID;
+  build_id: UUID | null;
   sequence: PlaybackManifestItem[];
   expires_at: string;
 }

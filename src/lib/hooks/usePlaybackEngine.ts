@@ -127,13 +127,28 @@ export function usePlaybackEngine({
 
   // Play audio segment
   const playSegment = useCallback(async (slot: VoiceSlot, url: string) => {
-    console.log('playSegment called:', { slot, url });
+    console.log('[usePlaybackEngine] playSegment called:', { slot, url });
+
+    if (!url || url.trim() === '') {
+      console.error('[usePlaybackEngine] Invalid URL provided:', url);
+      handleSegmentEnd();
+      return;
+    }
 
     if (!audioRef.current) {
       audioRef.current = new Audio();
 
       // Set up event listeners
       audioRef.current.addEventListener('ended', handleSegmentEnd);
+      audioRef.current.addEventListener('error', (e) => {
+        console.error('[usePlaybackEngine] Audio element error:', e, {
+          error: audioRef.current?.error,
+          networkState: audioRef.current?.networkState,
+          readyState: audioRef.current?.readyState,
+          src: audioRef.current?.src
+        });
+        handleSegmentEnd();
+      });
       audioRef.current.addEventListener('timeupdate', () => {
         if (audioRef.current) {
           setClockMs(audioRef.current.currentTime * 1000);
@@ -145,15 +160,19 @@ export function usePlaybackEngine({
     audio.src = url;
     audio.playbackRate = speed;
 
-    console.log('Audio element configured:', { src: audio.src, playbackRate: audio.playbackRate });
+    console.log('[usePlaybackEngine] Audio element configured:', { src: audio.src, playbackRate: audio.playbackRate });
 
     try {
       await audio.play();
-      console.log('Audio playback started successfully');
+      console.log('[usePlaybackEngine] Audio playback started successfully');
       currentSegmentRef.current = slot;
       setCurrentSlot(slot);
     } catch (error) {
-      console.error('Failed to play audio segment:', error);
+      console.error('[usePlaybackEngine] Failed to play audio segment:', error, {
+        errorCode: (error as any)?.code,
+        errorMessage: (error as any)?.message,
+        src: audio.src
+      });
       handleSegmentEnd();
     }
   }, [speed, setCurrentSlot, setClockMs, handleSegmentEnd]);
