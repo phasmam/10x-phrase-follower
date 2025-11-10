@@ -1,7 +1,6 @@
 import type { APIContext } from "astro";
-import { createClient } from "@supabase/supabase-js";
 import { ApiErrors } from "../../lib/errors";
-import { DEFAULT_USER_ID } from "../../db/supabase.client";
+import { getSupabaseClient } from "../../lib/utils";
 import type { UserVoicesListResponse } from "../../types";
 
 export const prerender = false;
@@ -18,22 +17,8 @@ function getUserId(context: APIContext): string {
 export async function GET(context: APIContext) {
   try {
     const userId = getUserId(context);
-    let supabase = context.locals.supabase;
-
-    // In development mode, use service role key to bypass RLS
-    if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
-      const supabaseUrl = import.meta.env.SUPABASE_URL;
-      const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-      
-      if (supabaseServiceKey) {
-        supabase = createClient(supabaseUrl, supabaseServiceKey, {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-          },
-        });
-      }
-    }
+    console.log('[user-voices GET] userId:', userId);
+    const supabase = getSupabaseClient(context);
 
     // Get all voice slots for the user
     const { data: voices, error } = await supabase
@@ -41,6 +26,8 @@ export async function GET(context: APIContext) {
       .select("id, slot, language, voice_id, created_at")
       .eq("user_id", userId)
       .order("slot");
+    
+    console.log('[user-voices GET] Query result - voices:', voices, 'error:', error);
 
     if (error) {
       throw ApiErrors.internal("Failed to fetch user voices");

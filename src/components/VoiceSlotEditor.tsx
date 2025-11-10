@@ -6,6 +6,7 @@ interface VoiceSlot {
   slot: 'EN1' | 'EN2' | 'EN3' | 'PL';
   language: 'en' | 'pl';
   voice_id: string;
+  created_at?: string;
 }
 
 interface VoiceSlotEditorProps {}
@@ -15,6 +16,7 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const { apiCall } = useApi();
 
   // Load voice slots on mount
@@ -33,21 +35,38 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
         { slot: 'PL', language: 'pl', voice_id: '' },
       ];
 
-      if (data.slots && data.slots.length > 0) {
+      const slots = data?.slots || [];
+      if (slots.length > 0) {
         // Merge database data with default slots
         const mergedSlots = defaultSlots.map(defaultSlot => {
-          const dbSlot = data.slots.find(slot => slot.slot === defaultSlot.slot);
+          const dbSlot = slots.find(slot => slot.slot === defaultSlot.slot);
           if (dbSlot) {
+            // Ensure voice_id is a non-null string, trimmed
+            const voiceId = (dbSlot.voice_id != null && dbSlot.voice_id !== '') 
+              ? String(dbSlot.voice_id).trim() 
+              : '';
             return {
-              ...dbSlot,
-              language: dbSlot.slot.startsWith('EN') ? 'en' : 'pl'
+              slot: dbSlot.slot,
+              language: dbSlot.slot.startsWith('EN') ? 'en' : 'pl',
+              voice_id: voiceId,
+              created_at: dbSlot.created_at,
             };
           }
           return defaultSlot;
         });
         setVoiceSlots(mergedSlots);
+        
+        // Find the most recent created_at timestamp
+        const timestamps = slots
+          .map(slot => slot.created_at)
+          .filter((ts): ts is string => !!ts)
+          .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+        if (timestamps.length > 0) {
+          setLastSavedAt(timestamps[0]);
+        }
       } else {
         setVoiceSlots(defaultSlots);
+        setLastSavedAt(null);
       }
     } catch (error) {
       console.error('Failed to load voice slots:', error);
@@ -77,19 +96,22 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
     setSaveResult(null);
 
     try {
-      // Save each voice slot
-      const savePromises = voiceSlots.map(slot => 
+      // Only save slots that have voice_id values
+      const slotsToSave = voiceSlots.filter(slot => slot.voice_id.trim().length > 0);
+      const savePromises = slotsToSave.map(slot => 
         apiCall(`/api/user-voices/${slot.slot}`, {
           method: 'PUT',
           body: JSON.stringify({
             language: slot.language,
-            voice_id: slot.voice_id
+            voice_id: slot.voice_id.trim(),
           }),
         })
       );
 
       await Promise.all(savePromises);
       setSaveResult({ success: true, message: 'Voice slots saved successfully!' });
+      // Reload voice slots to get updated timestamps
+      await loadVoiceSlots();
     } catch (error) {
       console.error('Failed to save voice slots:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to save voice slots. Please try again.';
@@ -101,18 +123,20 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
 
   const validateConfiguration = () => {
     const enSlots = voiceSlots.filter(slot => slot.slot.startsWith('EN'));
-    const enVoiceIds = enSlots.map(slot => slot.voice_id);
+    const enVoiceIds = enSlots
+      .map(slot => (slot.voice_id || '').trim())
+      .filter(id => id.length > 0);
     
-    // Check for duplicate EN voice IDs
-    const duplicateVoiceIds = enVoiceIds.filter((id, index) => enVoiceIds.indexOf(id) !== index);
-    if (duplicateVoiceIds.length > 0) {
+    // Check for duplicate EN voice IDs, ignoring empty values
+    const uniqueVoiceIds = new Set(enVoiceIds);
+    if (uniqueVoiceIds.size !== enVoiceIds.length) {
       return 'EN slots must use different voice IDs';
     }
 
-    // Check for empty voice IDs
-    const emptyVoiceIds = voiceSlots.filter(slot => !slot.voice_id.trim());
-    if (emptyVoiceIds.length > 0) {
-      return 'All voice slots must have a voice ID';
+    // Check for empty EN voice IDs
+    const emptyEnSlots = enSlots.filter(slot => !(slot.voice_id || '').trim());
+    if (emptyEnSlots.length > 0) {
+      return 'All EN slots must have a voice ID';
     }
 
     return null;
@@ -126,10 +150,38 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
     );
   }
 
-  const validationError = validateConfiguration();
+  // Only validate if we're not loading and have slots data
+  const validationError = isLoading ? null : validateConfiguration();
+  const isConfigured =
+    !isLoading &&
+    !validationError &&
+    voiceSlots
+      .filter(slot => slot.slot.startsWith('EN'))
+      .every(slot => (slot.voice_id || '').trim().length > 0);
 
   return (
     <div className="space-y-6">
+      {/* Current Status */}
+      {isConfigured && (
+        <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+          <div className="flex items-center">
+            <svg className="h-5 w-5 text-green-600 dark:text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                Voice slots are configured
+              </p>
+              {lastSavedAt && (
+                <p className="text-xs text-green-600 dark:text-green-400">
+                  Last saved: {new Date(lastSavedAt).toLocaleString()}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Voice Slots Configuration */}
       <div className="space-y-4">
         {voiceSlots.map((slot) => (
