@@ -1,23 +1,19 @@
-import type { APIRoute } from "astro";
+import type { APIRoute, APIContext } from "astro";
 import type { ImportLogsListResponse } from "../../../../../types";
 import type { LocalsWithAuth } from "../../../../../lib/types";
 import { withErrorHandling, requireAuth, ApiErrors } from "../../../../../lib/errors";
+import { getSupabaseClient } from "../../../../../lib/utils";
 
 export const prerender = false;
 
 // GET /api/notebooks/:notebookId/import-logs - List import logs for a notebook
-const getImportLogs = async ({
-  locals,
-  params,
-  url,
-}: {
-  locals: LocalsWithAuth;
-  params: { notebookId: string };
-  url: URL;
-}): Promise<Response> => {
+const getImportLogs = async (context: APIContext): Promise<Response> => {
+  const locals = context.locals as LocalsWithAuth;
   requireAuth(locals.userId);
 
-  const { notebookId } = params;
+  const supabase = getSupabaseClient(context);
+
+  const { notebookId } = context.params as { notebookId: string };
 
   // Validate UUID format
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(notebookId)) {
@@ -25,10 +21,10 @@ const getImportLogs = async ({
   }
 
   // Parse query parameters
-  const limit = Math.min(parseInt(url.searchParams.get("limit") || "25"), 100);
-  const cursor = url.searchParams.get("cursor");
-  const sort = url.searchParams.get("sort") || "created_at";
-  const order = url.searchParams.get("order") || "desc";
+  const limit = Math.min(parseInt(context.url.searchParams.get("limit") || "25"), 100);
+  const cursor = context.url.searchParams.get("cursor");
+  const sort = context.url.searchParams.get("sort") || "created_at";
+  const order = context.url.searchParams.get("order") || "desc";
 
   // Validate sort field
   const allowedSorts = ["created_at"];
@@ -42,7 +38,7 @@ const getImportLogs = async ({
   }
 
   // First verify the notebook exists and belongs to the user
-  const { data: notebook, error: notebookError } = await locals.supabase
+  const { data: notebook, error: notebookError } = await supabase
     .from("notebooks")
     .select("id")
     .eq("id", notebookId)
@@ -54,7 +50,7 @@ const getImportLogs = async ({
   }
 
   // Build query
-  let query = locals.supabase
+  let query = supabase
     .from("import_logs")
     .select("id, line_no, raw_text, reason, created_at")
     .eq("notebook_id", notebookId)

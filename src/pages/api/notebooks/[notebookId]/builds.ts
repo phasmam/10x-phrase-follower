@@ -1,6 +1,7 @@
 import type { APIContext } from "astro";
 import { ApiErrors } from "../../../../lib/errors";
 import type { BuildListResponse } from "../../../../types";
+import { getSupabaseClient } from "../../../../lib/utils";
 
 export const prerender = false;
 
@@ -24,7 +25,7 @@ function parseQueryParams(url: URL) {
 export async function GET(context: APIContext) {
   try {
     const userId = getUserId(context);
-    const supabase = context.locals.supabase;
+    const supabase = getSupabaseClient(context);
 
     // Parse and validate path parameter
     const notebookId = context.params.notebookId;

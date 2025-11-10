@@ -1,10 +1,9 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
-import { createClient } from "@supabase/supabase-js";
 import { ApiErrors } from "../../../../../lib/errors";
 import type { JobDTO } from "../../../../../types";
-import { DEFAULT_USER_ID } from "../../../../../db/supabase.client";
 import { JobWorker } from "../../../../../lib/job-worker";
+import { ensureUserExists, getSupabaseClient } from "../../../../../lib/utils";
 
 export const prerender = false;
 
@@ -20,29 +19,6 @@ function getUserId(context: APIContext): string {
     throw ApiErrors.unauthorized("Authentication required");
   }
   return userId;
-}
-
-// Helper function to get the appropriate Supabase client
-function getSupabaseClient(context: APIContext) {
-  const userId = context.locals.userId;
-  
-  // In development mode with DEFAULT_USER_ID, use service role key to bypass RLS
-  if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
-    const supabaseUrl = import.meta.env.SUPABASE_URL;
-    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-    
-    if (supabaseServiceKey) {
-      return createClient(supabaseUrl, supabaseServiceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      });
-    }
-  }
-  
-  // Otherwise, use the regular client from context
-  return context.locals.supabase;
 }
 
 // Helper function to check TTS credentials
@@ -107,6 +83,7 @@ export async function POST(context: APIContext) {
   try {
     const userId = getUserId(context);
     const supabase = getSupabaseClient(context);
+    await ensureUserExists(supabase, userId);
 
     // Parse and validate path parameter
     const notebookId = context.params.notebookId;

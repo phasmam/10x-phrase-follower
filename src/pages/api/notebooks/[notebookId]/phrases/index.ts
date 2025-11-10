@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { APIRoute, APIContext } from "astro";
 import type { PhraseListResponse, CreatePhraseCommand } from "../../../../../types";
 import type { LocalsWithAuth } from "../../../../../lib/types";
 import { withErrorHandling, requireAuth, ApiErrors } from "../../../../../lib/errors";
@@ -11,47 +11,25 @@ import {
   validateNonEmptyText,
   validateRateLimit,
 } from "../../../../../lib/validation.service";
-import { createClient } from "@supabase/supabase-js";
-import { DEFAULT_USER_ID } from "../../../../../db/supabase.client";
+import { ensureUserExists, getSupabaseClient } from "../../../../../lib/utils";
 
 export const prerender = false;
 
 // GET /api/notebooks/:notebookId/phrases - List phrases in a notebook
-const getPhrases = async ({
-  locals,
-  params,
-  url,
-}: {
-  locals: LocalsWithAuth;
-  params: { notebookId: string };
-  url: URL;
-}): Promise<Response> => {
+const getPhrases = async (context: APIContext): Promise<Response> => {
+  const locals = context.locals as LocalsWithAuth;
   requireAuth(locals.userId);
 
-  // In development, use service role key to bypass RLS
-  let supabase = locals.supabase;
-  if (import.meta.env.NODE_ENV === "development" && locals.userId === DEFAULT_USER_ID) {
-    const supabaseUrl = import.meta.env.SUPABASE_URL;
-    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-    
-    if (supabaseServiceKey) {
-      supabase = createClient(supabaseUrl, supabaseServiceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      });
-    }
-  }
+  const supabase = getSupabaseClient(context);
 
-  const { notebookId } = params;
+  const { notebookId } = context.params as { notebookId: string };
 
   // Validate UUID format
   validateUUID(notebookId, "Notebook ID");
 
   // Validate query parameters
-  const { limit, cursor } = validatePaginationParams(url);
-  const { sort, order } = validateSortParams(url, ["position", "created_at"], "position");
+  const { limit, cursor } = validatePaginationParams(context.url);
+  const { sort, order } = validateSortParams(context.url, ["position", "created_at"], "position");
 
   // First verify the notebook exists and belongs to the user
   const { data: notebook, error: notebookError } = await supabase
@@ -108,34 +86,14 @@ const getPhrases = async ({
 };
 
 // POST /api/notebooks/:notebookId/phrases - Create a new phrase
-const createPhrase = async ({
-  locals,
-  params,
-  request,
-}: {
-  locals: LocalsWithAuth;
-  params: { notebookId: string };
-  request: Request;
-}): Promise<Response> => {
+const createPhrase = async (context: APIContext): Promise<Response> => {
+  const locals = context.locals as LocalsWithAuth;
   requireAuth(locals.userId);
 
-  // In development, use service role key to bypass RLS
-  let supabase = locals.supabase;
-  if (import.meta.env.NODE_ENV === "development" && locals.userId === DEFAULT_USER_ID) {
-    const supabaseUrl = import.meta.env.SUPABASE_URL;
-    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-    
-    if (supabaseServiceKey) {
-      supabase = createClient(supabaseUrl, supabaseServiceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      });
-    }
-  }
+  const supabase = getSupabaseClient(context);
+  await ensureUserExists(supabase, locals.userId);
 
-  const { notebookId } = params;
+  const { notebookId } = context.params as { notebookId: string };
 
   // Validate UUID format
   validateUUID(notebookId, "Notebook ID");
@@ -143,7 +101,7 @@ const createPhrase = async ({
   // Rate limiting for phrase creation
   validateRateLimit(`create_phrase:${locals.userId}`, 20, 60000); // 20 per minute
 
-  const body = await request.json();
+  const body = await context.request.json();
   validateJsonBody(body, ["position", "en_text", "pl_text"]);
 
   const { position, en_text, pl_text, tokens }: CreatePhraseCommand = body;

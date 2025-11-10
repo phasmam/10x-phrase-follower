@@ -2,9 +2,7 @@ import type { APIRoute, APIContext } from "astro";
 import type { ReorderPhrasesCommand, ReorderPhrasesResultDTO } from "../../../../../types";
 import type { LocalsWithAuth } from "../../../../../lib/types";
 import { withErrorHandling, requireAuth, ApiErrors } from "../../../../../lib/errors";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "../../../../../db/database.types";
-import { DEFAULT_USER_ID } from "../../../../../db/supabase.client";
+import { ensureUserExists, getSupabaseClient } from "../../../../../lib/utils";
 
 export const prerender = false;
 
@@ -12,23 +10,10 @@ export const prerender = false;
 const reorderPhrases = async (context: APIContext): Promise<Response> => {
   const { locals, params, request } = context;
   const userId = (locals as LocalsWithAuth).userId;
-  let supabase = (locals as LocalsWithAuth).supabase;
   requireAuth(userId);
 
-  // In development, use service role key to bypass RLS
-  if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
-    const supabaseUrl = import.meta.env.SUPABASE_URL;
-    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (supabaseServiceKey) {
-      supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      });
-    }
-  }
+  const supabase = getSupabaseClient(context);
+  await ensureUserExists(supabase, userId);
 
   const { notebookId } = params as { notebookId: string };
 

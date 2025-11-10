@@ -2,8 +2,7 @@ import type { APIContext } from "astro";
 import { z } from "zod";
 import { ApiErrors } from "../../../../lib/errors";
 import type { PlaybackManifestDTO } from "../../../../types";
-import { createClient } from "@supabase/supabase-js";
-import { DEFAULT_USER_ID } from "../../../../db/supabase.client";
+import { getSupabaseClient } from "../../../../lib/utils";
 
 export const prerender = false;
 
@@ -78,21 +77,7 @@ export async function GET(context: APIContext) {
   try {
     const userId = getUserId(context);
     
-    // In development, use service role key to bypass RLS
-    let supabase = context.locals.supabase;
-    if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
-      const supabaseUrl = import.meta.env.SUPABASE_URL;
-      const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-      
-      if (supabaseServiceKey) {
-        supabase = createClient(supabaseUrl, supabaseServiceKey, {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-          },
-        });
-      }
-    }
+    const supabase = getSupabaseClient(context);
 
     // Parse and validate path parameter
     const notebookId = context.params.notebookId;
