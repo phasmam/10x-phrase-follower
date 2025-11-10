@@ -1,17 +1,23 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
-import { ApiErrors, ApiErrorCode } from "../../lib/errors";
-import type { TtsCredentialsStateDTO, TestTtsCredentialsCommand, SaveTtsCredentialsCommand } from "../../types";
-import { encrypt, decrypt, generateKeyFingerprint } from "../../lib/tts-encryption";
+import { ApiErrors } from "../../lib/errors";
+import type { ApiErrorCode, TtsCredentialsStateDTO } from "../../types";
+import { encrypt, generateKeyFingerprint } from "../../lib/tts-encryption";
 import { DEFAULT_USER_ID } from "../../db/supabase.client";
 
 export const prerender = false;
 
-// Validation schemas
-const TestTtsCredentialsSchema = z.object({
-  google_api_key: z.string().min(1, "API key is required"),
-});
+type ErrorWithCode = Error & { code: ApiErrorCode };
+
+function isErrorWithCode(error: unknown): error is ErrorWithCode {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const candidate = error as Error & { code?: unknown };
+  return typeof candidate.code === "string";
+}
 
 const SaveTtsCredentialsSchema = z.object({
   google_api_key: z.string().min(1, "API key is required"),
@@ -29,12 +35,12 @@ function getUserId(context: APIContext): string {
 // Helper function to get the appropriate Supabase client
 function getSupabaseClient(context: APIContext) {
   const userId = context.locals.userId;
-  
+
   // In development mode with DEFAULT_USER_ID, use service role key to bypass RLS
   if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
     const supabaseUrl = import.meta.env.SUPABASE_URL;
     const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-    
+
     if (supabaseServiceKey) {
       return createClient(supabaseUrl, supabaseServiceKey, {
         auth: {
@@ -44,8 +50,35 @@ function getSupabaseClient(context: APIContext) {
       });
     }
   }
-  
-  // Otherwise, use the regular client from context
+
+  // In production, create an authenticated client with the user's token
+  // This is required for RLS policies to work (they check auth.uid())
+  if (userId) {
+    const authHeader = context.request.headers.get("authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.substring(7);
+      const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || import.meta.env.SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_KEY || import.meta.env.SUPABASE_KEY;
+
+      if (supabaseUrl && supabaseAnonKey) {
+        // Create an authenticated client with the user's token
+        // The Authorization header allows PostgREST to extract the JWT and make auth.uid() available to RLS policies
+        return createClient(supabaseUrl, supabaseAnonKey, {
+          global: {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+          },
+        });
+      }
+    }
+  }
+
+  // Fallback to the regular client from context
   return context.locals.supabase;
 }
 
@@ -114,8 +147,8 @@ export async function GET(context: APIContext) {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    if (error instanceof Error && "code" in error) {
-      return new Response(JSON.stringify({ error: { code: (error as any).code, message: error.message } }), {
+    if (isErrorWithCode(error)) {
+      return new Response(JSON.stringify({ error: { code: error.code, message: error.message } }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
       });
@@ -142,7 +175,7 @@ export async function PUT(context: APIContext) {
     } else {
       try {
         const testResult = await testTtsCredentials(google_api_key);
-        
+
         if (!testResult.ok) {
           throw ApiErrors.invalidKey("TTS credentials test failed");
         }
@@ -157,25 +190,34 @@ export async function PUT(context: APIContext) {
     }
 
     // Encrypt the API key
-    const encryptedKey = await encrypt(google_api_key);
-    const keyFingerprint = generateKeyFingerprint(google_api_key);
+    let encryptedKey: Buffer;
+    try {
+      encryptedKey = await encrypt(google_api_key);
+    } catch (encryptError) {
+      // eslint-disable-next-line no-console
+      console.error("Encryption failed:", encryptError);
+      const errorMessage = encryptError instanceof Error ? encryptError.message : "Encryption failed";
+      throw ApiErrors.internal(`Failed to encrypt TTS credentials: ${errorMessage}`);
+    }
+
+    const keyFingerprint = await generateKeyFingerprint(google_api_key);
 
     // Convert Buffer to base64 string for storage
-    const encryptedKeyBase64 = encryptedKey.toString('base64');
+    const encryptedKeyBase64 = encryptedKey.toString("base64");
 
     // Save or update credentials
-    const { error } = await supabase
-      .from("tts_credentials")
-      .upsert({
-        user_id: userId,
-        encrypted_key: encryptedKeyBase64,
-        key_fingerprint: keyFingerprint,
-        last_validated_at: new Date().toISOString(),
-        is_configured: true,
-      });
+    const { error } = await supabase.from("tts_credentials").upsert({
+      user_id: userId,
+      encrypted_key: encryptedKeyBase64,
+      key_fingerprint: keyFingerprint,
+      last_validated_at: new Date().toISOString(),
+      is_configured: true,
+    });
 
     if (error) {
-      throw ApiErrors.internal("Failed to save TTS credentials");
+      // eslint-disable-next-line no-console
+      console.error("Supabase upsert error:", error);
+      throw ApiErrors.internal(`Failed to save TTS credentials: ${error.message || "Database error"}`);
     }
 
     const state: TtsCredentialsStateDTO = {
@@ -204,17 +246,29 @@ export async function PUT(context: APIContext) {
         }
       );
     }
-    if (error instanceof Error && "code" in error) {
-      const status = (error as any).code === "unauthorized" ? 401 : 400;
-      return new Response(JSON.stringify({ error: { code: (error as any).code, message: error.message } }), {
+    if (isErrorWithCode(error)) {
+      const status = error.code === "unauthorized" ? 401 : 400;
+      return new Response(JSON.stringify({ error: { code: error.code, message: error.message } }), {
         status,
         headers: { "Content-Type": "application/json" },
       });
     }
-    return new Response(JSON.stringify({ error: { code: "internal", message: "Internal server error" } }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    // Log unexpected errors for debugging
+    // eslint-disable-next-line no-console
+    console.error("Unexpected error in PUT /api/tts-credentials:", error);
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return new Response(
+      JSON.stringify({
+        error: {
+          code: "internal",
+          message: import.meta.env.MODE === "development" ? errorMessage : "Internal server error",
+        },
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 }
 
@@ -232,8 +286,8 @@ export async function DELETE(context: APIContext) {
 
     return new Response(null, { status: 204 });
   } catch (error) {
-    if (error instanceof Error && "code" in error) {
-      return new Response(JSON.stringify({ error: { code: (error as any).code, message: error.message } }), {
+    if (isErrorWithCode(error)) {
+      return new Response(JSON.stringify({ error: { code: error.code, message: error.message } }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
       });

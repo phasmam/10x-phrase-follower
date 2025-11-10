@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "generate:tts-key": "node scripts/generate-tts-encryption-key.js"
   },
   "dependencies": {
     "@astrojs/node": "^9.4.3",
