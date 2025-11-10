@@ -15,7 +15,7 @@ const getUserProfile = async ({ locals }: { locals: LocalsWithAuth }): Promise<R
   if (import.meta.env.NODE_ENV === "development" && locals.userId === DEFAULT_USER_ID) {
     const supabaseUrl = import.meta.env.SUPABASE_URL;
     const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-    
+
     if (supabaseServiceKey) {
       supabase = createClient(supabaseUrl, supabaseServiceKey, {
         auth: {
@@ -27,11 +27,7 @@ const getUserProfile = async ({ locals }: { locals: LocalsWithAuth }): Promise<R
   }
 
   // Query user profile
-  const { data: user, error } = await supabase
-    .from("users")
-    .select("id, created_at")
-    .eq("id", locals.userId)
-    .single();
+  const { data: user, error } = await supabase.from("users").select("id, created_at").eq("id", locals.userId).single();
 
   if (error || !user) {
     throw ApiErrors.notFound("User not found");

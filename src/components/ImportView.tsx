@@ -21,12 +21,12 @@ function ImportViewContent({}: ImportViewProps) {
     isLoading: false,
     error: null,
   });
-  
+
   // Form state
   const [notebookName, setNotebookName] = useState("");
   const [linesText, setLinesText] = useState("");
   const [normalize, setNormalize] = useState(false);
-  
+
   // Import result
   const [importResult, setImportResult] = useState<ImportNotebookResultDTO | null>(null);
 
@@ -35,25 +35,25 @@ function ImportViewContent({}: ImportViewProps) {
     if (!notebookName.trim()) {
       return "Notebook name is required";
     }
-    
+
     if (notebookName.length < 1 || notebookName.length > 100) {
       return "Notebook name must be between 1 and 100 characters";
     }
-    
+
     if (!linesText.trim()) {
       return "Import content is required";
     }
-    
-    const lines = linesText.split('\n').filter(line => line.trim());
-    
+
+    const lines = linesText.split("\n").filter((line) => line.trim());
+
     if (lines.length === 0) {
       return "No valid lines found";
     }
-    
+
     if (lines.length > 100) {
       return "Import exceeds 100 phrases limit";
     }
-    
+
     // Basic format validation
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
@@ -61,42 +61,42 @@ function ImportViewContent({}: ImportViewProps) {
         return `Line ${i + 1}: Missing separator (:::) between EN and PL parts`;
       }
     }
-    
+
     return null;
   };
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!isAuthenticated) {
-      setState(prev => ({ ...prev, error: "Authentication required" }));
+      setState((prev) => ({ ...prev, error: "Authentication required" }));
       return;
     }
-    
+
     // Validate form
     const validationError = validateForm();
     if (validationError) {
-      setState(prev => ({ ...prev, error: validationError }));
+      setState((prev) => ({ ...prev, error: validationError }));
       return;
     }
-    
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
-    
+
+    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
     try {
       // Prepare lines array
-      const lines = linesText.split('\n').filter(line => line.trim());
-      
+      const lines = linesText.split("\n").filter((line) => line.trim());
+
       // Prepare import command
       const command: ImportNotebookCommand = {
         name: notebookName.trim(),
         lines,
         normalize,
       };
-      
+
       // Generate idempotency key
       const idempotencyKey = crypto.randomUUID();
-      
+
       // Call import API
       const result = await apiCall<ImportNotebookResultDTO>("/api/notebooks/import", {
         method: "POST",
@@ -105,24 +105,23 @@ function ImportViewContent({}: ImportViewProps) {
           "Idempotency-Key": idempotencyKey,
         },
       });
-      
+
       setImportResult(result);
-      setState(prev => ({ ...prev, step: "summary", isLoading: false }));
-      
+      setState((prev) => ({ ...prev, step: "summary", isLoading: false }));
+
       // Show success toast
       addToast({
         type: "success",
         title: "Import completed",
         description: `Successfully imported ${result.import.accepted} phrases.`,
       });
-      
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Import failed";
-      
-      setState(prev => ({ 
-        ...prev, 
-        isLoading: false, 
-        error: errorMessage
+
+      setState((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: errorMessage,
       }));
 
       // Show error toast
@@ -190,8 +189,8 @@ function ImportForm({
   isLoading,
   error,
 }: ImportFormProps) {
-  const lineCount = linesText.split('\n').filter(line => line.trim()).length;
-  
+  const lineCount = linesText.split("\n").filter((line) => line.trim()).length;
+
   return (
     <div className="bg-card border border-border rounded-lg p-6">
       <form onSubmit={onSubmit} className="space-y-6">
@@ -217,9 +216,7 @@ function ImportForm({
             required
             className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
           />
-          <p className="text-xs text-muted-foreground">
-            {notebookName.length}/100 characters
-          </p>
+          <p className="text-xs text-muted-foreground">{notebookName.length}/100 characters</p>
         </div>
 
         {/* Import content */}
@@ -238,9 +235,7 @@ function ImportForm({
           />
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>{lineCount} lines (max 100)</span>
-            <span className={lineCount > 100 ? "text-destructive" : ""}>
-              {lineCount > 100 ? "Exceeds limit!" : ""}
-            </span>
+            <span className={lineCount > 100 ? "text-destructive" : ""}>{lineCount > 100 ? "Exceeds limit!" : ""}</span>
           </div>
         </div>
 
@@ -262,26 +257,24 @@ function ImportForm({
         <div className="p-4 bg-muted/50 rounded-md">
           <h4 className="text-sm font-medium text-foreground mb-2">Format Requirements:</h4>
           <ul className="text-xs text-muted-foreground space-y-1">
-            <li>• Each line: <code>EN text ::: PL text</code></li>
-            <li>• Exactly one separator <code>:::</code> per line</li>
+            <li>
+              • Each line: <code>EN text ::: PL text</code>
+            </li>
+            <li>
+              • Exactly one separator <code>:::</code> per line
+            </li>
             <li>• Both EN and PL parts must be non-empty</li>
             <li>• Maximum 2000 characters per part</li>
             <li>• Maximum 100 lines per import</li>
           </ul>
           <div className="mt-2">
             <p className="text-xs text-muted-foreground font-medium">Example:</p>
-            <code className="text-xs bg-background px-2 py-1 rounded">
-              Hello world ::: Witaj świecie
-            </code>
+            <code className="text-xs bg-background px-2 py-1 rounded">Hello world ::: Witaj świecie</code>
           </div>
         </div>
 
         {/* Submit button */}
-        <Button
-          type="submit"
-          disabled={isLoading || lineCount > 100}
-          className="w-full"
-        >
+        <Button type="submit" disabled={isLoading || lineCount > 100} className="w-full">
           {isLoading ? "Importing..." : `Import ${lineCount} phrases`}
         </Button>
       </form>
@@ -298,18 +291,21 @@ interface ImportSummaryProps {
 function ImportSummary({ result, onStartOver }: ImportSummaryProps) {
   const { notebook, import: importData } = result;
   const { accepted, rejected, logs } = importData;
-  
+
   return (
     <div className="space-y-6">
       {/* Success message */}
       <div className="p-4 rounded-md bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800">
         <div className="flex items-center">
-          <svg className="h-5 w-5 text-green-600 dark:text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className="h-5 w-5 text-green-600 dark:text-green-400 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
           </svg>
-          <h3 className="text-sm font-medium text-green-800 dark:text-green-200">
-            Import completed successfully!
-          </h3>
+          <h3 className="text-sm font-medium text-green-800 dark:text-green-200">Import completed successfully!</h3>
         </div>
         <p className="text-sm text-green-700 dark:text-green-300 mt-1">
           Notebook "{notebook.name}" has been created with {accepted} phrases.
@@ -319,7 +315,7 @@ function ImportSummary({ result, onStartOver }: ImportSummaryProps) {
       {/* Import statistics */}
       <div className="bg-card border border-border rounded-lg p-6">
         <h3 className="text-lg font-semibold mb-4">Import Summary</h3>
-        
+
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
             <div className="text-2xl font-bold text-green-600 dark:text-green-400">{accepted}</div>
@@ -337,18 +333,17 @@ function ImportSummary({ result, onStartOver }: ImportSummaryProps) {
             <h4 className="text-sm font-medium text-foreground">Rejected Lines:</h4>
             <div className="max-h-60 overflow-y-auto space-y-2">
               {logs.map((log) => (
-                <div key={log.id} className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                <div
+                  key={log.id}
+                  className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md"
+                >
                   <div className="flex justify-between items-start mb-1">
-                    <span className="text-xs font-medium text-red-700 dark:text-red-300">
-                      Line {log.line_no}
-                    </span>
+                    <span className="text-xs font-medium text-red-700 dark:text-red-300">Line {log.line_no}</span>
                   </div>
                   <div className="text-xs text-red-600 dark:text-red-400 font-mono bg-background px-2 py-1 rounded mb-2">
                     {log.raw_text}
                   </div>
-                  <div className="text-xs text-red-700 dark:text-red-300">
-                    {log.reason}
-                  </div>
+                  <div className="text-xs text-red-700 dark:text-red-300">{log.reason}</div>
                 </div>
               ))}
             </div>
@@ -358,9 +353,7 @@ function ImportSummary({ result, onStartOver }: ImportSummaryProps) {
         {/* Action buttons */}
         <div className="flex gap-3 mt-6">
           <Button asChild className="flex-1">
-            <a href={`/notebooks/${notebook.id}`}>
-              View Notebook
-            </a>
+            <a href={`/notebooks/${notebook.id}`}>View Notebook</a>
           </Button>
           <Button variant="outline" onClick={onStartOver} className="flex-1">
             Import Another

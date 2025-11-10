@@ -40,10 +40,7 @@ async function checkTtsCredentials(supabase: any, userId: string): Promise<void>
 
 // Helper function to check user voices
 async function checkUserVoices(supabase: any, userId: string): Promise<void> {
-  const { data: voices, error } = await supabase
-    .from("user_voices")
-    .select("slot, language")
-    .eq("user_id", userId);
+  const { data: voices, error } = await supabase.from("user_voices").select("slot, language").eq("user_id", userId);
 
   if (error) {
     throw ApiErrors.internal("Failed to check user voices");
@@ -128,25 +125,25 @@ export async function POST(context: APIContext) {
     try {
       const supabaseUrl = import.meta.env.SUPABASE_URL;
       const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-      
+
       console.log("Supabase URL configured:", !!supabaseUrl);
       console.log("Supabase Service Key configured:", !!supabaseServiceKey);
-      
+
       if (supabaseUrl && supabaseServiceKey) {
         console.log("Creating JobWorker instance...");
         const worker = new JobWorker(supabaseUrl, supabaseServiceKey);
         console.log("JobWorker instance created, starting job processing...");
-        
+
         // Process the job in the background (non-blocking)
         worker.processJob(jobId).catch((error) => {
           console.error("Failed to process job:", error);
           // Update job state to failed
           supabase
             .from("jobs")
-            .update({ 
-              state: "failed", 
+            .update({
+              state: "failed",
               error: error.message,
-              ended_at: new Date().toISOString()
+              ended_at: new Date().toISOString(),
             })
             .eq("id", jobId)
             .then(() => {
@@ -188,8 +185,7 @@ export async function POST(context: APIContext) {
       );
     }
     if (error instanceof Error && "code" in error) {
-      const status = (error as any).code === "unauthorized" ? 401 : 
-                    (error as any).code === "conflict" ? 409 : 400;
+      const status = (error as any).code === "unauthorized" ? 401 : (error as any).code === "conflict" ? 409 : 400;
       return new Response(JSON.stringify({ error: { code: (error as any).code, message: error.message } }), {
         status,
         headers: { "Content-Type": "application/json" },

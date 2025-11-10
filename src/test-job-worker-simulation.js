@@ -4,7 +4,7 @@
 
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,13 +35,7 @@ function getEncryptionKey() {
 
 // Helper function to derive key from master key and salt
 async function deriveKey(masterKey, salt) {
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    masterKey,
-    { name: "PBKDF2" },
-    false,
-    ["deriveKey"]
-  );
+  const keyMaterial = await crypto.subtle.importKey("raw", masterKey, { name: "PBKDF2" }, false, ["deriveKey"]);
 
   return crypto.subtle.deriveKey(
     {
@@ -61,25 +55,25 @@ async function deriveKey(masterKey, salt) {
 async function decrypt(encryptedData) {
   try {
     const masterKey = getEncryptionKey();
-    
+
     // Convert to Buffer if needed
     let buffer;
-    if (typeof encryptedData === 'string') {
-      buffer = Buffer.from(encryptedData, 'base64');
+    if (typeof encryptedData === "string") {
+      buffer = Buffer.from(encryptedData, "base64");
     } else if (encryptedData instanceof Uint8Array) {
       buffer = Buffer.from(encryptedData);
     } else {
       buffer = encryptedData;
     }
-    
+
     // Extract components
     const salt = buffer.subarray(0, SALT_LENGTH);
     const iv = buffer.subarray(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
     const encrypted = buffer.subarray(SALT_LENGTH + IV_LENGTH);
-    
+
     // Derive key from master key and salt
     const derivedKey = await deriveKey(masterKey, salt);
-    
+
     // Decrypt
     const decrypted = await crypto.subtle.decrypt(
       {
@@ -89,7 +83,7 @@ async function decrypt(encryptedData) {
       derivedKey,
       encrypted
     );
-    
+
     return new TextDecoder().decode(decrypted);
   } catch (error) {
     throw new Error(`Decryption failed: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -135,7 +129,7 @@ class TtsService {
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`TTS API Error: ${response.status} - ${errorText}`);
-      
+
       if (response.status === 400) {
         throw new Error("invalid_key");
       }
@@ -150,10 +144,10 @@ class TtsService {
 
     const data = await response.json();
     const audioData = Buffer.from(data.audioContent, "base64");
-    
+
     console.log(`Audio generated successfully!`);
     console.log(`Audio size: ${audioData.length} bytes`);
-    
+
     return audioData;
   }
 }
@@ -162,71 +156,69 @@ class TtsService {
 async function testJobWorkerSimulation() {
   console.log("=== Job Worker Simulation Test ===");
   console.log("Simulating exactly what the job worker does...");
-  
+
   try {
     // Step 1: Test encryption/decryption with a known key
     console.log(`\n--- Step 1: Test Encryption/Decryption ---`);
     const testApiKey = process.env.GOOGLE_API_KEY;
-    
+
     if (!testApiKey) {
       console.error("❌ GOOGLE_API_KEY environment variable not found!");
       return;
     }
-    
+
     console.log(`Original API key: ${testApiKey.substring(0, 10)}...`);
-    
+
     // Encrypt the key (simulating what happens when user saves credentials)
     const encrypted = await encrypt(testApiKey);
     console.log(`Encrypted data length: ${encrypted.length} bytes`);
-    
+
     // Save encrypted data to file
     const encryptedPath = path.join(__dirname, "simulation-encrypted.bin");
     fs.writeFileSync(encryptedPath, encrypted);
     console.log(`Encrypted data saved to: ${encryptedPath}`);
-    
+
     // Step 2: Simulate what job worker does - decrypt the key
     console.log(`\n--- Step 2: Simulate Job Worker Decryption ---`);
     console.log(`Attempting to decrypt the encrypted data (like job worker does)...`);
-    
+
     const decryptedKey = await decrypt(encrypted);
     console.log(`Decrypted key: ${decryptedKey.substring(0, 10)}...`);
-    
+
     if (decryptedKey !== testApiKey) {
       console.error(`❌ Decryption failed! Keys don't match!`);
       return;
     }
-    
+
     console.log(`✅ Decryption successful!`);
-    
+
     // Step 3: Test TTS service with decrypted key
     console.log(`\n--- Step 3: Test TTS Service ---`);
     console.log(`Testing TTS service with decrypted key...`);
-    
+
     const ttsService = new TtsService(decryptedKey);
-    
+
     // Test with a simple phrase
     const testPhrase = "Hello world, this is a test";
     const voiceId = "en-GB-Standard-B";
     const language = "en";
-    
+
     console.log(`Testing TTS with phrase: "${testPhrase}"`);
-    
+
     try {
       const audioBuffer = await ttsService.synthesize(testPhrase, voiceId, language);
-      
+
       // Save audio to file
       const audioPath = path.join(__dirname, "simulation-output.mp3");
       fs.writeFileSync(audioPath, audioBuffer);
-      
+
       console.log(`\n✅ SUCCESS! Job worker simulation completed successfully!`);
       console.log(`Audio file saved to: ${audioPath}`);
       console.log(`File size: ${audioBuffer.length} bytes`);
-      
     } catch (ttsError) {
       console.error(`❌ TTS generation failed: ${ttsError.message}`);
       console.error(`This might be the same error you're seeing in your job worker.`);
     }
-    
   } catch (error) {
     console.error(`\n❌ FAILED!`);
     console.error(`Error: ${error.message}`);
@@ -240,10 +232,10 @@ async function encrypt(plaintext) {
     const masterKey = getEncryptionKey();
     const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
     const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
-    
+
     // Derive key from master key and salt
     const derivedKey = await deriveKey(masterKey, salt);
-    
+
     // Encrypt
     const encrypted = await crypto.subtle.encrypt(
       {
@@ -253,13 +245,13 @@ async function encrypt(plaintext) {
       derivedKey,
       new TextEncoder().encode(plaintext)
     );
-    
+
     // Combine salt + iv + encrypted data
     const result = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
     result.set(salt, 0);
     result.set(iv, salt.length);
     result.set(new Uint8Array(encrypted), salt.length + iv.length);
-    
+
     return Buffer.from(result);
   } catch (error) {
     throw new Error(`Encryption failed: ${error instanceof Error ? error.message : "Unknown error"}`);

@@ -23,7 +23,7 @@ function parseQueryParams(url: URL) {
   const limit = Math.min(parseInt(url.searchParams.get("limit") || "25"), 100);
   const cursor = url.searchParams.get("cursor");
   const state = url.searchParams.get("state");
-  
+
   return {
     limit,
     cursor,

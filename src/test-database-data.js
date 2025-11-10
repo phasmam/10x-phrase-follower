@@ -4,7 +4,7 @@
 
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,13 +35,7 @@ function getEncryptionKey() {
 
 // Helper function to derive key from master key and salt
 async function deriveKey(masterKey, salt) {
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    masterKey,
-    { name: "PBKDF2" },
-    false,
-    ["deriveKey"]
-  );
+  const keyMaterial = await crypto.subtle.importKey("raw", masterKey, { name: "PBKDF2" }, false, ["deriveKey"]);
 
   return crypto.subtle.deriveKey(
     {
@@ -61,25 +55,25 @@ async function deriveKey(masterKey, salt) {
 async function decrypt(encryptedData) {
   try {
     const masterKey = getEncryptionKey();
-    
+
     // Convert to Buffer if needed
     let buffer;
-    if (typeof encryptedData === 'string') {
-      buffer = Buffer.from(encryptedData, 'base64');
+    if (typeof encryptedData === "string") {
+      buffer = Buffer.from(encryptedData, "base64");
     } else if (encryptedData instanceof Uint8Array) {
       buffer = Buffer.from(encryptedData);
     } else {
       buffer = encryptedData;
     }
-    
+
     // Extract components
     const salt = buffer.subarray(0, SALT_LENGTH);
     const iv = buffer.subarray(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
     const encrypted = buffer.subarray(SALT_LENGTH + IV_LENGTH);
-    
+
     // Derive key from master key and salt
     const derivedKey = await deriveKey(masterKey, salt);
-    
+
     // Decrypt
     const decrypted = await crypto.subtle.decrypt(
       {
@@ -89,7 +83,7 @@ async function decrypt(encryptedData) {
       derivedKey,
       encrypted
     );
-    
+
     return new TextDecoder().decode(decrypted);
   } catch (error) {
     throw new Error(`Decryption failed: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -100,12 +94,12 @@ async function decrypt(encryptedData) {
 async function testDatabaseData() {
   console.log("=== Database Data Test ===");
   console.log("Checking what's actually stored in your database...");
-  
+
   try {
     // Get Supabase configuration from environment
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    
+
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error("❌ Missing Supabase configuration!");
       console.log("Please set these environment variables:");
@@ -120,7 +114,7 @@ async function testDatabaseData() {
 
     // Import Supabase client
     const { createClient } = await import("@supabase/supabase-js");
-    
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
@@ -146,7 +140,7 @@ async function testDatabaseData() {
     console.log(`Encrypted key type: ${typeof credentials.encrypted_key}`);
     console.log(`Encrypted key length: ${credentials.encrypted_key?.length}`);
     console.log(`Encrypted key first 50 chars: ${credentials.encrypted_key?.substring(0, 50)}...`);
-    
+
     // Save the encrypted data to file for inspection
     const encryptedPath = path.join(__dirname, "database-encrypted.bin");
     fs.writeFileSync(encryptedPath, credentials.encrypted_key);
@@ -158,7 +152,7 @@ async function testDatabaseData() {
       console.log(`✅ SUCCESS! Decryption worked!`);
       console.log(`Decrypted key length: ${decryptedKey.length}`);
       console.log(`Decrypted key first 10 chars: ${decryptedKey.substring(0, 10)}...`);
-      
+
       // Test if this key works with TTS
       console.log(`\n--- Testing Decrypted Key with TTS ---`);
       const testResponse = await fetch("https://texttospeech.googleapis.com/v1/voices", {
@@ -166,25 +160,23 @@ async function testDatabaseData() {
           "X-goog-api-key": decryptedKey,
         },
       });
-      
+
       if (testResponse.ok) {
         console.log(`✅ TTS API key is valid and working!`);
         console.log(`The database data is fine. The issue must be elsewhere.`);
       } else {
         console.log(`❌ TTS API key test failed: ${testResponse.status}`);
       }
-      
     } catch (decryptError) {
       console.error(`❌ Decryption failed: ${decryptError.message}`);
       console.error(`Full error:`, decryptError);
-      
+
       console.log(`\n🔍 DIAGNOSIS:`);
       console.log(`The encrypted data in your database is corrupted or incompatible.`);
       console.log(`This explains the "Decryption failed" error in your job worker.`);
       console.log(`\n💡 SOLUTION:`);
       console.log(`You need to re-save your TTS credentials to fix the encrypted data.`);
     }
-
   } catch (error) {
     console.error(`\n❌ FAILED!`);
     console.error(`Error: ${error.message}`);

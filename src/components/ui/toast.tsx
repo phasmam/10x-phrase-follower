@@ -34,7 +34,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       duration: toast.duration ?? 5000, // Default 5 seconds
     };
 
-    setToasts(prev => [...prev, newToast]);
+    setToasts((prev) => [...prev, newToast]);
 
     // Auto-remove toast after duration
     if (newToast.duration > 0) {
@@ -45,7 +45,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const removeToast = useCallback((id: string) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id));
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
   const clearToasts = useCallback(() => {
@@ -77,7 +77,7 @@ function ToastContainer() {
 
   return (
     <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
-      {toasts.map(toast => (
+      {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} />
       ))}
     </div>
@@ -102,9 +102,7 @@ function ToastItem({ toast }: { toast: Toast }) {
 
   const getToastStyles = () => {
     const baseStyles = "p-4 rounded-lg border shadow-lg transition-all duration-150 transform";
-    const visibilityStyles = isVisible 
-      ? "translate-x-0 opacity-100" 
-      : "translate-x-full opacity-0";
+    const visibilityStyles = isVisible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0";
 
     switch (toast.type) {
       case "success":
@@ -146,9 +144,7 @@ function ToastItem({ toast }: { toast: Toast }) {
           )}
           <div className="flex-1">
             <div className="font-medium">{toast.title}</div>
-            {toast.description && (
-              <div className="text-sm opacity-90 mt-1">{toast.description}</div>
-            )}
+            {toast.description && <div className="text-sm opacity-90 mt-1">{toast.description}</div>}
           </div>
         </div>
         <Button
@@ -157,8 +153,7 @@ function ToastItem({ toast }: { toast: Toast }) {
           className="h-6 w-6 p-0 ml-2 opacity-70 hover:opacity-100"
           onClick={handleClose}
         >
-          <span className="sr-only">Close</span>
-          ✕
+          <span className="sr-only">Close</span>✕
         </Button>
       </div>
     </div>

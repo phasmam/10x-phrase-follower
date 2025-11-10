@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { JobWorker } from "../lib/job-worker";
 
 // Mock crypto.randomUUID
-Object.defineProperty(global, 'crypto', {
+Object.defineProperty(global, "crypto", {
   value: {
-    randomUUID: vi.fn(() => 'test-uuid-123'),
+    randomUUID: vi.fn(() => "test-uuid-123"),
   },
 });
 
@@ -14,7 +14,7 @@ describe("JobWorker", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Create a more comprehensive mock
     mockSupabase = {
       from: vi.fn(() => ({
@@ -78,7 +78,7 @@ describe("JobWorker", () => {
         })),
       })),
     }));
-    
+
     mockSupabase.from = mockFrom;
 
     // The job worker catches errors and updates job state, so it doesn't throw
@@ -92,11 +92,11 @@ describe("JobWorker", () => {
         error: null,
       })),
     }));
-    
+
     const mockFrom = vi.fn(() => ({
       update: mockUpdate,
     }));
-    
+
     mockSupabase.from = mockFrom;
 
     await (worker as any).updateJobState("test-job", "running", "2023-01-01T00:00:00Z");
@@ -113,11 +113,11 @@ describe("JobWorker", () => {
       data: null,
       error: null,
     }));
-    
+
     const mockFrom = vi.fn(() => ({
       insert: mockInsert,
     }));
-    
+
     mockSupabase.from = mockFrom;
 
     const buildId = await (worker as any).createBuild("test-notebook", "test-job");

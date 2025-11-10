@@ -245,5 +245,3 @@ Zmiany nie naruszają aktualnego działania DEV — `AuthCard` wciąż najpierw 
 - Wylogowanie dostępne z przycisku w prawym górnym rogu (`Topbar.astro`).
 - Tryb developerski zachowany i niewpływający na produkcję.
 - W produkcji logowanie oparte o Supabase Auth; wszystkie żądania do API zawierają Bearer token w nagłówku (zgodnie z middleware).
-
-

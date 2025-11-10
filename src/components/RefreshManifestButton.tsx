@@ -1,16 +1,13 @@
-import React from 'react';
-import { Button } from './ui/button';
-import { RefreshCw } from 'lucide-react';
+import React from "react";
+import { Button } from "./ui/button";
+import { RefreshCw } from "lucide-react";
 
 interface RefreshManifestButtonProps {
   loading: boolean;
   onRefresh: () => Promise<void>;
 }
 
-export default function RefreshManifestButton({
-  loading,
-  onRefresh
-}: RefreshManifestButtonProps) {
+export default function RefreshManifestButton({ loading, onRefresh }: RefreshManifestButtonProps) {
   return (
     <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
       <div className="flex items-center justify-between">
@@ -26,8 +23,8 @@ export default function RefreshManifestButton({
           variant="default"
           className="bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-700 dark:hover:bg-yellow-600 text-white"
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'Refreshing...' : 'Refresh Manifest'}
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+          {loading ? "Refreshing..." : "Refresh Manifest"}
         </Button>
       </div>
     </div>

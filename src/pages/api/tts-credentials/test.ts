@@ -76,7 +76,7 @@ export async function POST(context: APIContext) {
     // Parse and validate request body
     const body = await context.request.json();
     console.log("Request body received");
-    
+
     const { api_key, provider } = TestTtsCredentialsSchema.parse(body);
     console.log("Parsed data:", { api_key: api_key.substring(0, 10) + "...", provider });
 
@@ -95,7 +95,7 @@ export async function POST(context: APIContext) {
     });
   } catch (error) {
     console.error("TTS test endpoint error:", error);
-    
+
     if (error instanceof z.ZodError) {
       return new Response(
         JSON.stringify({

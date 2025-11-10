@@ -27,7 +27,7 @@ export default function GenerateAudioButton({ notebookId, onJobCreated }: Genera
     voicesConfigured: false,
     error: null,
   });
-  
+
   const hasCheckedPrerequisites = useRef(false);
 
   // Memoize the checkPrerequisites function to prevent infinite loops
@@ -36,9 +36,9 @@ export default function GenerateAudioButton({ notebookId, onJobCreated }: Genera
       console.log("Prerequisites already checked, skipping...");
       return;
     }
-    
+
     hasCheckedPrerequisites.current = true;
-    
+
     try {
       console.log("Checking prerequisites...");
       // Check TTS credentials
@@ -54,18 +54,18 @@ export default function GenerateAudioButton({ notebookId, onJobCreated }: Genera
       const ttsConfigured = ttsResponse.is_configured;
       const voicesConfigured = voicesResponse.slots && voicesResponse.slots.length > 0;
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         ttsConfigured,
         voicesConfigured,
         canGenerate: ttsConfigured && voicesConfigured,
         error: null,
       }));
-      
+
       console.log("Prerequisites checked:", { ttsConfigured, voicesConfigured });
     } catch (err) {
       console.error("Failed to check prerequisites:", err);
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         error: err instanceof Error ? err.message : "Failed to check prerequisites",
       }));
@@ -81,7 +81,7 @@ export default function GenerateAudioButton({ notebookId, onJobCreated }: Genera
   const handleGenerateAudio = async () => {
     if (!state.canGenerate || state.isGenerating) return;
 
-    setState(prev => ({ ...prev, isGenerating: true, error: null }));
+    setState((prev) => ({ ...prev, isGenerating: true, error: null }));
 
     try {
       // Generate idempotency key
@@ -97,7 +97,7 @@ export default function GenerateAudioButton({ notebookId, onJobCreated }: Genera
         }),
       });
 
-      setState(prev => ({ ...prev, isGenerating: false }));
+      setState((prev) => ({ ...prev, isGenerating: false }));
 
       addToast({
         type: "success",
@@ -110,8 +110,8 @@ export default function GenerateAudioButton({ notebookId, onJobCreated }: Genera
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to start audio generation";
-      
-      setState(prev => ({
+
+      setState((prev) => ({
         ...prev,
         isGenerating: false,
         error: errorMessage,
@@ -160,19 +160,13 @@ export default function GenerateAudioButton({ notebookId, onJobCreated }: Genera
       >
         {getButtonText()}
       </Button>
-      
-      {state.error && (
-        <p className="text-xs text-destructive">{state.error}</p>
-      )}
-      
+
+      {state.error && <p className="text-xs text-destructive">{state.error}</p>}
+
       {!state.canGenerate && !state.isGenerating && (
         <div className="text-xs text-muted-foreground">
-          {!state.ttsConfigured && (
-            <p>• Configure TTS credentials in Settings</p>
-          )}
-          {!state.voicesConfigured && (
-            <p>• Configure voice slots in Settings</p>
-          )}
+          {!state.ttsConfigured && <p>• Configure TTS credentials in Settings</p>}
+          {!state.voicesConfigured && <p>• Configure voice slots in Settings</p>}
         </div>
       )}
     </div>

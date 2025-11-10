@@ -4,7 +4,7 @@
 
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,13 +35,7 @@ function getEncryptionKey() {
 
 // Helper function to derive key from master key and salt
 async function deriveKey(masterKey, salt) {
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    masterKey,
-    { name: "PBKDF2" },
-    false,
-    ["deriveKey"]
-  );
+  const keyMaterial = await crypto.subtle.importKey("raw", masterKey, { name: "PBKDF2" }, false, ["deriveKey"]);
 
   return crypto.subtle.deriveKey(
     {
@@ -61,21 +55,21 @@ async function deriveKey(masterKey, salt) {
 async function decrypt(encryptedData) {
   try {
     const masterKey = getEncryptionKey();
-    
+
     // Convert to Buffer if needed
     let buffer;
-    if (typeof encryptedData === 'string') {
+    if (typeof encryptedData === "string") {
       // Check if it's hex encoded (starts with \x)
-      if (encryptedData.startsWith('\\x')) {
+      if (encryptedData.startsWith("\\x")) {
         // Remove \x prefix and convert hex to buffer
-        const hexString = encryptedData.replace(/\\x/g, '');
-        buffer = Buffer.from(hexString, 'hex');
+        const hexString = encryptedData.replace(/\\x/g, "");
+        buffer = Buffer.from(hexString, "hex");
       } else {
         // Try base64 first, then hex
         try {
-          buffer = Buffer.from(encryptedData, 'base64');
+          buffer = Buffer.from(encryptedData, "base64");
         } catch {
-          buffer = Buffer.from(encryptedData, 'hex');
+          buffer = Buffer.from(encryptedData, "hex");
         }
       }
     } else if (encryptedData instanceof Uint8Array) {
@@ -83,15 +77,15 @@ async function decrypt(encryptedData) {
     } else {
       buffer = encryptedData;
     }
-    
+
     // Extract components
     const salt = buffer.subarray(0, SALT_LENGTH);
     const iv = buffer.subarray(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
     const encrypted = buffer.subarray(SALT_LENGTH + IV_LENGTH);
-    
+
     // Derive key from master key and salt
     const derivedKey = await deriveKey(masterKey, salt);
-    
+
     // Decrypt
     const decrypted = await crypto.subtle.decrypt(
       {
@@ -101,7 +95,7 @@ async function decrypt(encryptedData) {
       derivedKey,
       encrypted
     );
-    
+
     return new TextDecoder().decode(decrypted);
   } catch (error) {
     throw new Error(`Decryption failed: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -112,23 +106,23 @@ async function decrypt(encryptedData) {
 async function testWithAstroEnv() {
   console.log("=== Test with Astro Environment ===");
   console.log("Using the same environment loading as your Astro app...");
-  
+
   try {
     // Load environment variables from .env file (same as Astro does)
     const envPath = path.join(__dirname, "..", ".env");
-    
+
     if (fs.existsSync(envPath)) {
       console.log(`Found .env file at: ${envPath}`);
-      
+
       // Read and parse .env file
-      const envContent = fs.readFileSync(envPath, 'utf8');
-      const envLines = envContent.split('\n');
-      
+      const envContent = fs.readFileSync(envPath, "utf8");
+      const envLines = envContent.split("\n");
+
       for (const line of envLines) {
-        if (line.trim() && !line.startsWith('#')) {
-          const [key, ...valueParts] = line.split('=');
+        if (line.trim() && !line.startsWith("#")) {
+          const [key, ...valueParts] = line.split("=");
           if (key && valueParts.length > 0) {
-            const value = valueParts.join('=').trim();
+            const value = valueParts.join("=").trim();
             process.env[key.trim()] = value;
             console.log(`Loaded: ${key.trim()}=${value.substring(0, 20)}...`);
           }
@@ -137,28 +131,30 @@ async function testWithAstroEnv() {
     } else {
       console.log(`No .env file found at: ${envPath}`);
     }
-    
+
     // Check if we have the required environment variables
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    
+
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error("❌ Still missing Supabase configuration!");
       console.log("Available environment variables:");
-      Object.keys(process.env).filter(key => key.includes('SUPABASE')).forEach(key => {
-        console.log(`${key}=${process.env[key]?.substring(0, 20)}...`);
-      });
+      Object.keys(process.env)
+        .filter((key) => key.includes("SUPABASE"))
+        .forEach((key) => {
+          console.log(`${key}=${process.env[key]?.substring(0, 20)}...`);
+        });
       return;
     }
 
     console.log(`\n--- Environment Check ---`);
     console.log(`Supabase URL: ${supabaseUrl.substring(0, 30)}...`);
     console.log(`Service Key: ${supabaseServiceKey.substring(0, 20)}...`);
-    console.log(`TTS Encryption Key: ${process.env.TTS_ENCRYPTION_KEY ? 'SET' : 'NOT SET'}`);
+    console.log(`TTS Encryption Key: ${process.env.TTS_ENCRYPTION_KEY ? "SET" : "NOT SET"}`);
 
     // Import Supabase client
     const { createClient } = await import("@supabase/supabase-js");
-    
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
@@ -184,7 +180,7 @@ async function testWithAstroEnv() {
     console.log(`Encrypted key type: ${typeof credentials.encrypted_key}`);
     console.log(`Encrypted key length: ${credentials.encrypted_key?.length}`);
     console.log(`Encrypted key first 50 chars: ${credentials.encrypted_key?.substring(0, 50)}...`);
-    
+
     // Save the encrypted data to file for inspection
     const encryptedPath = path.join(__dirname, "database-encrypted.bin");
     fs.writeFileSync(encryptedPath, credentials.encrypted_key);
@@ -196,7 +192,7 @@ async function testWithAstroEnv() {
       console.log(`✅ SUCCESS! Decryption worked!`);
       console.log(`Decrypted key length: ${decryptedKey.length}`);
       console.log(`Decrypted key first 10 chars: ${decryptedKey.substring(0, 10)}...`);
-      
+
       // Test if this key works with TTS
       console.log(`\n--- Testing Decrypted Key with TTS ---`);
       const testResponse = await fetch("https://texttospeech.googleapis.com/v1/voices", {
@@ -204,25 +200,23 @@ async function testWithAstroEnv() {
           "X-goog-api-key": decryptedKey,
         },
       });
-      
+
       if (testResponse.ok) {
         console.log(`✅ TTS API key is valid and working!`);
         console.log(`The database data is fine. The issue must be elsewhere.`);
       } else {
         console.log(`❌ TTS API key test failed: ${testResponse.status}`);
       }
-      
     } catch (decryptError) {
       console.error(`❌ Decryption failed: ${decryptError.message}`);
       console.error(`Full error:`, decryptError);
-      
+
       console.log(`\n🔍 DIAGNOSIS:`);
       console.log(`The encrypted data in your database is corrupted or incompatible.`);
       console.log(`This explains the "Decryption failed" error in your job worker.`);
       console.log(`\n💡 SOLUTION:`);
       console.log(`You need to re-save your TTS credentials to fix the encrypted data.`);
     }
-
   } catch (error) {
     console.error(`\n❌ FAILED!`);
     console.error(`Error: ${error.message}`);

@@ -75,18 +75,21 @@ The app will run on `http://localhost:4321` (or the port shown) in production mo
 If you want to test production mode with `npm run dev`, you can set the environment variable:
 
 **Windows PowerShell:**
+
 ```powershell
 $env:NODE_ENV="production"
 npm run dev
 ```
 
 **Windows CMD:**
+
 ```cmd
 set NODE_ENV=production
 npm run dev
 ```
 
 **Linux/Mac:**
+
 ```bash
 NODE_ENV=production npm run dev
 ```
@@ -96,6 +99,7 @@ NODE_ENV=production npm run dev
 ### Important: Environment Variables in Production
 
 In production mode, you **MUST** set:
+
 - `PUBLIC_SUPABASE_URL` - Required (will throw error if missing)
 - `PUBLIC_SUPABASE_KEY` - Required (will throw error if missing)
 
@@ -104,9 +108,10 @@ The Supabase client will throw an error on startup if these are not set in produ
 ## Step 4: Test the Login Flow
 
 1. **Clear localStorage** (to remove any DEV_JWT tokens):
+
    ```javascript
    // In browser console
-   localStorage.clear()
+   localStorage.clear();
    ```
 
 2. **Navigate to `/login`**
@@ -136,6 +141,7 @@ Open DevTools → Application → Local Storage and verify:
 ### Check Browser Console
 
 Look for these logs:
+
 - "DEV_JWT not available, checking Supabase session"
 - "Using stored Supabase session" (on page reload)
 
@@ -144,15 +150,15 @@ Look for these logs:
 Open DevTools → Console and test an authenticated API call:
 
 ```javascript
-const token = localStorage.getItem('sb_access_token');
-fetch('/api/users/me', {
+const token = localStorage.getItem("sb_access_token");
+fetch("/api/users/me", {
   headers: {
-    'Authorization': `Bearer ${token}`,
-    'Accept': 'application/json'
-  }
+    Authorization: `Bearer ${token}`,
+    Accept: "application/json",
+  },
 })
-.then(r => r.json())
-.then(console.log);
+  .then((r) => r.json())
+  .then(console.log);
 ```
 
 Should return user information.
@@ -160,9 +166,10 @@ Should return user information.
 ## Step 6: Test Token Refresh
 
 1. **Wait for token to expire** (or manually expire it):
+
    ```javascript
    // In browser console - set expiry to past
-   localStorage.setItem('sb_expires_at', (Date.now() - 1000).toString());
+   localStorage.setItem("sb_expires_at", (Date.now() - 1000).toString());
    ```
 
 2. **Reload the page**
@@ -223,6 +230,7 @@ Should return user information.
 ### Issue: Login fails with "Invalid email or password"
 
 **Solutions**:
+
 - Verify the user exists in Supabase Dashboard
 - Check that email confirmation is not required (or confirm the email)
 - Verify password meets requirements (min 8 characters)
@@ -230,6 +238,7 @@ Should return user information.
 ### Issue: Token refresh fails
 
 **Solutions**:
+
 - Check that `sb_refresh_token` is stored in localStorage
 - Verify the refresh token hasn't expired (Supabase refresh tokens last ~30 days)
 - Check browser console for specific error messages
@@ -237,6 +246,7 @@ Should return user information.
 ### Issue: API calls return 401
 
 **Solutions**:
+
 - Verify `Authorization: Bearer <token>` header is being sent
 - Check that token hasn't expired
 - Verify middleware is correctly extracting and validating the token
@@ -255,11 +265,12 @@ $body = @{
 Invoke-WebRequest -Uri "http://localhost:3000/api/auth/login" `
     -Method POST `
     -Headers @{"Content-Type"="application/json"} `
-    -Body $body | 
+    -Body $body |
     Select-Object -ExpandProperty Content
 ```
 
 **Note**: This endpoint returns 404 in development mode (as per spec). To test it, you need to either:
+
 - Build and run in production mode
 - Temporarily modify the endpoint to work in dev
 
@@ -272,4 +283,3 @@ After verifying production auth works:
 3. **Implement password reset** (if needed)
 4. **Add email verification** (if needed)
 5. **Set up proper error monitoring** for auth failures
-

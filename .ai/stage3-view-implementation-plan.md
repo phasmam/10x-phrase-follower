@@ -4,9 +4,11 @@
 # Plan implementacji widoku Player (Etap 3 — Klik-to-seek + highlight + statusy)
 
 ## 1. Przegląd
+
 Widok **Player** odpowiada za odtwarzanie fraz w sekwencji **EN1 → EN2 → EN3 → PL** z kontrolowanymi pauzami **800 ms**, funkcją **klik-to-seek per słowo**, przełączanym **podświetlaniem tokenów** oraz prezentacją **statusów audio** (complete/failed/missing). Wspiera skróty klawiaturowe, auto-advance i ręczne odświeżanie manifestu odtwarzania (krótkotrwałe URL-e). Wymagania funkcjonalne i UX wynikają z PRD i planu UI/API. :contentReference[oaicite:0]{index=0} :contentReference[oaicite:1]{index=1} :contentReference[oaicite:2]{index=2}
 
 ## 2. Routing widoku
+
 - **Ścieżka:** `/player/:notebookId?start_phrase_id=<uuid>`
 - **Dostęp:** prywatny (po zalogowaniu), JWT Supabase; 403/404 dla zasobów innych użytkowników (RLS). :contentReference[oaicite:3]{index=3}
 
@@ -18,7 +20,7 @@ PlayerPage
 ├─ PlayerControls
 ├─ SegmentSequenceBar
 ├─ PhraseViewer
-│  └─ Token (wiele)
+│ └─ Token (wiele)
 ├─ KeyboardShortcutsHandler
 └─ RefreshManifestButton
 
@@ -240,10 +242,11 @@ PlayerPage
 - **UC-09** Statusy audio w tabeli / pomijanie braków → w Playerze `SegmentSequenceBar` pokazuje obecność segmentów (manifest pomija non-complete); odtwarzacz pomija brakujące. :contentReference[oaicite:35]{index=35}
 
 ```
+
 **Załączniki i referencje**:
 
-* PRD: @prd.md  
-* Opis widoku: ui-plan.md  
-* Endpointy: @api-plan.md  
-* Etapy: stages-plan.md  
-* Typy DTO: @types.ts (lokalny plik, źródło prawdy dla kontraktów)
+- PRD: @prd.md
+- Opis widoku: ui-plan.md
+- Endpointy: @api-plan.md
+- Etapy: stages-plan.md
+- Typy DTO: @types.ts (lokalny plik, źródło prawdy dla kontraktów)

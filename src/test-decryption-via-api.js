@@ -5,7 +5,7 @@
 async function testDecryptionViaAPI() {
   console.log("=== Testing Decryption via API ===");
   console.log("Using the existing dev API endpoint to test decryption...");
-  
+
   try {
     // Use the existing dev test endpoint
     const response = await fetch("http://localhost:3000/api/dev/test-tts-credentials", {
@@ -16,7 +16,7 @@ async function testDecryptionViaAPI() {
     });
 
     console.log(`Response status: ${response.status}`);
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`❌ API call failed: ${response.status} - ${errorText}`);
@@ -26,7 +26,7 @@ async function testDecryptionViaAPI() {
     const result = await response.json();
     console.log(`\n--- API Response ---`);
     console.log(JSON.stringify(result, null, 2));
-    
+
     if (result.success) {
       console.log(`\n✅ SUCCESS! Decryption is working via API!`);
       console.log(`Key length: ${result.key_length}`);
@@ -40,7 +40,6 @@ async function testDecryptionViaAPI() {
         console.log(`Encrypted data preview: ${result.encrypted_preview}`);
       }
     }
-
   } catch (error) {
     console.error(`\n❌ FAILED!`);
     console.error(`Error: ${error.message}`);

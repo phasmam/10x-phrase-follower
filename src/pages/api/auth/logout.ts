@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { APIRoute } from 'astro';
 
 export const prerender = false;
 
@@ -12,4 +12,3 @@ const logoutHandler = async (): Promise<Response> => {
 };
 
 export const POST: APIRoute = logoutHandler;
-

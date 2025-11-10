@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Button } from './ui/button';
-import { useApi } from '../lib/hooks/useApi';
+import { useState, useEffect } from "react";
+import { Button } from "./ui/button";
+import { useApi } from "../lib/hooks/useApi";
 
 interface VoiceSlot {
-  slot: 'EN1' | 'EN2' | 'EN3' | 'PL';
-  language: 'en' | 'pl';
+  slot: "EN1" | "EN2" | "EN3" | "PL";
+  language: "en" | "pl";
   voice_id: string;
   created_at?: string;
 }
@@ -26,28 +26,26 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
 
   const loadVoiceSlots = async () => {
     try {
-      const data = await apiCall('/api/user-voices');
+      const data = await apiCall("/api/user-voices");
       // Always show all 4 slots, merge with database data
       const defaultSlots: VoiceSlot[] = [
-        { slot: 'EN1', language: 'en', voice_id: '' },
-        { slot: 'EN2', language: 'en', voice_id: '' },
-        { slot: 'EN3', language: 'en', voice_id: '' },
-        { slot: 'PL', language: 'pl', voice_id: '' },
+        { slot: "EN1", language: "en", voice_id: "" },
+        { slot: "EN2", language: "en", voice_id: "" },
+        { slot: "EN3", language: "en", voice_id: "" },
+        { slot: "PL", language: "pl", voice_id: "" },
       ];
 
       const slots = data?.slots || [];
       if (slots.length > 0) {
         // Merge database data with default slots
-        const mergedSlots = defaultSlots.map(defaultSlot => {
-          const dbSlot = slots.find(slot => slot.slot === defaultSlot.slot);
+        const mergedSlots = defaultSlots.map((defaultSlot) => {
+          const dbSlot = slots.find((slot) => slot.slot === defaultSlot.slot);
           if (dbSlot) {
             // Ensure voice_id is a non-null string, trimmed
-            const voiceId = (dbSlot.voice_id != null && dbSlot.voice_id !== '') 
-              ? String(dbSlot.voice_id).trim() 
-              : '';
+            const voiceId = dbSlot.voice_id != null && dbSlot.voice_id !== "" ? String(dbSlot.voice_id).trim() : "";
             return {
               slot: dbSlot.slot,
-              language: dbSlot.slot.startsWith('EN') ? 'en' : 'pl',
+              language: dbSlot.slot.startsWith("EN") ? "en" : "pl",
               voice_id: voiceId,
               created_at: dbSlot.created_at,
             };
@@ -55,10 +53,10 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
           return defaultSlot;
         });
         setVoiceSlots(mergedSlots);
-        
+
         // Find the most recent created_at timestamp
         const timestamps = slots
-          .map(slot => slot.created_at)
+          .map((slot) => slot.created_at)
           .filter((ts): ts is string => !!ts)
           .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
         if (timestamps.length > 0) {
@@ -69,13 +67,13 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
         setLastSavedAt(null);
       }
     } catch (error) {
-      console.error('Failed to load voice slots:', error);
+      console.error("Failed to load voice slots:", error);
       // Set default slots on error
       const defaultSlots: VoiceSlot[] = [
-        { slot: 'EN1', language: 'en', voice_id: '' },
-        { slot: 'EN2', language: 'en', voice_id: '' },
-        { slot: 'EN3', language: 'en', voice_id: '' },
-        { slot: 'PL', language: 'pl', voice_id: '' },
+        { slot: "EN1", language: "en", voice_id: "" },
+        { slot: "EN2", language: "en", voice_id: "" },
+        { slot: "EN3", language: "en", voice_id: "" },
+        { slot: "PL", language: "pl", voice_id: "" },
       ];
       setVoiceSlots(defaultSlots);
     } finally {
@@ -83,12 +81,8 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
     }
   };
 
-  const updateVoiceSlot = (slot: 'EN1' | 'EN2' | 'EN3' | 'PL', field: 'language' | 'voice_id', value: string) => {
-    setVoiceSlots(prev => prev.map(vs => 
-      vs.slot === slot 
-        ? { ...vs, [field]: value }
-        : vs
-    ));
+  const updateVoiceSlot = (slot: "EN1" | "EN2" | "EN3" | "PL", field: "language" | "voice_id", value: string) => {
+    setVoiceSlots((prev) => prev.map((vs) => (vs.slot === slot ? { ...vs, [field]: value } : vs)));
   };
 
   const handleSave = async () => {
@@ -97,10 +91,10 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
 
     try {
       // Only save slots that have voice_id values
-      const slotsToSave = voiceSlots.filter(slot => slot.voice_id.trim().length > 0);
-      const savePromises = slotsToSave.map(slot => 
+      const slotsToSave = voiceSlots.filter((slot) => slot.voice_id.trim().length > 0);
+      const savePromises = slotsToSave.map((slot) =>
         apiCall(`/api/user-voices/${slot.slot}`, {
-          method: 'PUT',
+          method: "PUT",
           body: JSON.stringify({
             language: slot.language,
             voice_id: slot.voice_id.trim(),
@@ -109,12 +103,12 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
       );
 
       await Promise.all(savePromises);
-      setSaveResult({ success: true, message: 'Voice slots saved successfully!' });
+      setSaveResult({ success: true, message: "Voice slots saved successfully!" });
       // Reload voice slots to get updated timestamps
       await loadVoiceSlots();
     } catch (error) {
-      console.error('Failed to save voice slots:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save voice slots. Please try again.';
+      console.error("Failed to save voice slots:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to save voice slots. Please try again.";
       setSaveResult({ success: false, message: errorMessage });
     } finally {
       setIsSaving(false);
@@ -122,21 +116,19 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
   };
 
   const validateConfiguration = () => {
-    const enSlots = voiceSlots.filter(slot => slot.slot.startsWith('EN'));
-    const enVoiceIds = enSlots
-      .map(slot => (slot.voice_id || '').trim())
-      .filter(id => id.length > 0);
-    
+    const enSlots = voiceSlots.filter((slot) => slot.slot.startsWith("EN"));
+    const enVoiceIds = enSlots.map((slot) => (slot.voice_id || "").trim()).filter((id) => id.length > 0);
+
     // Check for duplicate EN voice IDs, ignoring empty values
     const uniqueVoiceIds = new Set(enVoiceIds);
     if (uniqueVoiceIds.size !== enVoiceIds.length) {
-      return 'EN slots must use different voice IDs';
+      return "EN slots must use different voice IDs";
     }
 
     // Check for empty EN voice IDs
-    const emptyEnSlots = enSlots.filter(slot => !(slot.voice_id || '').trim());
+    const emptyEnSlots = enSlots.filter((slot) => !(slot.voice_id || "").trim());
     if (emptyEnSlots.length > 0) {
-      return 'All EN slots must have a voice ID';
+      return "All EN slots must have a voice ID";
     }
 
     return null;
@@ -155,9 +147,7 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
   const isConfigured =
     !isLoading &&
     !validationError &&
-    voiceSlots
-      .filter(slot => slot.slot.startsWith('EN'))
-      .every(slot => (slot.voice_id || '').trim().length > 0);
+    voiceSlots.filter((slot) => slot.slot.startsWith("EN")).every((slot) => (slot.voice_id || "").trim().length > 0);
 
   return (
     <div className="space-y-6">
@@ -166,12 +156,14 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
         <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
           <div className="flex items-center">
             <svg className="h-5 w-5 text-green-600 dark:text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clipRule="evenodd"
+              />
             </svg>
             <div>
-              <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                Voice slots are configured
-              </p>
+              <p className="text-sm font-medium text-green-800 dark:text-green-200">Voice slots are configured</p>
               {lastSavedAt && (
                 <p className="text-xs text-green-600 dark:text-green-400">
                   Last saved: {new Date(lastSavedAt).toLocaleString()}
@@ -188,52 +180,46 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
           <div key={slot.slot} className="p-4 border border-border rounded-lg bg-card">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-medium text-foreground">
-                {slot.slot} {slot.slot.startsWith('EN') ? '(English)' : '(Polish)'}
+                {slot.slot} {slot.slot.startsWith("EN") ? "(English)" : "(Polish)"}
               </h3>
-              <span className={`px-2 py-1 text-xs rounded-full ${
-                slot.slot.startsWith('EN') 
-                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                  : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-              }`}>
-                {slot.slot.startsWith('EN') ? 'English' : 'Polish'}
+              <span
+                className={`px-2 py-1 text-xs rounded-full ${
+                  slot.slot.startsWith("EN")
+                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                    : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                }`}
+              >
+                {slot.slot.startsWith("EN") ? "English" : "Polish"}
               </span>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Language
-                </label>
+                <label className="block text-sm font-medium text-foreground mb-2">Language</label>
                 <select
                   value={slot.language}
-                  onChange={(e) => updateVoiceSlot(slot.slot, 'language', e.target.value as 'en' | 'pl')}
+                  onChange={(e) => updateVoiceSlot(slot.slot, "language", e.target.value as "en" | "pl")}
                   className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  disabled={slot.slot.startsWith('EN')}
+                  disabled={slot.slot.startsWith("EN")}
                 >
                   <option value="en">English</option>
                   <option value="pl">Polish</option>
                 </select>
-                {slot.slot.startsWith('EN') && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    EN slots are fixed to English
-                  </p>
+                {slot.slot.startsWith("EN") && (
+                  <p className="text-xs text-muted-foreground mt-1">EN slots are fixed to English</p>
                 )}
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Voice ID
-                </label>
+                <label className="block text-sm font-medium text-foreground mb-2">Voice ID</label>
                 <input
                   type="text"
                   value={slot.voice_id}
-                  onChange={(e) => updateVoiceSlot(slot.slot, 'voice_id', e.target.value)}
+                  onChange={(e) => updateVoiceSlot(slot.slot, "voice_id", e.target.value)}
                   placeholder="e.g., en-US-Wavenet-A"
                   className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Google TTS voice identifier
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">Google TTS voice identifier</p>
               </div>
             </div>
           </div>
@@ -243,24 +229,24 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
       {/* Validation Error */}
       {validationError && (
         <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <p className="text-sm text-red-800 dark:text-red-200">
-            {validationError}
-          </p>
+          <p className="text-sm text-red-800 dark:text-red-200">{validationError}</p>
         </div>
       )}
 
       {/* Save Result */}
       {saveResult && (
-        <div className={`p-3 rounded-lg ${
-          saveResult.success 
-            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' 
-            : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
-        }`}>
-          <p className={`text-sm ${
-            saveResult.success 
-              ? 'text-green-800 dark:text-green-200' 
-              : 'text-red-800 dark:text-red-200'
-          }`}>
+        <div
+          className={`p-3 rounded-lg ${
+            saveResult.success
+              ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
+              : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+          }`}
+        >
+          <p
+            className={`text-sm ${
+              saveResult.success ? "text-green-800 dark:text-green-200" : "text-red-800 dark:text-red-200"
+            }`}
+          >
             {saveResult.message}
           </p>
         </div>
@@ -268,28 +254,30 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <Button
-          onClick={handleSave}
-          disabled={isSaving || !!validationError}
-          className="min-w-[120px]"
-        >
+        <Button onClick={handleSave} disabled={isSaving || !!validationError} className="min-w-[120px]">
           {isSaving ? (
             <>
               <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
               </svg>
               Saving...
             </>
           ) : (
-            'Save Voice Slots'
+            "Save Voice Slots"
           )}
         </Button>
       </div>
 
       {/* Help Text */}
       <div className="text-sm text-muted-foreground">
-        <p className="mb-2"><strong>Configuration Rules:</strong></p>
+        <p className="mb-2">
+          <strong>Configuration Rules:</strong>
+        </p>
         <ul className="list-disc list-inside space-y-1">
           <li>EN1, EN2, EN3 are fixed to English language and must use different voice IDs</li>
           <li>PL slot is fixed to Polish language and can use any Polish voice ID</li>

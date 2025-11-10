@@ -34,7 +34,7 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
     if (!isAuthenticated) return;
 
     const loadData = async () => {
-      setState(prev => ({ ...prev, isLoading: true, error: null }));
+      setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       try {
         // Load notebook and phrases in parallel
@@ -43,14 +43,14 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
           apiCall<PhraseListResponse>(`/api/notebooks/${notebookId}/phrases`, { method: "GET" }),
         ]);
 
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           notebook: notebookData,
           phrases: phrasesData.items,
           isLoading: false,
         }));
       } catch (err) {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           isLoading: false,
           error: err instanceof Error ? err.message : "Failed to load notebook",
@@ -71,9 +71,9 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
       });
 
       // Remove from local state
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
-        phrases: prev.phrases.filter(p => p.id !== phraseId),
+        phrases: prev.phrases.filter((p) => p.id !== phraseId),
       }));
 
       // Show success toast
@@ -84,8 +84,8 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to delete phrase";
-      
-      setState(prev => ({
+
+      setState((prev) => ({
         ...prev,
         error: errorMessage,
       }));
@@ -101,16 +101,16 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
 
   // Handle phrase reorder
   const handleMovePhrase = async (phraseId: string, direction: "up" | "down") => {
-    const currentPhrase = state.phrases.find(p => p.id === phraseId);
+    const currentPhrase = state.phrases.find((p) => p.id === phraseId);
     if (!currentPhrase) return;
 
-    const currentIndex = state.phrases.findIndex(p => p.id === phraseId);
+    const currentIndex = state.phrases.findIndex((p) => p.id === phraseId);
     const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
-    
+
     if (targetIndex < 0 || targetIndex >= state.phrases.length) return;
 
     const targetPhrase = state.phrases[targetIndex];
-    
+
     try {
       // Call reorder API
       await apiCall(`/api/notebooks/${notebookId}/phrases/reorder`, {
@@ -119,15 +119,15 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
           moves: [
             { phrase_id: currentPhrase.id, position: targetPhrase.position },
             { phrase_id: targetPhrase.id, position: currentPhrase.position },
-          ]
+          ],
         }),
       });
 
       // Update local state optimistically
       const newPhrases = [...state.phrases];
       [newPhrases[currentIndex], newPhrases[targetIndex]] = [newPhrases[targetIndex], newPhrases[currentIndex]];
-      
-      setState(prev => ({
+
+      setState((prev) => ({
         ...prev,
         phrases: newPhrases,
       }));
@@ -137,10 +137,9 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
         title: "Phrase reordered",
         description: "The phrase position has been updated.",
       });
-
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to reorder phrase";
-      
+
       addToast({
         type: "error",
         title: "Reorder failed",
@@ -151,7 +150,7 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
 
   // Handle job creation
   const handleJobCreated = (job: JobDTO) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       activeJob: job,
     }));
@@ -176,7 +175,7 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
         </div>
         <div className="bg-card border border-border rounded-lg p-6">
           <div className="space-y-4">
-            {[1, 2, 3].map(i => (
+            {[1, 2, 3].map((i) => (
               <div key={i} className="h-16 bg-muted animate-pulse rounded"></div>
             ))}
           </div>
@@ -206,17 +205,10 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            {state.notebook?.name || "Notebook"}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {state.phrases.length} phrases
-          </p>
+          <h1 className="text-3xl font-bold text-foreground">{state.notebook?.name || "Notebook"}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{state.phrases.length} phrases</p>
         </div>
-        <a 
-          href="/notebooks" 
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
+        <a href="/notebooks" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
           ← Back to Notebooks
         </a>
       </div>
@@ -247,15 +239,12 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
             <h2 className="text-lg font-semibold">Phrases</h2>
             <div className="flex items-center gap-2">
               <Button asChild size="sm" variant="default">
-                <a href={`/player/${notebookId}`} title="Open Player">Open Player</a>
+                <a href={`/player/${notebookId}`} title="Open Player">
+                  Open Player
+                </a>
               </Button>
-              <span className="text-xs text-muted-foreground">
-                Reorder temporarily disabled
-              </span>
-              <GenerateAudioButton 
-                notebookId={notebookId}
-                onJobCreated={handleJobCreated}
-              />
+              <span className="text-xs text-muted-foreground">Reorder temporarily disabled</span>
+              <GenerateAudioButton notebookId={notebookId} onJobCreated={handleJobCreated} />
             </div>
           </div>
         </div>
@@ -263,19 +252,15 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
         {state.phrases.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-muted-foreground">No phrases found in this notebook.</p>
-            <a 
-              href="/import" 
+            <a
+              href="/import"
               className="inline-flex items-center mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
             >
               Import Phrases
             </a>
           </div>
         ) : (
-          <PhraseTable 
-            phrases={state.phrases}
-            onDelete={handleDeletePhrase}
-            onMove={handleMovePhrase}
-          />
+          <PhraseTable phrases={state.phrases} onDelete={handleDeletePhrase} onMove={handleMovePhrase} />
         )}
       </div>
     </div>
@@ -333,9 +318,7 @@ interface PhraseRowProps {
 function PhraseRow({ phrase, index, isFirst, isLast, onDelete, onMove }: PhraseRowProps) {
   return (
     <tr className="border-b border-border hover:bg-muted/50 transition-colors">
-      <td className="p-4 text-sm text-muted-foreground">
-        {phrase.position}
-      </td>
+      <td className="p-4 text-sm text-muted-foreground">{phrase.position}</td>
       <td className="p-4">
         <div className="text-sm text-foreground">{phrase.en_text}</div>
       </td>
@@ -346,7 +329,12 @@ function PhraseRow({ phrase, index, isFirst, isLast, onDelete, onMove }: PhraseR
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="sm" disabled className="p-1 h-auto opacity-50">
             <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h1m4 0h1m6-10V4a2 2 0 00-2-2H5a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2V4z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h1m4 0h1m6-10V4a2 2 0 00-2-2H5a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2V4z"
+              />
             </svg>
           </Button>
         </div>
@@ -366,7 +354,7 @@ function PhraseRow({ phrase, index, isFirst, isLast, onDelete, onMove }: PhraseR
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7" />
             </svg>
           </Button>
-          
+
           {/* Move down */}
           <Button
             variant="ghost"
@@ -380,7 +368,7 @@ function PhraseRow({ phrase, index, isFirst, isLast, onDelete, onMove }: PhraseR
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
             </svg>
           </Button>
-          
+
           {/* Delete */}
           <Button
             variant="ghost"
@@ -390,7 +378,12 @@ function PhraseRow({ phrase, index, isFirst, isLast, onDelete, onMove }: PhraseR
             title="Delete phrase"
           >
             <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
             </svg>
           </Button>
         </div>

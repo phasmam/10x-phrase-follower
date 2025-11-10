@@ -9,8 +9,8 @@ import AuthGuard from "../../components/AuthGuard";
     <div class="space-y-6">
       <div class="flex items-center justify-between">
         <h1 class="text-3xl font-bold text-foreground">Your Notebooks</h1>
-        <a 
-          href="/import" 
+        <a
+          href="/import"
           class="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
         >
           <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -19,7 +19,7 @@ import AuthGuard from "../../components/AuthGuard";
           Create New
         </a>
       </div>
-      
+
       <NotebookList client:load />
     </div>
   </AuthGuard>

@@ -8,15 +8,18 @@ export async function POST(context: APIContext) {
   try {
     const supabaseUrl = import.meta.env.SUPABASE_URL;
     const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-    
+
     if (!supabaseUrl || !supabaseServiceKey) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: "Missing Supabase configuration" 
-      }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Missing Supabase configuration",
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
@@ -39,13 +42,16 @@ export async function POST(context: APIContext) {
     }
 
     if (!jobs || jobs.length === 0) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: "No jobs found" 
-      }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "No jobs found",
+        }),
+        {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
     const job = jobs[0];
@@ -53,40 +59,49 @@ export async function POST(context: APIContext) {
 
     // Test the job worker
     const worker = new JobWorker(supabaseUrl, supabaseServiceKey);
-    
+
     try {
       await worker.processJob(job.id);
-      
-      return new Response(JSON.stringify({ 
-        success: true, 
-        message: `Job ${job.id} processed successfully`,
-        job_state: job.state
-      }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `Job ${job.id} processed successfully`,
+          job_state: job.state,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     } catch (error) {
       console.error("Job processing error:", error);
-      
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : "Unknown error",
-        job_id: job.id,
-        job_state: job.state
-      }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+          job_id: job.id,
+          job_state: job.state,
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
   } catch (error) {
     console.error("Failed to test job processing:", error);
-    
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error" 
-    }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 }

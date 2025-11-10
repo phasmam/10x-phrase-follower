@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef } from 'react';
-import type { PlaybackManifestVM, VoiceSlot, PlaybackSpeed } from '../../types';
+import { useCallback, useEffect, useRef } from "react";
+import type { PlaybackManifestVM, VoiceSlot, PlaybackSpeed } from "../../types";
 
 interface UsePlaybackEngineProps {
   manifest: PlaybackManifestVM | null;
@@ -10,7 +10,7 @@ interface UsePlaybackEngineProps {
   setPhraseIndex: (index: number) => void;
 }
 
-const SLOT_SEQUENCE: VoiceSlot[] = ['EN1', 'EN2', 'EN3', 'PL'];
+const SLOT_SEQUENCE: VoiceSlot[] = ["EN1", "EN2", "EN3", "PL"];
 const PAUSE_DURATION_MS = 800;
 
 export function usePlaybackEngine({
@@ -19,7 +19,7 @@ export function usePlaybackEngine({
   speed,
   setCurrentSlot,
   setClockMs,
-  setPhraseIndex
+  setPhraseIndex,
 }: UsePlaybackEngineProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -56,7 +56,7 @@ export function usePlaybackEngine({
       try {
         await audioRef.current.play();
       } catch (error) {
-        console.error('Failed to resume audio:', error);
+        console.error("Failed to resume audio:", error);
       }
     }
   }, []);
@@ -88,7 +88,7 @@ export function usePlaybackEngine({
     const currentSlotIndex = SLOT_SEQUENCE.indexOf(currentSlot);
     const nextSlot = SLOT_SEQUENCE[currentSlotIndex + 1];
 
-    const nextSegment = currentPhrase.segments.find(s => s.slot === nextSlot);
+    const nextSegment = currentPhrase.segments.find((s) => s.slot === nextSlot);
 
     if (nextSegment) {
       timeoutRef.current = setTimeout(() => {
@@ -116,66 +116,72 @@ export function usePlaybackEngine({
     setPhraseIndex(nextPhraseIndex);
 
     const nextPhrase = currentManifest.sequence[nextPhraseIndex];
-    const en1Segment = nextPhrase.segments.find(s => s.slot === 'EN1');
+    const en1Segment = nextPhrase.segments.find((s) => s.slot === "EN1");
 
     if (en1Segment) {
       timeoutRef.current = setTimeout(() => {
-        playSegment('EN1', en1Segment.url);
+        playSegment("EN1", en1Segment.url);
       }, PAUSE_DURATION_MS);
     }
   }, [setPhraseIndex, setCurrentSlot, setClockMs]);
 
   // Play audio segment
-  const playSegment = useCallback(async (slot: VoiceSlot, url: string) => {
-    console.log('[usePlaybackEngine] playSegment called:', { slot, url });
+  const playSegment = useCallback(
+    async (slot: VoiceSlot, url: string) => {
+      console.log("[usePlaybackEngine] playSegment called:", { slot, url });
 
-    if (!url || url.trim() === '') {
-      console.error('[usePlaybackEngine] Invalid URL provided:', url);
-      handleSegmentEnd();
-      return;
-    }
+      if (!url || url.trim() === "") {
+        console.error("[usePlaybackEngine] Invalid URL provided:", url);
+        handleSegmentEnd();
+        return;
+      }
 
-    if (!audioRef.current) {
-      audioRef.current = new Audio();
+      if (!audioRef.current) {
+        audioRef.current = new Audio();
 
-      // Set up event listeners
-      audioRef.current.addEventListener('ended', handleSegmentEnd);
-      audioRef.current.addEventListener('error', (e) => {
-        console.error('[usePlaybackEngine] Audio element error:', e, {
-          error: audioRef.current?.error,
-          networkState: audioRef.current?.networkState,
-          readyState: audioRef.current?.readyState,
-          src: audioRef.current?.src
+        // Set up event listeners
+        audioRef.current.addEventListener("ended", handleSegmentEnd);
+        audioRef.current.addEventListener("error", (e) => {
+          console.error("[usePlaybackEngine] Audio element error:", e, {
+            error: audioRef.current?.error,
+            networkState: audioRef.current?.networkState,
+            readyState: audioRef.current?.readyState,
+            src: audioRef.current?.src,
+          });
+          handleSegmentEnd();
+        });
+        audioRef.current.addEventListener("timeupdate", () => {
+          if (audioRef.current) {
+            setClockMs(audioRef.current.currentTime * 1000);
+          }
+        });
+      }
+
+      const audio = audioRef.current;
+      audio.src = url;
+      audio.playbackRate = speed;
+
+      console.log("[usePlaybackEngine] Audio element configured:", {
+        src: audio.src,
+        playbackRate: audio.playbackRate,
+      });
+
+      try {
+        await audio.play();
+        console.log("[usePlaybackEngine] Audio playback started successfully");
+        currentSegmentRef.current = slot;
+        setCurrentSlot(slot);
+      } catch (error) {
+        console.error("[usePlaybackEngine] Failed to play audio segment:", error, {
+          errorCode: (error as any)?.code,
+          errorMessage: (error as any)?.message,
+          src: audio.src,
         });
         handleSegmentEnd();
-      });
-      audioRef.current.addEventListener('timeupdate', () => {
-        if (audioRef.current) {
-          setClockMs(audioRef.current.currentTime * 1000);
-        }
-      });
-    }
-
-    const audio = audioRef.current;
-    audio.src = url;
-    audio.playbackRate = speed;
-
-    console.log('[usePlaybackEngine] Audio element configured:', { src: audio.src, playbackRate: audio.playbackRate });
-
-    try {
-      await audio.play();
-      console.log('[usePlaybackEngine] Audio playback started successfully');
-      currentSegmentRef.current = slot;
-      setCurrentSlot(slot);
-    } catch (error) {
-      console.error('[usePlaybackEngine] Failed to play audio segment:', error, {
-        errorCode: (error as any)?.code,
-        errorMessage: (error as any)?.message,
-        src: audio.src
-      });
-      handleSegmentEnd();
-    }
-  }, [speed, setCurrentSlot, setClockMs, handleSegmentEnd]);
+      }
+    },
+    [speed, setCurrentSlot, setClockMs, handleSegmentEnd]
+  );
 
   // Advance to next phrase
   const onAdvanceNext = useCallback(() => {
@@ -206,7 +212,7 @@ export function usePlaybackEngine({
       clearTimeouts();
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.src = '';
+        audioRef.current.src = "";
       }
     };
   }, [clearTimeouts]);
@@ -226,6 +232,6 @@ export function usePlaybackEngine({
     pausePlayback,
     resumePlayback,
     stopPlayback,
-    playSegment
+    playSegment,
   };
 }

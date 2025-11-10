@@ -47,8 +47,7 @@ export async function GET(context: APIContext) {
     });
   } catch (error) {
     if (error instanceof Error && "code" in error) {
-      const status = (error as any).code === "unauthorized" ? 401 : 
-                    (error as any).code === "not_found" ? 404 : 400;
+      const status = (error as any).code === "unauthorized" ? 401 : (error as any).code === "not_found" ? 404 : 400;
       return new Response(JSON.stringify({ error: { code: (error as any).code, message: error.message } }), {
         status,
         headers: { "Content-Type": "application/json" },

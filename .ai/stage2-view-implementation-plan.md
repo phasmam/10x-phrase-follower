@@ -3,9 +3,11 @@
 # Plan implementacji widoku Audio Loop (Player)
 
 ## 1. Przegląd
+
 Widok **Audio Loop (Player)** służy do minimalnego odsłuchu fraz w sekwencji **EN1 → EN2 → EN3 → PL** z wymuszonymi pauzami **800 ms** oraz auto-advance między frazami. Zapewnia klik-to-seek per słowo, podświetlanie tokenów on/off, kontrolę prędkości odtwarzania, oraz ręczne „Odśwież manifest”, gdy podpisane URL-e wygasną. Wymaga wcześniejszej konfiguracji TTS (klucz + sloty głosów) oraz wygenerowanych segmentów audio (pełny rebuild notatnika). :contentReference[oaicite:0]{index=0} :contentReference[oaicite:1]{index=1}
 
 ## 2. Routing widoku
+
 - **Ścieżka:** `/player/:notebookId?start_phrase_id=<uuid>`
 - **Ochrona trasy:** prywatna (Supabase Auth JWT), redirect do `/login` przy braku/wygaśnięciu sesji. :contentReference[oaicite:2]{index=2}
 
@@ -16,7 +18,7 @@ PlayerPage (route)
 ├─ PlayerControls
 ├─ SegmentSequenceBar
 ├─ PhraseViewer
-│  └─ Token (wielokrotnie)
+│ └─ Token (wielokrotnie)
 ├─ KeyboardShortcutsHandler
 └─ RefreshManifestButton
 
@@ -25,6 +27,7 @@ PlayerPage (route)
 ## 4. Szczegóły komponentów
 
 ### PlayerPage
+
 - **Opis:** Kontener routingu. Pobiera `notebookId` i opcjonalny `start_phrase_id`, montuje `PlayerShell`.
 - **Główne elementy:** `<main>`, `PlayerShell`.
 - **Zdarzenia:** `onAuthStateChange` (redirect do `/login`).
@@ -33,6 +36,7 @@ PlayerPage (route)
 - **Propsy:** brak (używa hooków routingu).
 
 ### PlayerShell
+
 - **Opis:** Orkiestracja pobrania **Playback Manifest**, ustawienie początkowej frazy i sterowanie state machine odtwarzania.
 - **Główne elementy:** `PlayerControls`, `PhraseViewer`, `SegmentSequenceBar`, `RefreshManifestButton`.
 - **Zdarzenia:** `onPlay`, `onPause`, `onStop`, `onRestartPhrase`, `onSpeedChange`, `onToggleHighlight`, `onSeekToToken`, `onAdvanceNext`, `onAdvancePrev`, `onRefreshManifest`.
@@ -41,6 +45,7 @@ PlayerPage (route)
 - **Propsy:** `{ notebookId: UUID, startPhraseId?: UUID }`.
 
 ### PlayerControls
+
 - **Opis:** Panel sterowania odtwarzaniem.
 - **Główne elementy:** przyciski **Play/Pause**, **Stop**, **Restart frazy**, selektor prędkości (0.75/0.9/1.0/1.25), przełącznik **Highlight on/off**.
 - **Zdarzenia:** `onPlay`, `onPause`, `onStop`, `onRestart`, `onSpeedChange`, `onToggleHighlight`.
@@ -49,6 +54,7 @@ PlayerPage (route)
 - **Propsy:** `{ playing: boolean, speed: PlaybackSpeed, highlight: boolean, hasPlayable: boolean, onPlay():void, ... }`.
 
 ### SegmentSequenceBar
+
 - **Opis:** Wskaźnik postępu przez sekwencję EN1→EN2→EN3→PL dla bieżącej frazy (ikonki slotów + stan).
 - **Główne elementy:** lista 4 pozycji (EN1..PL), stan `playing/queued/omitted`.
 - **Zdarzenia:** klik na slot (opcjonalny seek do początku slotu, jeśli obecny).
@@ -57,6 +63,7 @@ PlayerPage (route)
 - **Propsy:** `{ sequenceForPhrase: Segment[], activeSlot?: VoiceSlot, onJumpToSlot(slot):void }`.
 
 ### PhraseViewer
+
 - **Opis:** Wyświetla EN/PL z tokenizacją i podświetlaniem, obsługuje klik-to-seek od początku słowa w aktywnym segmencie.
 - **Główne elementy:** kontenery `EN`, `PL`, lista `Token`.
 - **Zdarzenia:** `onTokenClick(tokenIndex)`.
@@ -65,6 +72,7 @@ PlayerPage (route)
 - **Propsy:** `{ phrase: PhraseVM, activeLang: 'en'|'pl'|null, highlight: boolean, onSeekToToken(index:number):void }`.
 
 ### KeyboardShortcutsHandler
+
 - **Opis:** Rejestruje skróty: **Space/K**, **S**, **R**, **←/→**, **Shift+←/→**, **P/N** (wyłączone w polach input).
 - **Główne elementy:** `useEffect` + event listeners.
 - **Zdarzenia:** wywołania callbacków sterujących odtwarzaniem i nawigacją fraz.
@@ -73,6 +81,7 @@ PlayerPage (route)
 - **Propsy:** `{ onPlayPause, onStop, onRestart, onSeekSmall, onSeekLarge, onPrevPhrase, onNextPhrase }`.
 
 ### RefreshManifestButton
+
 - **Opis:** Manualne odświeżenie Playback Manifest (np. 403/410/URL expired).
 - **Główne elementy:** przycisk w panelu kontrolnym lub banner.
 - **Zdarzenia:** `onClick` → refetch manifestu.
@@ -81,7 +90,9 @@ PlayerPage (route)
 - **Propsy:** `{ loading: boolean, onRefresh():Promise<void> }`.
 
 ## 5. Typy
+
 **DTO (z API):**
+
 - `PlaybackManifest` (GET `/api/notebooks/:id/playback-manifest`)
   - `notebook_id: UUID`
   - `build_id: UUID`
@@ -100,6 +111,7 @@ PlayerPage (route)
   - `{ word: string, start_ms: number, end_ms: number }`
 
 **ViewModel (frontend, nowe):**
+
 - `PhraseVM`:
   - `{ id: UUID, position: number, en: string, pl: string, tokens: { en: Token[], pl: Token[] } }`
 - `Token`:
@@ -112,6 +124,7 @@ PlayerPage (route)
   - `{ playing: boolean, currentPhraseIndex: number, currentSlot: VoiceSlot|null, speed: PlaybackSpeed, highlight: boolean, clockMs: number }`
 
 ## 6. Zarządzanie stanem
+
 - **Lokalny state (React):**
   - `manifest: PlaybackManifest | null`
   - `phraseIndex: number` (wyznaczany z `start_phrase_id` lub 0)
@@ -129,6 +142,7 @@ PlayerPage (route)
     - Mapuje kliknięty token → czas początkowy słowa (z heurystyką, jeśli brak per-word timings). :contentReference[oaicite:15]{index=15}
 
 ## 7. Integracja API
+
 - **Pobranie manifestu:**
   - `GET /api/notebooks/:notebookId/playback-manifest?phrase_ids=<subset>&speed=<0.75|0.9|1|1.25>&highlight=<on|off>`
   - **200**: `PlaybackManifest` (tylko `status=complete` segmenty; segmenty `failed/missing` pominięte) :contentReference[oaicite:16]{index=16}
@@ -138,6 +152,7 @@ PlayerPage (route)
   - Status audio (opcjonalne pre-check): `GET /api/notebooks/:id/audio-status` (brak blokady – player i tak pominie brakujące) :contentReference[oaicite:19]{index=19}
 
 ## 8. Interakcje użytkownika
+
 - **Play/Pause:** start/stop bieżącego segmentu. Po `Play` rozpoczyna się od `currentSlot` lub od EN1, jeśli nic nie gra.
 - **Stop:** zatrzymuje i resetuje do początku aktualnej frazy.
 - **Restart frazy:** ustawia `currentSlot=EN1`, `clockMs=0`, `playing=true`.
@@ -148,6 +163,7 @@ PlayerPage (route)
 - **P/N:** nawigacja frazami; auto-advance po PL + 800 ms. :contentReference[oaicite:21]{index=21}
 
 ## 9. Warunki i walidacja
+
 - **Prędkość:** {0.75, 0.9, 1.0, 1.25} – inne wartości odrzucone (UI nie pozwala). :contentReference[oaicite:22]{index=22}
 - **Sekwencja slotów:** EN1→EN2→EN3→PL, z pominięciem brakujących/failed (UI pokazuje `omitted`). :contentReference[oaicite:23]{index=23}
 - **Pauzy:** stałe **800 ms** między segmentami i między frazami. :contentReference[oaicite:24]{index=24}
@@ -155,6 +171,7 @@ PlayerPage (route)
 - **Dostęp/Autoryzacja:** wszystkie żądania z JWT; RLS izoluje zasoby. Błędy 403/404 nie ujawniają metadanych. :contentReference[oaicite:26]{index=26}
 
 ## 10. Obsługa błędów
+
 - **Wygaśnięcie URL-i (403/410):** banner + `RefreshManifestButton` (ponowne `GET /playback-manifest`). :contentReference[oaicite:27]{index=27}
 - **Brak konfiguracji TTS/slotów:** komunikat „Skonfiguruj TTS w Ustawieniach” + link do `/settings`. :contentReference[oaicite:28]{index=28}
 - **Brak segmentów w frazie:** mini-toast „Brak dostępnych segmentów – pomijam frazę”.
@@ -163,6 +180,7 @@ PlayerPage (route)
 - **Spójne komunikaty:** zgodnie z katalogiem błędów API (np. `internal`, `validation_error`), copy wg PRD „Nie udało się wygenerować audio. Spróbuj ponownie.” dla kontekstu generate (jeśli widok otwarty po nieudanym buildzie). :contentReference[oaicite:29]{index=29} :contentReference[oaicite:30]{index=30}
 
 ## 11. Kroki implementacji
+
 1. **Routing i ochrona trasy:** dodaj trasę `/player/:notebookId`, guard JWT (redirect do `/login`). :contentReference[oaicite:31]{index=31}
 2. **Szkielet strony:** stwórz `PlayerPage` i `PlayerShell` z placeholderami komponentów.
 3. **Typy i adaptery:** zaimplementuj DTO → VM (`PlaybackManifest` → `PhraseVM`, `Segment`), z mapowaniem `word_timings` do `Token.timing`. :contentReference[oaicite:32]{index=32}
@@ -172,7 +190,7 @@ PlayerPage (route)
 7. **PhraseViewer:** render tokenów EN/PL, highlight on/off, klik-to-seek (z heurystyką gdy brak `word_timings`).
 8. **Controls & Shortcuts:** `PlayerControls`, `KeyboardShortcutsHandler`, `SegmentSequenceBar`.
 9. **Obsługa błędów i odświeżania:** `RefreshManifestButton`, bannery/ toast’y, retry dla 403/410 i sieci.
-10. **Testy e2e/scenariusze:** 
+10. **Testy e2e/scenariusze:**
     - sekwencja EN→PL z pauzami,
     - auto-advance po PL + 800 ms,
     - klik-to-seek tokenu (różne pozycje),
@@ -182,14 +200,16 @@ PlayerPage (route)
 11. **Dostępność:** aria-live dla zmian stanu odtwarzania, focus management, kontrast (dark-only). :contentReference[oaicite:35]{index=35}
 
 ---
+
 **Mapowanie na PRD/Stories:**
+
 - UC-07/UC-08/UC-09: sekwencja odtwarzania, klik-to-seek, highlight, statusy segmentów (pomijanie brakujących), metryki timingu. :contentReference[oaicite:36]{index=36}
 - Integracje: `/api/notebooks/:id/playback-manifest` (rdzeń), `/api/tts-credentials`, `/api/user-voices`, opcjonalnie `/api/notebooks/:id/audio-status`. :contentReference[oaicite:37]{index=37}
 
 **Załączniki i referencje**:
 
-* PRD: @prd.md  
-* Opis widoku: ui-plan.md  
-* Endpointy: @api-plan.md  
-* Etapy: stages-plan.md  
-* Typy DTO: @types.ts (lokalny plik, źródło prawdy dla kontraktów)
+- PRD: @prd.md
+- Opis widoku: ui-plan.md
+- Endpointy: @api-plan.md
+- Etapy: stages-plan.md
+- Typy DTO: @types.ts (lokalny plik, źródło prawdy dla kontraktów)

@@ -51,7 +51,7 @@ Kryteria akceptacji:
 - Logowanie odbywają się na dedykowanej stronie.
 - Logowanie wymaga podania adresu email i hasła.
 - Użytkownik może się wylogować z systemu poprzez przycisk w prawym górnym rogu w głównym @Layout.astro.
-- Wsparcie dla trybu developerskiego: w NODE_ENV=development działa endpoint /api/dev/jwt, który zwraca krótkotrwały token dev_ dla stałego DEFAULT_USER_ID, zapisywany w localStorage i przekazywany jako Authorization: Bearer.
+- Wsparcie dla trybu developerskiego: w NODE*ENV=development działa endpoint /api/dev/jwt, który zwraca krótkotrwały token dev* dla stałego DEFAULT_USER_ID, zapisywany w localStorage i przekazywany jako Authorization: Bearer.
 
 UC-02 Konfiguracja klucza Google TTS
 Opis: Jako użytkownik chcę zapisać swój klucz TTS po teście walidacyjnym.

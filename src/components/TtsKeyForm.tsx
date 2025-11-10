@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Button } from './ui/button';
-import { useApi } from '../lib/hooks/useApi';
+import { useState, useEffect } from "react";
+import { Button } from "./ui/button";
+import { useApi } from "../lib/hooks/useApi";
 
 interface TtsCredentialsState {
   is_configured: boolean;
@@ -11,7 +11,7 @@ interface TtsCredentialsState {
 interface TtsKeyFormProps {}
 
 export default function TtsKeyForm({}: TtsKeyFormProps) {
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState("");
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -25,16 +25,16 @@ export default function TtsKeyForm({}: TtsKeyFormProps) {
 
   const loadCredentialsState = async () => {
     try {
-      const data = await apiCall('/api/tts-credentials');
+      const data = await apiCall("/api/tts-credentials");
       setCredentialsState(data);
     } catch (error) {
-      console.error('Failed to load TTS credentials state:', error);
+      console.error("Failed to load TTS credentials state:", error);
     }
   };
 
   const handleTest = async () => {
     if (!apiKey.trim()) {
-      setTestResult({ success: false, message: 'Please enter an API key' });
+      setTestResult({ success: false, message: "Please enter an API key" });
       return;
     }
 
@@ -42,20 +42,20 @@ export default function TtsKeyForm({}: TtsKeyFormProps) {
     setTestResult(null);
 
     try {
-      console.log('Making TTS test request...');
-      const data = await apiCall('/api/tts-credentials/test', {
-        method: 'POST',
-        body: JSON.stringify({ api_key: apiKey, provider: 'google' }),
+      console.log("Making TTS test request...");
+      const data = await apiCall("/api/tts-credentials/test", {
+        method: "POST",
+        body: JSON.stringify({ api_key: apiKey, provider: "google" }),
       });
 
-      console.log('TTS test response data:', data);
-      setTestResult({ success: true, message: 'TTS credentials are valid!' });
+      console.log("TTS test response data:", data);
+      setTestResult({ success: true, message: "TTS credentials are valid!" });
     } catch (error) {
-      console.error('TTS test catch error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to test credentials. Please try again.';
-      setTestResult({ 
-        success: false, 
-        message: errorMessage
+      console.error("TTS test catch error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to test credentials. Please try again.";
+      setTestResult({
+        success: false,
+        message: errorMessage,
       });
     } finally {
       setIsTesting(false);
@@ -64,31 +64,31 @@ export default function TtsKeyForm({}: TtsKeyFormProps) {
 
   const handleSave = async () => {
     if (!apiKey.trim()) {
-      setTestResult({ success: false, message: 'Please enter an API key' });
+      setTestResult({ success: false, message: "Please enter an API key" });
       return;
     }
 
     if (!testResult?.success) {
-      setTestResult({ success: false, message: 'Please test your credentials first' });
+      setTestResult({ success: false, message: "Please test your credentials first" });
       return;
     }
 
     setIsSaving(true);
 
     try {
-      const data = await apiCall('/api/tts-credentials', {
-        method: 'PUT',
+      const data = await apiCall("/api/tts-credentials", {
+        method: "PUT",
         body: JSON.stringify({ google_api_key: apiKey }),
       });
 
       setCredentialsState(data);
-      setTestResult({ success: true, message: 'TTS credentials saved successfully!' });
-      setApiKey(''); // Clear the form
+      setTestResult({ success: true, message: "TTS credentials saved successfully!" });
+      setApiKey(""); // Clear the form
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save credentials. Please try again.';
-      setTestResult({ 
-        success: false, 
-        message: errorMessage
+      const errorMessage = error instanceof Error ? error.message : "Failed to save credentials. Please try again.";
+      setTestResult({
+        success: false,
+        message: errorMessage,
       });
     } finally {
       setIsSaving(false);
@@ -102,12 +102,14 @@ export default function TtsKeyForm({}: TtsKeyFormProps) {
         <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
           <div className="flex items-center">
             <svg className="h-5 w-5 text-green-600 dark:text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clipRule="evenodd"
+              />
             </svg>
             <div>
-              <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                TTS is configured
-              </p>
+              <p className="text-sm font-medium text-green-800 dark:text-green-200">TTS is configured</p>
               {credentialsState.last_validated_at && (
                 <p className="text-xs text-green-600 dark:text-green-400">
                   Last validated: {new Date(credentialsState.last_validated_at).toLocaleString()}
@@ -131,23 +133,23 @@ export default function TtsKeyForm({}: TtsKeyFormProps) {
           placeholder="Enter your Google TTS API key"
           className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
         />
-        <p className="text-xs text-muted-foreground mt-1">
-          Your API key is encrypted and never stored in plain text
-        </p>
+        <p className="text-xs text-muted-foreground mt-1">Your API key is encrypted and never stored in plain text</p>
       </div>
 
       {/* Test Result */}
       {testResult && (
-        <div className={`p-3 rounded-lg ${
-          testResult.success 
-            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' 
-            : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
-        }`}>
-          <p className={`text-sm ${
-            testResult.success 
-              ? 'text-green-800 dark:text-green-200' 
-              : 'text-red-800 dark:text-red-200'
-          }`}>
+        <div
+          className={`p-3 rounded-lg ${
+            testResult.success
+              ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
+              : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+          }`}
+        >
+          <p
+            className={`text-sm ${
+              testResult.success ? "text-green-800 dark:text-green-200" : "text-red-800 dark:text-red-200"
+            }`}
+          >
             {testResult.message}
           </p>
         </div>
@@ -155,40 +157,39 @@ export default function TtsKeyForm({}: TtsKeyFormProps) {
 
       {/* Action Buttons */}
       <div className="flex space-x-3">
-        <Button
-          onClick={handleTest}
-          disabled={isTesting || !apiKey.trim()}
-          variant="outline"
-          className="flex-1"
-        >
+        <Button onClick={handleTest} disabled={isTesting || !apiKey.trim()} variant="outline" className="flex-1">
           {isTesting ? (
             <>
               <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
               </svg>
               Testing...
             </>
           ) : (
-            'Test Credentials'
+            "Test Credentials"
           )}
         </Button>
-        
-        <Button
-          onClick={handleSave}
-          disabled={isSaving || !testResult?.success}
-          className="flex-1"
-        >
+
+        <Button onClick={handleSave} disabled={isSaving || !testResult?.success} className="flex-1">
           {isSaving ? (
             <>
               <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
               </svg>
               Saving...
             </>
           ) : (
-            'Save Credentials'
+            "Save Credentials"
           )}
         </Button>
       </div>

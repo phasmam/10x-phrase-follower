@@ -31,19 +31,16 @@ export default function NotebookList({ initialItems = [] }: NotebookListProps) {
       if (query) params.append("q", query);
       params.append("limit", "20");
 
-      const data = await apiCall<NotebookListResponse>(
-        `/api/notebooks?${params.toString()}`,
-        { method: "GET" }
-      );
-      
+      const data = await apiCall<NotebookListResponse>(`/api/notebooks?${params.toString()}`, { method: "GET" });
+
       if (cursor) {
         // Append to existing notebooks (load more)
-        setNotebooks(prev => [...prev, ...data.items]);
+        setNotebooks((prev) => [...prev, ...data.items]);
       } else {
         // Replace notebooks (new search or initial load)
         setNotebooks(data.items);
       }
-      
+
       setNextCursor(data.next_cursor);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load notebooks");
@@ -86,11 +83,9 @@ export default function NotebookList({ initialItems = [] }: NotebookListProps) {
       });
 
       // Update local state
-      setNotebooks(prev => 
-        prev.map(notebook => 
-          notebook.id === id 
-            ? { ...notebook, name: newName, updated_at: new Date().toISOString() }
-            : notebook
+      setNotebooks((prev) =>
+        prev.map((notebook) =>
+          notebook.id === id ? { ...notebook, name: newName, updated_at: new Date().toISOString() } : notebook
         )
       );
     } catch (err) {
@@ -110,7 +105,7 @@ export default function NotebookList({ initialItems = [] }: NotebookListProps) {
       });
 
       // Remove from local state
-      setNotebooks(prev => prev.filter(notebook => notebook.id !== id));
+      setNotebooks((prev) => prev.filter((notebook) => notebook.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete notebook");
     }
@@ -143,8 +138,8 @@ export default function NotebookList({ initialItems = [] }: NotebookListProps) {
       {notebooks.length === 0 && !isLoading ? (
         <div className="text-center py-12">
           <p className="text-muted-foreground">No notebooks found.</p>
-          <a 
-            href="/import" 
+          <a
+            href="/import"
             className="inline-flex items-center mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
           >
             Create your first notebook
@@ -153,12 +148,7 @@ export default function NotebookList({ initialItems = [] }: NotebookListProps) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {notebooks.map((notebook) => (
-            <NotebookTile
-              key={notebook.id}
-              notebook={notebook}
-              onRename={handleRename}
-              onDelete={handleDelete}
-            />
+            <NotebookTile key={notebook.id} notebook={notebook} onRename={handleRename} onDelete={handleDelete} />
           ))}
         </div>
       )}
@@ -166,11 +156,7 @@ export default function NotebookList({ initialItems = [] }: NotebookListProps) {
       {/* Load more */}
       {nextCursor && (
         <div className="text-center">
-          <Button
-            onClick={handleLoadMore}
-            disabled={isLoading}
-            variant="outline"
-          >
+          <Button onClick={handleLoadMore} disabled={isLoading} variant="outline">
             {isLoading ? "Loading..." : "Load More"}
           </Button>
         </div>
@@ -232,16 +218,16 @@ function NotebookTile({ notebook, onRename, onDelete }: NotebookTileProps) {
             {notebook.name}
           </a>
         )}
-        
+
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsRenaming(true)}
-            className="p-1 h-auto"
-          >
+          <Button variant="ghost" size="sm" onClick={() => setIsRenaming(true)} className="p-1 h-auto">
             <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
             </svg>
           </Button>
           <Button
@@ -251,15 +237,18 @@ function NotebookTile({ notebook, onRename, onDelete }: NotebookTileProps) {
             className="p-1 h-auto text-destructive hover:text-destructive"
           >
             <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
             </svg>
           </Button>
         </div>
       </div>
-      
-      <p className="text-sm text-muted-foreground">
-        Updated {new Date(notebook.updated_at).toLocaleDateString()}
-      </p>
+
+      <p className="text-sm text-muted-foreground">Updated {new Date(notebook.updated_at).toLocaleDateString()}</p>
     </div>
   );
 }

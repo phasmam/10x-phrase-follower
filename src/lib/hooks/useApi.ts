@@ -60,59 +60,65 @@ export function useApi() {
   const effectiveToken = token || getTokenFromStorage();
   const effectiveIsAuthenticated = isAuthenticated || !!effectiveToken;
 
-  const apiCall = useCallback(async <T>(endpoint: string, options: ApiOptions = {}): Promise<T> => {
-    const { requireAuth = true, headers = {}, ...restOptions } = options;
+  const apiCall = useCallback(
+    async <T>(endpoint: string, options: ApiOptions = {}): Promise<T> => {
+      const { requireAuth = true, headers = {}, ...restOptions } = options;
 
-    // Check authentication requirement
-    if (requireAuth && !effectiveIsAuthenticated) {
-      throw new Error("Authentication required");
-    }
-
-    // Prepare headers
-    const requestHeaders: Record<string, string> = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      ...headers as Record<string, string>,
-    };
-
-    // Add authorization header if token is available
-    if (effectiveToken) {
-      // DEV_JWT tokens already have "dev_" prefix, Supabase tokens don't
-      // The middleware expects DEV_JWT tokens to have the prefix
-      requestHeaders["Authorization"] = `Bearer ${effectiveToken}`;
-    }
-
-    // Make the request
-    const response = await fetch(endpoint, {
-      ...restOptions,
-      headers: requestHeaders,
-    });
-
-    // Handle response
-    if (!response.ok) {
-      const errorText = await response.text();
-      let errorMessage = `HTTP ${response.status}`;
-
-      try {
-        const errorData = JSON.parse(errorText);
-        errorMessage = errorData.error?.message || errorMessage;
-      } catch {
-        // If not JSON, use status text
-        errorMessage = response.statusText || errorMessage;
+      // Check authentication requirement
+      if (requireAuth && !effectiveIsAuthenticated) {
+        throw new Error("Authentication required");
       }
 
-      throw new Error(errorMessage);
-    }
+      // Prepare headers
+      const requestHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...(headers as Record<string, string>),
+      };
 
-    // Parse JSON response
-    const contentType = response.headers.get("content-type");
-    if (contentType?.includes("application/json")) {
-      return response.json();
-    }
+      // Add authorization header if token is available
+      if (effectiveToken) {
+        // DEV_JWT tokens already have "dev_" prefix, Supabase tokens don't
+        // The middleware expects DEV_JWT tokens to have the prefix
+        requestHeaders["Authorization"] = `Bearer ${effectiveToken}`;
+      }
 
-    // Return text for non-JSON responses
-    return response.text() as unknown as T;
-  }, [effectiveToken, effectiveIsAuthenticated]);
+      // Make the request
+      const response = await fetch(endpoint, {
+        ...restOptions,
+        headers: requestHeaders,
+      });
 
-  return useMemo(() => ({ apiCall, isAuthenticated: effectiveIsAuthenticated, token: effectiveToken, userId }), [apiCall, effectiveIsAuthenticated, effectiveToken, userId]);
+      // Handle response
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = `HTTP ${response.status}`;
+
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error?.message || errorMessage;
+        } catch {
+          // If not JSON, use status text
+          errorMessage = response.statusText || errorMessage;
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      // Parse JSON response
+      const contentType = response.headers.get("content-type");
+      if (contentType?.includes("application/json")) {
+        return response.json();
+      }
+
+      // Return text for non-JSON responses
+      return response.text() as unknown as T;
+    },
+    [effectiveToken, effectiveIsAuthenticated]
+  );
+
+  return useMemo(
+    () => ({ apiCall, isAuthenticated: effectiveIsAuthenticated, token: effectiveToken, userId }),
+    [apiCall, effectiveIsAuthenticated, effectiveToken, userId]
+  );
 }

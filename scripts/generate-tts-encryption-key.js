@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
  * Helper script to generate a secure TTS_ENCRYPTION_KEY
- * 
+ *
  * Usage:
  *   node scripts/generate-tts-encryption-key.js
  *   npm run generate:tts-key
- * 
+ *
  * This generates a 64-character hex string (32 bytes) that can be used
  * as the TTS_ENCRYPTION_KEY environment variable.
  */
@@ -96,4 +96,3 @@ if (__filename === scriptPath || scriptPath.includes("generate-tts-encryption-ke
 }
 
 export { generateKey, validateKey };
-

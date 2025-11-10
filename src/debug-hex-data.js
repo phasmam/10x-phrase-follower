@@ -4,7 +4,7 @@
 
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,13 +35,7 @@ function getEncryptionKey() {
 
 // Helper function to derive key from master key and salt
 async function deriveKey(masterKey, salt) {
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    masterKey,
-    { name: "PBKDF2" },
-    false,
-    ["deriveKey"]
-  );
+  const keyMaterial = await crypto.subtle.importKey("raw", masterKey, { name: "PBKDF2" }, false, ["deriveKey"]);
 
   return crypto.subtle.deriveKey(
     {
@@ -61,30 +55,30 @@ async function deriveKey(masterKey, salt) {
 async function debugHexData() {
   console.log("=== Debug Hex Data ===");
   console.log("Examining the hex-encoded encrypted data...");
-  
+
   try {
     // Load environment variables from .env file
     const envPath = path.join(__dirname, "..", ".env");
-    
+
     if (fs.existsSync(envPath)) {
-      const envContent = fs.readFileSync(envPath, 'utf8');
-      const envLines = envContent.split('\n');
-      
+      const envContent = fs.readFileSync(envPath, "utf8");
+      const envLines = envContent.split("\n");
+
       for (const line of envLines) {
-        if (line.trim() && !line.startsWith('#')) {
-          const [key, ...valueParts] = line.split('=');
+        if (line.trim() && !line.startsWith("#")) {
+          const [key, ...valueParts] = line.split("=");
           if (key && valueParts.length > 0) {
-            const value = valueParts.join('=').trim();
+            const value = valueParts.join("=").trim();
             process.env[key.trim()] = value;
           }
         }
       }
     }
-    
+
     // Get Supabase configuration
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    
+
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error("❌ Missing Supabase configuration!");
       return;
@@ -92,7 +86,7 @@ async function debugHexData() {
 
     // Import Supabase client
     const { createClient } = await import("@supabase/supabase-js");
-    
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
@@ -116,29 +110,29 @@ async function debugHexData() {
     console.log(`Encrypted key type: ${typeof credentials.encrypted_key}`);
     console.log(`Encrypted key length: ${credentials.encrypted_key?.length}`);
     console.log(`Encrypted key first 100 chars: ${credentials.encrypted_key?.substring(0, 100)}...`);
-    
+
     // Save the raw data to file for inspection
     const rawPath = path.join(__dirname, "raw-hex-encrypted.txt");
     fs.writeFileSync(rawPath, credentials.encrypted_key);
     console.log(`Raw data saved to: ${rawPath}`);
-    
+
     // Try different conversion methods
     console.log(`\n--- Conversion Attempts ---`);
-    
+
     // Method 1: Direct hex conversion
     try {
-      const hexString = credentials.encrypted_key.replace(/\\x/g, '');
-      const buffer1 = Buffer.from(hexString, 'hex');
+      const hexString = credentials.encrypted_key.replace(/\\x/g, "");
+      const buffer1 = Buffer.from(hexString, "hex");
       console.log(`Method 1 - Hex string length: ${hexString.length}`);
       console.log(`Method 1 - Buffer length: ${buffer1.length} bytes`);
       console.log(`Method 1 - Buffer first 20 bytes:`, Array.from(buffer1.subarray(0, 20)));
-      
+
       // Check if it has the right structure (salt + iv + encrypted)
       if (buffer1.length >= SALT_LENGTH + IV_LENGTH) {
         const salt = buffer1.subarray(0, SALT_LENGTH);
         const iv = buffer1.subarray(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
         const encrypted = buffer1.subarray(SALT_LENGTH + IV_LENGTH);
-        
+
         console.log(`Method 1 - Salt (first 10 bytes):`, Array.from(salt.subarray(0, 10)));
         console.log(`Method 1 - IV (first 10 bytes):`, Array.from(iv.subarray(0, 10)));
         console.log(`Method 1 - Encrypted length: ${encrypted.length} bytes`);
@@ -146,25 +140,27 @@ async function debugHexData() {
     } catch (e) {
       console.log(`Method 1 failed: ${e.message}`);
     }
-    
+
     // Method 2: Try base64 first
     try {
-      const buffer2 = Buffer.from(credentials.encrypted_key, 'base64');
+      const buffer2 = Buffer.from(credentials.encrypted_key, "base64");
       console.log(`Method 2 - Base64 buffer length: ${buffer2.length} bytes`);
       console.log(`Method 2 - Buffer first 20 bytes:`, Array.from(buffer2.subarray(0, 20)));
     } catch (e) {
       console.log(`Method 2 failed: ${e.message}`);
     }
-    
+
     // Method 3: Try as raw string
     try {
       const rawString = credentials.encrypted_key;
       console.log(`Method 3 - Raw string first 20 chars:`, rawString.substring(0, 20));
-      console.log(`Method 3 - Raw string char codes:`, Array.from(rawString.substring(0, 20)).map(c => c.charCodeAt(0)));
+      console.log(
+        `Method 3 - Raw string char codes:`,
+        Array.from(rawString.substring(0, 20)).map((c) => c.charCodeAt(0))
+      );
     } catch (e) {
       console.log(`Method 3 failed: ${e.message}`);
     }
-
   } catch (error) {
     console.error(`\n❌ FAILED!`);
     console.error(`Error: ${error.message}`);

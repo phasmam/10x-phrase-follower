@@ -61,16 +61,18 @@ export function getSupabaseClient(context: APIContext): ReturnType<typeof create
             autoRefreshToken: false,
           },
         });
-        
+
         // Also set the token directly in the auth state for RLS
         // This ensures the client is properly authenticated
-        client.auth.setSession({
-          access_token: token,
-          refresh_token: '',
-        }).catch(() => {
-          // Ignore errors - the global header should still work
-        });
-        
+        client.auth
+          .setSession({
+            access_token: token,
+            refresh_token: "",
+          })
+          .catch(() => {
+            // Ignore errors - the global header should still work
+          });
+
         return client;
       }
     }

@@ -17,7 +17,7 @@ function getUserId(context: APIContext): string {
 export async function GET(context: APIContext) {
   try {
     const userId = getUserId(context);
-    console.log('[user-voices GET] userId:', userId);
+    console.log("[user-voices GET] userId:", userId);
     const supabase = getSupabaseClient(context);
 
     // Get all voice slots for the user
@@ -26,8 +26,8 @@ export async function GET(context: APIContext) {
       .select("id, slot, language, voice_id, created_at")
       .eq("user_id", userId)
       .order("slot");
-    
-    console.log('[user-voices GET] Query result - voices:', voices, 'error:', error);
+
+    console.log("[user-voices GET] Query result - voices:", voices, "error:", error);
 
     if (error) {
       throw ApiErrors.internal("Failed to fetch user voices");

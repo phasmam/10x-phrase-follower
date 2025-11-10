@@ -1,7 +1,7 @@
-import React from 'react';
-import { Button } from './ui/button';
-import { Play, Pause, Square, RotateCcw, Volume2, VolumeX, SkipBack, SkipForward } from 'lucide-react';
-import type { PlaybackSpeed } from '../types';
+import React from "react";
+import { Button } from "./ui/button";
+import { Play, Pause, Square, RotateCcw, Volume2, VolumeX, SkipBack, SkipForward } from "lucide-react";
+import type { PlaybackSpeed } from "../types";
 
 interface PlayerControlsProps {
   playing: boolean;
@@ -19,10 +19,10 @@ interface PlayerControlsProps {
 }
 
 const speedOptions: { value: PlaybackSpeed; label: string }[] = [
-  { value: 0.75, label: '0.75x' },
-  { value: 0.9, label: '0.9x' },
-  { value: 1, label: '1x' },
-  { value: 1.25, label: '1.25x' }
+  { value: 0.75, label: "0.75x" },
+  { value: 0.9, label: "0.9x" },
+  { value: 1, label: "1x" },
+  { value: 1.25, label: "1.25x" },
 ];
 
 export default function PlayerControls({
@@ -37,57 +37,35 @@ export default function PlayerControls({
   onSpeedChange,
   onToggleHighlight,
   onPrevPhrase,
-  onNextPhrase
+  onNextPhrase,
 }: PlayerControlsProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-gray-800 rounded-lg p-4">
       {/* Main playback controls */}
       <div className="flex items-center gap-2">
-        <Button
-          onClick={playing ? onPause : onPlay}
-          disabled={!hasPlayable}
-          variant="default"
-          size="lg"
-        >
+        <Button onClick={playing ? onPause : onPlay} disabled={!hasPlayable} variant="default" size="lg">
           {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-          <span className="ml-2">{playing ? 'Pause' : 'Play'}</span>
+          <span className="ml-2">{playing ? "Pause" : "Play"}</span>
         </Button>
 
-        <Button
-          onClick={onStop}
-          variant="secondary"
-          size="lg"
-        >
+        <Button onClick={onStop} variant="secondary" size="lg">
           <Square className="h-5 w-5" />
           <span className="ml-2">Stop</span>
         </Button>
 
-        <Button
-          onClick={onRestart}
-          disabled={!hasPlayable}
-          variant="secondary"
-          size="lg"
-        >
+        <Button onClick={onRestart} disabled={!hasPlayable} variant="secondary" size="lg">
           <RotateCcw className="h-5 w-5" />
           <span className="ml-2">Restart</span>
         </Button>
 
         {/* Phrase navigation */}
         <div className="ml-2 flex items-center gap-2">
-          <Button
-            onClick={onPrevPhrase}
-            variant="secondary"
-            size="lg"
-          >
+          <Button onClick={onPrevPhrase} variant="secondary" size="lg">
             <SkipBack className="h-5 w-5" />
             <span className="ml-2">Prev</span>
           </Button>
 
-          <Button
-            onClick={onNextPhrase}
-            variant="secondary"
-            size="lg"
-          >
+          <Button onClick={onNextPhrase} variant="secondary" size="lg">
             <SkipForward className="h-5 w-5" />
             <span className="ml-2">Next</span>
           </Button>
@@ -102,7 +80,7 @@ export default function PlayerControls({
             <Button
               key={option.value}
               onClick={() => onSpeedChange(option.value)}
-              variant={speed === option.value ? 'default' : 'secondary'}
+              variant={speed === option.value ? "default" : "secondary"}
               size="sm"
             >
               {option.label}
@@ -113,11 +91,7 @@ export default function PlayerControls({
 
       {/* Highlight toggle */}
       <div className="flex items-center gap-2">
-        <Button
-          onClick={onToggleHighlight}
-          variant={'default'}
-          size="sm"
-        >
+        <Button onClick={onToggleHighlight} variant={"default"} size="sm">
           {highlight ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
           <span className="ml-2">Highlight</span>
         </Button>

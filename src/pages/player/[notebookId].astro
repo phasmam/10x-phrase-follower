@@ -29,11 +29,7 @@ if (startPhraseId && !uuidRegex.test(startPhraseId)) {
 <Layout title="Player - 10x Phrase Follower">
   <main class="min-h-screen">
     <AuthGuard client:load>
-      <PlayerShell 
-        notebookId={notebookId} 
-        startPhraseId={startPhraseId || undefined}
-        client:load
-      />
+      <PlayerShell notebookId={notebookId} startPhraseId={startPhraseId || undefined} client:load />
     </AuthGuard>
   </main>
 </Layout>

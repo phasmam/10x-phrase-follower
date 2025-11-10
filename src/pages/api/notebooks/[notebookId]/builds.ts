@@ -18,7 +18,7 @@ function getUserId(context: APIContext): string {
 function parseQueryParams(url: URL) {
   const limit = Math.min(parseInt(url.searchParams.get("limit") || "25"), 100);
   const cursor = url.searchParams.get("cursor");
-  
+
   return { limit, cursor };
 }
 

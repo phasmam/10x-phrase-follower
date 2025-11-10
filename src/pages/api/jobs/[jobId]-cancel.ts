@@ -18,12 +18,12 @@ function getUserId(context: APIContext): string {
 // Helper function to get the appropriate Supabase client
 function getSupabaseClient(context: APIContext) {
   const userId = context.locals.userId;
-  
+
   // In development mode with DEFAULT_USER_ID, use service role key to bypass RLS
   if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
     const supabaseUrl = import.meta.env.SUPABASE_URL;
     const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-    
+
     if (supabaseServiceKey) {
       return createClient(supabaseUrl, supabaseServiceKey, {
         auth: {
@@ -73,7 +73,7 @@ export async function POST(context: APIContext) {
       .from("jobs")
       .update({
         state: "canceled",
-        ended_at: new Date().toISOString()
+        ended_at: new Date().toISOString(),
       })
       .eq("id", jobId)
       .select("id, state")
@@ -91,9 +91,14 @@ export async function POST(context: APIContext) {
     });
   } catch (error) {
     if (error instanceof Error && "code" in error) {
-      const status = (error as any).code === "unauthorized" ? 401 : 
-                    (error as any).code === "not_found" ? 404 :
-                    (error as any).code === "cannot_cancel" ? 422 : 400;
+      const status =
+        (error as any).code === "unauthorized"
+          ? 401
+          : (error as any).code === "not_found"
+            ? 404
+            : (error as any).code === "cannot_cancel"
+              ? 422
+              : 400;
       return new Response(JSON.stringify({ error: { code: (error as any).code, message: error.message } }), {
         status,
         headers: { "Content-Type": "application/json" },

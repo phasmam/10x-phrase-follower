@@ -53,7 +53,7 @@ export default function AuthCard({}: AuthCardProps) {
     try {
       // Try development mode first - check if DEV_JWT endpoint is available
       const devResponse = await fetch("/api/dev/jwt", {
-        headers: { "Accept": "application/json" },
+        headers: { Accept: "application/json" },
       });
 
       if (devResponse.ok) {
@@ -74,7 +74,7 @@ export default function AuthCard({}: AuthCardProps) {
       // DEV_JWT endpoint not available (>= 400) - fallback to Supabase Auth
       // eslint-disable-next-line no-console
       console.log("DEV_JWT not available, attempting Supabase authentication");
-      
+
       if (!supabaseClient) {
         setError("Konfiguracja autentykacji nie jest dostępna. Skontaktuj się z administratorem.");
         setIsLoading(false);
@@ -83,12 +83,13 @@ export default function AuthCard({}: AuthCardProps) {
 
       // Check if Supabase client is using placeholder (not configured)
       // Try to access the client's URL through its internal properties
-      const clientUrl = (supabaseClient as any).supabaseUrl || 
-                        import.meta.env.PUBLIC_SUPABASE_URL || 
-                        import.meta.env.SUPABASE_URL;
-      
+      const clientUrl =
+        (supabaseClient as any).supabaseUrl || import.meta.env.PUBLIC_SUPABASE_URL || import.meta.env.SUPABASE_URL;
+
       if (!clientUrl || clientUrl.includes("placeholder")) {
-        setError("Supabase nie jest skonfigurowany. Ustaw PUBLIC_SUPABASE_URL i PUBLIC_SUPABASE_KEY w zmiennych środowiskowych i zbuduj aplikację ponownie (npm run build).");
+        setError(
+          "Supabase nie jest skonfigurowany. Ustaw PUBLIC_SUPABASE_URL i PUBLIC_SUPABASE_KEY w zmiennych środowiskowych i zbuduj aplikację ponownie (npm run build)."
+        );
         setIsLoading(false);
         return;
       }
@@ -101,7 +102,7 @@ export default function AuthCard({}: AuthCardProps) {
       if (authError) {
         // eslint-disable-next-line no-console
         console.error("Supabase auth error:", authError);
-        
+
         // Handle Supabase auth errors
         if (authError.status === 429) {
           setError("Zbyt wiele prób. Spróbuj ponownie później.");
@@ -142,13 +143,19 @@ export default function AuthCard({}: AuthCardProps) {
       // Network or unexpected errors
       // eslint-disable-next-line no-console
       console.error("Login error:", err);
-      
+
       if (err instanceof Error) {
         // Check for specific error types
-        if (err.message.includes("fetch") || err.message.includes("network") || err.message.includes("Failed to fetch")) {
+        if (
+          err.message.includes("fetch") ||
+          err.message.includes("network") ||
+          err.message.includes("Failed to fetch")
+        ) {
           // Check if it's a placeholder URL error
           if (err.message.includes("placeholder") || err.message.includes("ERR_NAME_NOT_RESOLVED")) {
-            setError("Supabase nie jest skonfigurowany. Ustaw PUBLIC_SUPABASE_URL i PUBLIC_SUPABASE_KEY w zmiennych środowiskowych i zbuduj aplikację ponownie (npm run build).");
+            setError(
+              "Supabase nie jest skonfigurowany. Ustaw PUBLIC_SUPABASE_URL i PUBLIC_SUPABASE_KEY w zmiennych środowiskowych i zbuduj aplikację ponownie (npm run build)."
+            );
           } else {
             setError("Błąd połączenia z serwerem. Sprawdź połączenie internetowe.");
           }
@@ -169,9 +176,7 @@ export default function AuthCard({}: AuthCardProps) {
     <div className="w-full max-w-md space-y-6">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-foreground">Sign In</h1>
-        <p className="text-muted-foreground mt-2">
-          Enter your credentials to access your notebooks
-        </p>
+        <p className="text-muted-foreground mt-2">Enter your credentials to access your notebooks</p>
       </div>
 
       <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
@@ -197,9 +202,7 @@ export default function AuthCard({}: AuthCardProps) {
               required
               autoComplete="email"
               className={`w-full px-3 py-2 border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent ${
-                validationErrors.some((err) => err.field === "email")
-                  ? "border-destructive"
-                  : "border-input"
+                validationErrors.some((err) => err.field === "email") ? "border-destructive" : "border-input"
               }`}
               placeholder="Enter your email"
             />
@@ -228,9 +231,7 @@ export default function AuthCard({}: AuthCardProps) {
               minLength={8}
               autoComplete="current-password"
               className={`w-full px-3 py-2 border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent ${
-                validationErrors.some((err) => err.field === "password")
-                  ? "border-destructive"
-                  : "border-input"
+                validationErrors.some((err) => err.field === "password") ? "border-destructive" : "border-input"
               }`}
               placeholder="Enter your password"
             />
@@ -250,9 +251,7 @@ export default function AuthCard({}: AuthCardProps) {
 
         {import.meta.env.NODE_ENV === "development" && (
           <div className="mt-4 pt-4 border-t border-border">
-            <p className="text-xs text-muted-foreground text-center">
-              Development mode: Any credentials will work
-            </p>
+            <p className="text-xs text-muted-foreground text-center">Development mode: Any credentials will work</p>
           </div>
         )}
       </div>

@@ -15,7 +15,7 @@ After implementing the authentication module according to `auth-spec.md`, the ap
 
 The problem had multiple contributing factors:
 
-1. **Supabase Client Import Failure**: 
+1. **Supabase Client Import Failure**:
    - The `supabaseClient` was imported at module level in `src/db/supabase.client.ts`
    - In development, `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_KEY` were not set (not needed for DEV_JWT)
    - The client initialization threw an error, preventing `useAuth` hook from even loading
@@ -44,7 +44,8 @@ The problem had multiple contributing factors:
 
 **Problem**: Supabase client threw an error if `PUBLIC_SUPABASE_URL`/`PUBLIC_SUPABASE_KEY` were missing, even in development where they're not needed.
 
-**Solution**: 
+**Solution**:
+
 - Made Supabase client initialization conditional
 - In development, create a dummy client if env vars are missing (prevents import errors)
 - Only throw error in production mode where Supabase is required
@@ -75,6 +76,7 @@ if (supabaseUrl && supabaseAnonKey) {
 **Problem**: Hook checked Supabase session first, which could fail in development before reaching DEV_JWT logic.
 
 **Solution**:
+
 - Reordered authentication checks to prioritize DEV_JWT
 - Check DEV_JWT first (localStorage, then API)
 - Only check Supabase session if DEV_JWT is not available
@@ -98,6 +100,7 @@ if (supabaseUrl && supabaseAnonKey) {
 **Problem**: Single object state with embedded function caused re-render issues.
 
 **Solution**:
+
 - Split state into separate `useState` hooks for each field
 - Used `useCallback` for `logout` function to maintain stable reference
 - Added `useRef` for mount tracking to prevent state updates after unmount
@@ -118,7 +121,9 @@ const [isAuthenticated, setIsAuthenticated] = useState(false);
 const [isLoading, setIsLoading] = useState(true);
 const [token, setToken] = useState<string | null>(null);
 const [userId, setUserId] = useState<string | null>(null);
-const logout = useCallback(async () => { /* ... */ }, []); // Stable reference
+const logout = useCallback(async () => {
+  /* ... */
+}, []); // Stable reference
 ```
 
 ### Fix 4: Added Comprehensive Error Handling
@@ -128,6 +133,7 @@ const logout = useCallback(async () => { /* ... */ }, []); // Stable reference
 **Problem**: No error handling around DEV_JWT fetch, causing silent failures.
 
 **Solution**:
+
 - Wrapped DEV_JWT fetch in try/catch
 - Added detailed console logging for debugging
 - Graceful fallback to Supabase if DEV_JWT fails
@@ -139,9 +145,9 @@ try {
   const devResponse = await fetch("/api/dev/jwt", {
     headers: { Accept: "application/json" },
   });
-  
+
   console.log("DEV_JWT response status:", devResponse.status);
-  
+
   if (devResponse.ok) {
     // Handle success
   } else {
@@ -160,6 +166,7 @@ try {
 **Problem**: Component tried to call API before authentication was ready, causing loading spinner to show indefinitely.
 
 **Solution**:
+
 - Wait for authentication to complete before calling API
 - Check both `useAuth` and `useApi` authentication state
 - Don't show loading if not authenticated
@@ -178,19 +185,20 @@ useEffect(() => {
 
 ## Key Changes Summary
 
-| File | Change | Impact |
-|------|--------|--------|
-| `src/db/supabase.client.ts` | Made client optional in dev, create dummy if missing | Prevents import errors in development |
-| `src/lib/hooks/useAuth.ts` | Prioritized DEV_JWT, stabilized state, added error handling | Fixes infinite loading, ensures DEV mode works |
-| `src/components/ConfigStatusBadge.tsx` | Wait for auth before API calls | Prevents loading spinner issues |
+| File                                   | Change                                                      | Impact                                         |
+| -------------------------------------- | ----------------------------------------------------------- | ---------------------------------------------- |
+| `src/db/supabase.client.ts`            | Made client optional in dev, create dummy if missing        | Prevents import errors in development          |
+| `src/lib/hooks/useAuth.ts`             | Prioritized DEV_JWT, stabilized state, added error handling | Fixes infinite loading, ensures DEV mode works |
+| `src/components/ConfigStatusBadge.tsx` | Wait for auth before API calls                              | Prevents loading spinner issues                |
 
 ## Testing the Fix
 
 ### Verify DEV Mode Works
 
 1. **Clear localStorage**:
+
    ```javascript
-   localStorage.clear()
+   localStorage.clear();
    ```
 
 2. **Navigate to protected route** (e.g., `/notebooks`)
@@ -206,12 +214,14 @@ useEffect(() => {
 ### Verify Production Mode Still Works
 
 1. **Set environment variables**:
+
    ```env
    PUBLIC_SUPABASE_URL=https://your-project.supabase.co
    PUBLIC_SUPABASE_KEY=your-anon-key-here
    ```
 
 2. **Build and run in production**:
+
    ```bash
    npm run build
    npm run preview
@@ -268,7 +278,6 @@ useEffect(() => {
 ✅ **DEV Mode**: Fixed and working  
 ✅ **Production Mode**: Working (requires Supabase configuration)  
 ✅ **Error Handling**: Comprehensive logging and graceful fallbacks  
-✅ **State Management**: Stable and performant  
+✅ **State Management**: Stable and performant
 
 The authentication system now works correctly in both development and production modes, with proper error handling and state management.
-
