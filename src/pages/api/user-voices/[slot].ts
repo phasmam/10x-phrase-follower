@@ -1,9 +1,8 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
-import { createClient } from "@supabase/supabase-js";
 import { ApiErrors } from "../../../lib/errors";
-import { DEFAULT_USER_ID } from "../../../db/supabase.client";
 import type { UpsertUserVoiceBySlotCommand, UserVoiceDTO } from "../../../types";
+import { ensureUserExists, getSupabaseClient } from "../../../lib/utils";
 
 export const prerender = false;
 
@@ -27,7 +26,7 @@ function getUserId(context: APIContext): string {
 function validateSlotLanguage(slot: string, language: string): void {
   const isEnglishSlot = ["EN1", "EN2", "EN3"].includes(slot);
   const isPolishSlot = slot === "PL";
-  
+
   if (isEnglishSlot && language !== "en") {
     throw ApiErrors.validationError(`Slot ${slot} requires language 'en'`);
   }
@@ -37,12 +36,7 @@ function validateSlotLanguage(slot: string, language: string): void {
 }
 
 // Helper function to check for duplicate EN voices
-async function checkDuplicateEnVoices(
-  supabase: any,
-  userId: string,
-  slot: string,
-  voiceId: string
-): Promise<void> {
+async function checkDuplicateEnVoices(supabase: any, userId: string, slot: string, voiceId: string): Promise<void> {
   if (!["EN1", "EN2", "EN3"].includes(slot)) {
     return; // Only check for EN slots
   }
@@ -67,22 +61,12 @@ async function checkDuplicateEnVoices(
 export async function PUT(context: APIContext) {
   try {
     const userId = getUserId(context);
-    let supabase = context.locals.supabase;
+    const supabase = getSupabaseClient(context);
 
-    // In development mode, use service role key to bypass RLS
-    if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
-      const supabaseUrl = import.meta.env.SUPABASE_URL;
-      const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-      
-      if (supabaseServiceKey) {
-        supabase = createClient(supabaseUrl, supabaseServiceKey, {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-          },
-        });
-      }
-    }
+    // Ensure user exists in the users table before saving voice configuration
+    // This is needed because users are created in auth.users by Supabase Auth,
+    // but we need a corresponding row in the public.users table for foreign key constraints
+    await ensureUserExists(supabase, userId);
 
     // Parse and validate path parameter
     const slot = context.params.slot;
@@ -104,15 +88,18 @@ export async function PUT(context: APIContext) {
     // Upsert the voice configuration
     const { data: voice, error } = await supabase
       .from("user_voices")
-      .upsert({
-        id: crypto.randomUUID(),
-        user_id: userId,
-        slot: validatedSlot,
-        language,
-        voice_id,
-      }, {
-        onConflict: 'user_id,slot'
-      })
+      .upsert(
+        {
+          id: crypto.randomUUID(),
+          user_id: userId,
+          slot: validatedSlot,
+          language,
+          voice_id,
+        },
+        {
+          onConflict: "user_id,slot",
+        }
+      )
       .select("id, slot, language, voice_id, created_at")
       .single();
 

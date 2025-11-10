@@ -1,10 +1,9 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
-import { createClient } from "@supabase/supabase-js";
 import { ApiErrors } from "../../lib/errors";
 import type { ApiErrorCode, TtsCredentialsStateDTO } from "../../types";
 import { encrypt, generateKeyFingerprint } from "../../lib/tts-encryption";
-import { DEFAULT_USER_ID } from "../../db/supabase.client";
+import { ensureUserExists, getSupabaseClient } from "../../lib/utils";
 
 export const prerender = false;
 
@@ -30,56 +29,6 @@ function getUserId(context: APIContext): string {
     throw ApiErrors.unauthorized("Authentication required");
   }
   return userId;
-}
-
-// Helper function to get the appropriate Supabase client
-function getSupabaseClient(context: APIContext) {
-  const userId = context.locals.userId;
-
-  // In development mode with DEFAULT_USER_ID, use service role key to bypass RLS
-  if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
-    const supabaseUrl = import.meta.env.SUPABASE_URL;
-    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (supabaseServiceKey) {
-      return createClient(supabaseUrl, supabaseServiceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      });
-    }
-  }
-
-  // In production, create an authenticated client with the user's token
-  // This is required for RLS policies to work (they check auth.uid())
-  if (userId) {
-    const authHeader = context.request.headers.get("authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.substring(7);
-      const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || import.meta.env.SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_KEY || import.meta.env.SUPABASE_KEY;
-
-      if (supabaseUrl && supabaseAnonKey) {
-        // Create an authenticated client with the user's token
-        // The Authorization header allows PostgREST to extract the JWT and make auth.uid() available to RLS policies
-        return createClient(supabaseUrl, supabaseAnonKey, {
-          global: {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-          auth: {
-            persistSession: false,
-            autoRefreshToken: false,
-          },
-        });
-      }
-    }
-  }
-
-  // Fallback to the regular client from context
-  return context.locals.supabase;
 }
 
 // Helper function to test TTS credentials with Google
@@ -164,6 +113,11 @@ export async function PUT(context: APIContext) {
   try {
     const userId = getUserId(context);
     const supabase = getSupabaseClient(context);
+
+    // Ensure user exists in the users table before saving credentials
+    // This is needed because users are created in auth.users by Supabase Auth,
+    // but we need a corresponding row in the public.users table for foreign key constraints
+    await ensureUserExists(supabase, userId);
 
     // Parse and validate request body
     const body = await context.request.json();
