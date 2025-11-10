@@ -10,10 +10,10 @@ describe("TTS Encryption", () => {
     expect(decrypted).toBe(testKey);
   });
 
-  it("should generate consistent fingerprints", () => {
+  it("should generate consistent fingerprints", async () => {
     const apiKey = "test-api-key-12345";
-    const fingerprint1 = generateKeyFingerprint(apiKey);
-    const fingerprint2 = generateKeyFingerprint(apiKey);
+    const fingerprint1 = await generateKeyFingerprint(apiKey);
+    const fingerprint2 = await generateKeyFingerprint(apiKey);
     
     expect(fingerprint1).toBe(fingerprint2);
     expect(fingerprint1).toMatch(/^SHA256:[a-f0-9]{16}$/);
