@@ -77,6 +77,8 @@ export function useApi() {
 
     // Add authorization header if token is available
     if (effectiveToken) {
+      // DEV_JWT tokens already have "dev_" prefix, Supabase tokens don't
+      // The middleware expects DEV_JWT tokens to have the prefix
       requestHeaders["Authorization"] = `Bearer ${effectiveToken}`;
     }
 

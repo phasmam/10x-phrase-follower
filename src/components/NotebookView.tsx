@@ -37,25 +37,15 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
 
       try {
-        // Load phrases (we'll get notebook info from the first phrase or use a fallback)
-        const phrasesData = await apiCall<PhraseListResponse>(
-          `/api/notebooks/${notebookId}/phrases`,
-          { method: "GET" }
-        );
-
-        // Create a mock notebook object since we don't have the GET endpoint working
-        const mockNotebook: NotebookDTO = {
-          id: notebookId,
-          name: "Loading...", // We'll update this if we can get it from somewhere
-          current_build_id: null,
-          last_generate_job_id: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
+        // Load notebook and phrases in parallel
+        const [notebookData, phrasesData] = await Promise.all([
+          apiCall<NotebookDTO>(`/api/notebooks/${notebookId}`, { method: "GET" }),
+          apiCall<PhraseListResponse>(`/api/notebooks/${notebookId}/phrases`, { method: "GET" }),
+        ]);
 
         setState(prev => ({
           ...prev,
-          notebook: mockNotebook,
+          notebook: notebookData,
           phrases: phrasesData.items,
           isLoading: false,
         }));

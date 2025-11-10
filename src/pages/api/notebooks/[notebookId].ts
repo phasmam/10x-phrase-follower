@@ -2,6 +2,9 @@ import type { APIRoute } from "astro";
 import type { UpdateNotebookCommand } from "../../../types";
 import type { LocalsWithAuth } from "../../../lib/types";
 import { withErrorHandling, requireAuth, ApiErrors } from "../../../lib/errors";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "../../../db/database.types";
+import { DEFAULT_USER_ID } from "../../../db/supabase.client";
 
 export const prerender = false;
 
@@ -22,7 +25,23 @@ const getNotebook = async ({
     throw ApiErrors.validationError("Invalid notebook ID format");
   }
 
-  const { data, error } = await locals.supabase
+  // In development, use service role key to bypass RLS
+  let supabase = locals.supabase;
+  if (import.meta.env.NODE_ENV === "development" && locals.userId === DEFAULT_USER_ID) {
+    const supabaseUrl = import.meta.env.SUPABASE_URL;
+    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (supabaseServiceKey) {
+      supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+    }
+  }
+
+  const { data, error } = await supabase
     .from("notebooks")
     .select("id, name, current_build_id, last_generate_job_id, created_at, updated_at")
     .eq("id", notebookId)
@@ -91,7 +110,23 @@ const updateNotebook = async ({
     throw ApiErrors.validationError("No valid fields to update");
   }
 
-  const { data, error } = await locals.supabase
+  // In development, use service role key to bypass RLS
+  let supabase = locals.supabase;
+  if (import.meta.env.NODE_ENV === "development" && locals.userId === DEFAULT_USER_ID) {
+    const supabaseUrl = import.meta.env.SUPABASE_URL;
+    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (supabaseServiceKey) {
+      supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+    }
+  }
+
+  const { data, error } = await supabase
     .from("notebooks")
     .update(updateData)
     .eq("id", notebookId)
@@ -138,7 +173,23 @@ const deleteNotebook = async ({
     throw ApiErrors.validationError("Invalid notebook ID format");
   }
 
-  const { error } = await locals.supabase.from("notebooks").delete().eq("id", notebookId).eq("user_id", locals.userId); // RLS will handle this, but explicit check for clarity
+  // In development, use service role key to bypass RLS
+  let supabase = locals.supabase;
+  if (import.meta.env.NODE_ENV === "development" && locals.userId === DEFAULT_USER_ID) {
+    const supabaseUrl = import.meta.env.SUPABASE_URL;
+    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (supabaseServiceKey) {
+      supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+    }
+  }
+
+  const { error } = await supabase.from("notebooks").delete().eq("id", notebookId).eq("user_id", locals.userId); // RLS will handle this, but explicit check for clarity
 
   if (error) {
     // eslint-disable-next-line no-console
