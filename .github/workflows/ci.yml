@@ -47,6 +47,7 @@ jobs:
 
   test:
     name: Run Tests
+    needs: [format, lint]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -66,6 +67,7 @@ jobs:
 
   build:
     name: Build
+    needs: [test]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
