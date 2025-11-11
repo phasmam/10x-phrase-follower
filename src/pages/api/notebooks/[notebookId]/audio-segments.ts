@@ -1,7 +1,7 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
-import { ApiErrors } from "../../../../lib/errors";
-import type { AudioSegmentListResponse } from "../../../../types";
+import { ApiError, ApiErrors } from "../../../../lib/errors";
+import type { AudioSegmentListResponse, WordTiming } from "../../../../types";
 import { getSupabaseClient } from "../../../../lib/utils";
 
 export const prerender = false;
@@ -38,7 +38,7 @@ function parseQueryParams(url: URL) {
 
 export async function GET(context: APIContext) {
   try {
-    const userId = getUserId(context);
+    getUserId(context); // Verify authentication
 
     // In development, use service role key to bypass RLS
     const supabase = getSupabaseClient(context);
@@ -94,7 +94,10 @@ export async function GET(context: APIContext) {
     const nextCursor = hasMore && items.length > 0 ? items[items.length - 1].created_at : null;
 
     const response: AudioSegmentListResponse = {
-      items,
+      items: items.map((item) => ({
+        ...item,
+        word_timings: item.word_timings as WordTiming[] | null,
+      })),
       next_cursor: nextCursor,
     };
 
@@ -118,12 +121,8 @@ export async function GET(context: APIContext) {
         }
       );
     }
-    if (error instanceof Error && "code" in error) {
-      const status = (error as any).code === "unauthorized" ? 401 : 400;
-      return new Response(JSON.stringify({ error: { code: (error as any).code, message: error.message } }), {
-        status,
-        headers: { "Content-Type": "application/json" },
-      });
+    if (error instanceof ApiError) {
+      return error.toResponse();
     }
     return new Response(JSON.stringify({ error: { code: "internal", message: "Internal server error" } }), {
       status: 500,

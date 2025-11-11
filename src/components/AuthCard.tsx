@@ -2,14 +2,12 @@ import React, { useState } from "react";
 import { Button } from "./ui/button";
 import { supabaseClient } from "../db/supabase.client";
 
-interface AuthCardProps {}
-
 interface ValidationError {
   field: string;
   message: string;
 }
 
-export default function AuthCard({}: AuthCardProps) {
+export default function AuthCard() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -84,7 +82,9 @@ export default function AuthCard({}: AuthCardProps) {
       // Check if Supabase client is using placeholder (not configured)
       // Try to access the client's URL through its internal properties
       const clientUrl =
-        (supabaseClient as any).supabaseUrl || import.meta.env.PUBLIC_SUPABASE_URL || import.meta.env.SUPABASE_URL;
+        (supabaseClient as { supabaseUrl?: string }).supabaseUrl ||
+        import.meta.env.PUBLIC_SUPABASE_URL ||
+        import.meta.env.SUPABASE_URL;
 
       if (!clientUrl || clientUrl.includes("placeholder")) {
         setError(

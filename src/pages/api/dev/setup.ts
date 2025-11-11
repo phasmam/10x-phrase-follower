@@ -5,7 +5,7 @@ import { createDevUser, generateSupabaseToken } from "../../../lib/create-dev-us
  * Development endpoint to set up a proper Supabase user for testing
  * This creates a real user in auth.users that will work with RLS policies
  */
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async () => {
   if (import.meta.env.NODE_ENV !== "development") {
     return new Response(
       JSON.stringify({

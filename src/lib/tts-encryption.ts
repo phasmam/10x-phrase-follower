@@ -123,7 +123,7 @@ export async function encrypt(plaintext: string): Promise<Buffer> {
  * @param encryptedData The encrypted key as Buffer
  * @returns Decrypted API key
  */
-export async function decrypt(encryptedData: Buffer | Uint8Array | string | any): Promise<string> {
+export async function decrypt(encryptedData: Buffer | Uint8Array | string | unknown): Promise<string> {
   try {
     const masterKey = getEncryptionKey();
 

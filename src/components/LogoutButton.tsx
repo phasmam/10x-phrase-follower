@@ -2,9 +2,7 @@ import React from "react";
 import { useAuth } from "../lib/hooks/useAuth";
 import { Button } from "./ui/button";
 
-interface LogoutButtonProps {}
-
-export default function LogoutButton({}: LogoutButtonProps) {
+export default function LogoutButton() {
   const { logout, isAuthenticated } = useAuth();
 
   // Don't render if not authenticated

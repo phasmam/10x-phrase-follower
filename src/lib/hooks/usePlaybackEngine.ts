@@ -67,6 +67,7 @@ export function usePlaybackEngine({
       audioRef.current.pause();
       try {
         audioRef.current.currentTime = 0;
+        // eslint-disable-next-line no-empty
       } catch {}
     }
     currentSegmentRef.current = null;
@@ -173,8 +174,8 @@ export function usePlaybackEngine({
         setCurrentSlot(slot);
       } catch (error) {
         console.error("[usePlaybackEngine] Failed to play audio segment:", error, {
-          errorCode: (error as any)?.code,
-          errorMessage: (error as any)?.message,
+          errorCode: error && typeof error === "object" && "code" in error ? String(error.code) : undefined,
+          errorMessage: error instanceof Error ? error.message : String(error),
           src: audio.src,
         });
         handleSegmentEnd();

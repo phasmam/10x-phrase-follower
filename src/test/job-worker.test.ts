@@ -10,7 +10,7 @@ Object.defineProperty(global, "crypto", {
 
 describe("JobWorker", () => {
   let worker: JobWorker;
-  let mockSupabase: any;
+  let mockSupabase: unknown;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -53,7 +53,7 @@ describe("JobWorker", () => {
 
     worker = new JobWorker("http://localhost:54321", "test-service-key");
     // Replace the supabase client with our mock
-    (worker as any).supabase = mockSupabase;
+    (worker as { supabase: unknown }).supabase = mockSupabase;
   });
 
   it("should be created with valid configuration", () => {
@@ -99,7 +99,9 @@ describe("JobWorker", () => {
 
     mockSupabase.from = mockFrom;
 
-    await (worker as any).updateJobState("test-job", "running", "2023-01-01T00:00:00Z");
+    await (
+      worker as { updateJobState: (jobId: string, state: string, startedAt: string) => Promise<void> }
+    ).updateJobState("test-job", "running", "2023-01-01T00:00:00Z");
 
     expect(mockFrom).toHaveBeenCalledWith("jobs");
     expect(mockUpdate).toHaveBeenCalledWith({
@@ -120,7 +122,9 @@ describe("JobWorker", () => {
 
     mockSupabase.from = mockFrom;
 
-    const buildId = await (worker as any).createBuild("test-notebook", "test-job");
+    const buildId = await (
+      worker as { createBuild: (notebookId: string, jobId: string) => Promise<string> }
+    ).createBuild("test-notebook", "test-job");
 
     expect(buildId).toBe("test-uuid-123");
     expect(mockFrom).toHaveBeenCalledWith("builds");

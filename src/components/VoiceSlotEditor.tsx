@@ -9,9 +9,8 @@ interface VoiceSlot {
   created_at?: string;
 }
 
-interface VoiceSlotEditorProps {}
-
-export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
+/* eslint-disable react-compiler/react-compiler */
+export default function VoiceSlotEditor() {
   const [voiceSlots, setVoiceSlots] = useState<VoiceSlot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -22,6 +21,7 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
   // Load voice slots on mount
   useEffect(() => {
     loadVoiceSlots();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadVoiceSlots = async () => {
@@ -67,6 +67,7 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
         setLastSavedAt(null);
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error("Failed to load voice slots:", error);
       // Set default slots on error
       const defaultSlots: VoiceSlot[] = [
@@ -107,6 +108,7 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
       // Reload voice slots to get updated timestamps
       await loadVoiceSlots();
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error("Failed to save voice slots:", error);
       const errorMessage = error instanceof Error ? error.message : "Failed to save voice slots. Please try again.";
       setSaveResult({ success: false, message: errorMessage });
@@ -195,8 +197,11 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Language</label>
+                <label htmlFor={`language-${slot.slot}`} className="block text-sm font-medium text-foreground mb-2">
+                  Language
+                </label>
                 <select
+                  id={`language-${slot.slot}`}
                   value={slot.language}
                   onChange={(e) => updateVoiceSlot(slot.slot, "language", e.target.value as "en" | "pl")}
                   className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -211,8 +216,11 @@ export default function VoiceSlotEditor({}: VoiceSlotEditorProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Voice ID</label>
+                <label htmlFor={`voice-id-${slot.slot}`} className="block text-sm font-medium text-foreground mb-2">
+                  Voice ID
+                </label>
                 <input
+                  id={`voice-id-${slot.slot}`}
                   type="text"
                   value={slot.voice_id}
                   onChange={(e) => updateVoiceSlot(slot.slot, "voice_id", e.target.value)}

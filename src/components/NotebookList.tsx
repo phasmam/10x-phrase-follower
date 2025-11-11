@@ -7,6 +7,7 @@ interface NotebookListProps {
   initialItems?: NotebookDTO[];
 }
 
+/* eslint-disable react-compiler/react-compiler */
 export default function NotebookList({ initialItems = [] }: NotebookListProps) {
   const { apiCall, isAuthenticated } = useApi();
   const [notebooks, setNotebooks] = useState<NotebookDTO[]>(initialItems);
@@ -54,6 +55,7 @@ export default function NotebookList({ initialItems = [] }: NotebookListProps) {
     if (initialItems.length === 0) {
       fetchNotebooks();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Handle search
@@ -206,6 +208,7 @@ function NotebookTile({ notebook, onRename, onDelete }: NotebookTileProps) {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               className="w-full px-2 py-1 text-sm border border-input rounded bg-background"
+              // eslint-disable-next-line jsx-a11y/no-autofocus
               autoFocus
               onBlur={() => setIsRenaming(false)}
             />

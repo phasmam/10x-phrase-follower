@@ -1,6 +1,6 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
-import { ApiErrors } from "../../../lib/errors";
+import { ApiError, ApiErrors } from "../../../lib/errors";
 
 export const prerender = false;
 
@@ -111,12 +111,8 @@ export async function POST(context: APIContext) {
         }
       );
     }
-    if (error instanceof Error && "code" in error) {
-      const status = (error as any).code === "unauthorized" ? 401 : 400;
-      return new Response(JSON.stringify({ error: { code: (error as any).code, message: error.message } }), {
-        status,
-        headers: { "Content-Type": "application/json" },
-      });
+    if (error instanceof ApiError) {
+      return error.toResponse();
     }
     return new Response(JSON.stringify({ error: { code: "internal", message: "Internal server error" } }), {
       status: 500,

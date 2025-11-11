@@ -1,6 +1,6 @@
 import type { APIContext } from "astro";
-import { ApiErrors } from "../../../lib/errors";
-import type { AudioSegmentDTO } from "../../../types";
+import { ApiError, ApiErrors } from "../../../lib/errors";
+import type { AudioSegmentDTO, WordTiming } from "../../../types";
 
 export const prerender = false;
 
@@ -15,7 +15,7 @@ function getUserId(context: APIContext): string {
 
 export async function GET(context: APIContext) {
   try {
-    const userId = getUserId(context);
+    getUserId(context); // Verify authentication
     const supabase = context.locals.supabase;
 
     // Parse and validate path parameter
@@ -44,19 +44,18 @@ export async function GET(context: APIContext) {
       throw ApiErrors.internal("Failed to fetch audio segment");
     }
 
-    const response: AudioSegmentDTO = segment;
+    const response: AudioSegmentDTO = {
+      ...segment,
+      word_timings: segment.word_timings as WordTiming[] | null,
+    };
 
     return new Response(JSON.stringify(response), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    if (error instanceof Error && "code" in error) {
-      const status = (error as any).code === "unauthorized" ? 401 : (error as any).code === "not_found" ? 404 : 400;
-      return new Response(JSON.stringify({ error: { code: (error as any).code, message: error.message } }), {
-        status,
-        headers: { "Content-Type": "application/json" },
-      });
+    if (error instanceof ApiError) {
+      return error.toResponse();
     }
     return new Response(JSON.stringify({ error: { code: "internal", message: "Internal server error" } }), {
       status: 500,

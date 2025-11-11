@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type {
   PlaybackManifestVM,
-  PlaybackSequenceItem,
-  PhraseVM,
-  Segment,
+  PlaybackManifestDTO,
+  PlaybackManifestItem,
+  PlaybackManifestSegment,
+  WordTiming,
   VoiceSlot,
   PlaybackSpeed,
-  PlayerState,
 } from "../types";
 import PlayerControls from "./PlayerControls";
 import SegmentSequenceBar from "./SegmentSequenceBar";
@@ -36,7 +36,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<PlaybackSpeed>(1);
   const [highlight, setHighlight] = useState(true);
-  const [clockMs, setClockMs] = useState(0);
+  const [, setClockMs] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,17 +62,18 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
       setLoading(true);
       setError(null);
 
-      const data = await apiCall<{
-        notebook_id: string;
-        build_id: string;
-        sequence: any[];
-        expires_at: string;
-      }>(`/api/notebooks/${notebookId}/playback-manifest?highlight=${highlight ? "on" : "off"}&speed=${speed}`);
+      const data = await apiCall<PlaybackManifestDTO>(
+        `/api/notebooks/${notebookId}/playback-manifest?highlight=${highlight ? "on" : "off"}&speed=${speed}`
+      );
 
+      // eslint-disable-next-line no-console
       console.log("[PlayerShell] Playback manifest loaded:", data);
+      // eslint-disable-next-line no-console
       console.log("[PlayerShell] Sequence items:", data.sequence?.length || 0);
       if (data.sequence && data.sequence.length > 0) {
+        // eslint-disable-next-line no-console
         console.log("[PlayerShell] First phrase segments:", data.sequence[0]?.segments?.length || 0);
+        // eslint-disable-next-line no-console
         console.log("[PlayerShell] First phrase segments details:", data.sequence[0]?.segments);
       }
 
@@ -80,7 +81,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
       const manifestVM: PlaybackManifestVM = {
         notebookId: data.notebook_id,
         buildId: data.build_id,
-        sequence: data.sequence.map((item: any) => ({
+        sequence: data.sequence.map((item: PlaybackManifestItem) => ({
           phrase: {
             id: item.phrase.id,
             position: item.phrase.position,
@@ -91,12 +92,12 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
               pl: item.phrase.tokens?.pl || [],
             },
           },
-          segments: item.segments.map((segment: any) => ({
+          segments: item.segments.map((segment: PlaybackManifestSegment) => ({
             slot: segment.slot,
             status: segment.status,
             url: segment.url,
             durationMs: segment.duration_ms,
-            timings: segment.word_timings?.map((wt: any) => ({
+            timings: segment.word_timings?.map((wt: WordTiming) => ({
               startMs: wt.start_ms,
               endMs: wt.end_ms,
             })),
@@ -105,9 +106,11 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
         expiresAt: data.expires_at,
       };
 
+      // eslint-disable-next-line no-console
       console.log("[PlayerShell] Manifest VM created:", manifestVM);
       setManifest(manifestVM);
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error("[PlayerShell] Failed to fetch playback manifest:", err);
       setError(err instanceof Error ? err.message : "Failed to load playback manifest");
     } finally {
@@ -129,16 +132,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
   const hasPlayableSegments = currentSegments.length > 0;
 
   // Playback engine
-  const {
-    onEndSegment,
-    onEndPhrase,
-    onAdvanceNext,
-    onAdvancePrev,
-    playSegment,
-    pausePlayback,
-    resumePlayback,
-    stopPlayback,
-  } = usePlaybackEngine({
+  const { onAdvanceNext, onAdvancePrev, playSegment, pausePlayback, resumePlayback, stopPlayback } = usePlaybackEngine({
     manifest,
     phraseIndex,
     speed,
@@ -153,12 +147,14 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
       // Find the first available segment to start with (EN1)
       const firstSegment = currentSegments.find((s) => s.slot === "EN1" && s.url);
       if (firstSegment && firstSegment.url) {
+        // eslint-disable-next-line no-console
         console.log("[PlayerShell] Starting playback with segment:", {
           slot: firstSegment.slot,
           url: firstSegment.url,
         });
         playSegment("EN1", firstSegment.url);
       } else {
+        // eslint-disable-next-line no-console
         console.warn(
           "[PlayerShell] No playable segment found. Available segments:",
           currentSegments.map((s) => ({ slot: s.slot, hasUrl: !!s.url, status: s.status }))
@@ -237,7 +233,9 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
     onPlayPause: playing ? handlePause : handlePlay,
     onStop: handleStop,
     onRestart: handleRestartPhrase,
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     onSeekSmall: () => {}, // TODO: Implement small seek
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     onSeekLarge: () => {}, // TODO: Implement large seek
     onPrevPhrase: onAdvancePrev,
     onNextPhrase: onAdvanceNext,

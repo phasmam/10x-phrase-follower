@@ -315,7 +315,7 @@ interface PhraseRowProps {
   onMove: (phraseId: string, direction: "up" | "down") => void;
 }
 
-function PhraseRow({ phrase, index, isFirst, isLast, onDelete, onMove }: PhraseRowProps) {
+function PhraseRow({ phrase, onDelete, onMove }: PhraseRowProps) {
   return (
     <tr className="border-b border-border hover:bg-muted/50 transition-colors">
       <td className="p-4 text-sm text-muted-foreground">{phrase.position}</td>

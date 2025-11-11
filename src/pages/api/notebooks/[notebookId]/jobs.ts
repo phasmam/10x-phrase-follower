@@ -1,6 +1,6 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
-import { ApiErrors } from "../../../../lib/errors";
+import { ApiError, ApiErrors } from "../../../../lib/errors";
 import type { JobListResponse } from "../../../../types";
 import { getSupabaseClient } from "../../../../lib/utils";
 
@@ -33,7 +33,7 @@ function parseQueryParams(url: URL) {
 
 export async function GET(context: APIContext) {
   try {
-    const userId = getUserId(context);
+    getUserId(context); // Verify authentication
     const supabase = getSupabaseClient(context);
 
     // Parse and validate path parameter
@@ -48,7 +48,7 @@ export async function GET(context: APIContext) {
     // Build query
     let query = supabase
       .from("jobs")
-      .select("id, type, state, started_at, ended_at, timeout_sec, error, created_at")
+      .select("id, user_id, notebook_id, type, state, started_at, ended_at, timeout_sec, error, created_at")
       .eq("notebook_id", notebookId)
       .order("created_at", { ascending: false })
       .limit(limit + 1); // Get one extra to check if there are more
@@ -98,11 +98,8 @@ export async function GET(context: APIContext) {
         }
       );
     }
-    if (error instanceof Error && "code" in error) {
-      return new Response(JSON.stringify({ error: { code: (error as any).code, message: error.message } }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
+    if (error instanceof ApiError) {
+      return error.toResponse();
     }
     return new Response(JSON.stringify({ error: { code: "internal", message: "Internal server error" } }), {
       status: 500,

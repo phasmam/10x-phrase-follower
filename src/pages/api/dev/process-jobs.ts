@@ -1,7 +1,6 @@
-import { APIContext } from "astro";
 import { startJobWorker } from "../../../lib/job-worker";
 
-export async function POST(context: APIContext) {
+export async function POST() {
   try {
     // Start the job worker
     await startJobWorker();

@@ -4,8 +4,6 @@ import { useApi } from "../lib/hooks/useApi";
 import { ToastProvider, useToast } from "./ui/toast";
 import type { ImportNotebookCommand, ImportNotebookResultDTO } from "../types";
 
-interface ImportViewProps {}
-
 interface ImportState {
   step: "form" | "summary";
   isLoading: boolean;
@@ -13,7 +11,7 @@ interface ImportState {
 }
 
 // Internal component that uses toast
-function ImportViewContent({}: ImportViewProps) {
+function ImportViewContent() {
   const { apiCall, isAuthenticated } = useApi();
   const { addToast } = useToast();
   const [state, setState] = useState<ImportState>({
@@ -308,7 +306,7 @@ function ImportSummary({ result, onStartOver }: ImportSummaryProps) {
           <h3 className="text-sm font-medium text-green-800 dark:text-green-200">Import completed successfully!</h3>
         </div>
         <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-          Notebook "{notebook.name}" has been created with {accepted} phrases.
+          Notebook &quot;{notebook.name}&quot; has been created with {accepted} phrases.
         </p>
       </div>
 

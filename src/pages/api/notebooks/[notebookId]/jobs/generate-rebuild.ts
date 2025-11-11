@@ -1,9 +1,13 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
-import { ApiErrors } from "../../../../../lib/errors";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "../../../../../db/database.types";
+import { ApiError, ApiErrors } from "../../../../../lib/errors";
 import type { JobDTO } from "../../../../../types";
 import { JobWorker } from "../../../../../lib/job-worker";
 import { ensureUserExists, getSupabaseClient } from "../../../../../lib/utils";
+
+type SupabaseClient = ReturnType<typeof createClient<Database>>;
 
 export const prerender = false;
 
@@ -22,7 +26,7 @@ function getUserId(context: APIContext): string {
 }
 
 // Helper function to check TTS credentials
-async function checkTtsCredentials(supabase: any, userId: string): Promise<void> {
+async function checkTtsCredentials(supabase: SupabaseClient, userId: string): Promise<void> {
   const { data: credentials, error } = await supabase
     .from("tts_credentials")
     .select("is_configured")
@@ -39,7 +43,7 @@ async function checkTtsCredentials(supabase: any, userId: string): Promise<void>
 }
 
 // Helper function to check user voices
-async function checkUserVoices(supabase: any, userId: string): Promise<void> {
+async function checkUserVoices(supabase: SupabaseClient, userId: string): Promise<void> {
   const { data: voices, error } = await supabase.from("user_voices").select("slot, language").eq("user_id", userId);
 
   if (error) {
@@ -51,8 +55,8 @@ async function checkUserVoices(supabase: any, userId: string): Promise<void> {
   }
 
   // Check for required slots (at least one EN and one PL)
-  const hasEn = voices.some((v: any) => ["EN1", "EN2", "EN3"].includes(v.slot));
-  const hasPl = voices.some((v: any) => v.slot === "PL");
+  const hasEn = voices.some((v) => ["EN1", "EN2", "EN3"].includes(v.slot));
+  const hasPl = voices.some((v) => v.slot === "PL");
 
   if (!hasEn || !hasPl) {
     throw ApiErrors.validationError("Voice configuration incomplete - need at least one EN slot and PL slot");
@@ -60,7 +64,7 @@ async function checkUserVoices(supabase: any, userId: string): Promise<void> {
 }
 
 // Helper function to check for active jobs
-async function checkActiveJobs(supabase: any, notebookId: string): Promise<void> {
+async function checkActiveJobs(supabase: SupabaseClient, notebookId: string): Promise<void> {
   const { data: activeJobs, error } = await supabase
     .from("jobs")
     .select("id, state")
@@ -113,7 +117,7 @@ export async function POST(context: APIContext) {
         state: "queued",
         timeout_sec: timeout_sec || 1800, // Default 30 minutes
       })
-      .select("id, type, state, notebook_id, started_at, ended_at, timeout_sec, created_at")
+      .select("id, user_id, notebook_id, type, state, started_at, ended_at, timeout_sec, error, created_at")
       .single();
 
     if (error) {
@@ -135,23 +139,22 @@ export async function POST(context: APIContext) {
         console.log("JobWorker instance created, starting job processing...");
 
         // Process the job in the background (non-blocking)
-        worker.processJob(jobId).catch((error) => {
+        worker.processJob(jobId).catch(async (error: Error) => {
           console.error("Failed to process job:", error);
           // Update job state to failed
-          supabase
-            .from("jobs")
-            .update({
-              state: "failed",
-              error: error.message,
-              ended_at: new Date().toISOString(),
-            })
-            .eq("id", jobId)
-            .then(() => {
-              console.log(`Job ${jobId} marked as failed: ${error.message}`);
-            })
-            .catch((updateError) => {
-              console.error("Failed to update job state:", updateError);
-            });
+          try {
+            await supabase
+              .from("jobs")
+              .update({
+                state: "failed",
+                error: error.message,
+                ended_at: new Date().toISOString(),
+              })
+              .eq("id", jobId);
+            console.log(`Job ${jobId} marked as failed: ${error.message}`);
+          } catch (updateError: unknown) {
+            console.error("Failed to update job state:", updateError);
+          }
         });
         console.log("Job processing started in background");
       } else {
@@ -184,12 +187,8 @@ export async function POST(context: APIContext) {
         }
       );
     }
-    if (error instanceof Error && "code" in error) {
-      const status = (error as any).code === "unauthorized" ? 401 : (error as any).code === "conflict" ? 409 : 400;
-      return new Response(JSON.stringify({ error: { code: (error as any).code, message: error.message } }), {
-        status,
-        headers: { "Content-Type": "application/json" },
-      });
+    if (error instanceof ApiError) {
+      return error.toResponse();
     }
     return new Response(JSON.stringify({ error: { code: "internal", message: "Internal server error" } }), {
       status: 500,

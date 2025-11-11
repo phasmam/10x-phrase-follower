@@ -36,7 +36,7 @@ const loginHandler = async (context: { request: Request }): Promise<Response> =>
   let body: unknown;
   try {
     body = await context.request.json();
-  } catch (error) {
+  } catch {
     throw ApiErrors.invalidBody("Request body is required and must be valid JSON");
   }
 

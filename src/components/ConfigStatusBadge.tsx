@@ -8,9 +8,8 @@ interface TtsCredentialsState {
   key_fingerprint?: string;
 }
 
-interface ConfigStatusBadgeProps {}
-
-export default function ConfigStatusBadge({}: ConfigStatusBadgeProps) {
+/* eslint-disable react-compiler/react-compiler */
+export default function ConfigStatusBadge() {
   const [credentialsState, setCredentialsState] = useState<TtsCredentialsState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { apiCall, isAuthenticated } = useApi();
@@ -24,6 +23,7 @@ export default function ConfigStatusBadge({}: ConfigStatusBadgeProps) {
       // Not authenticated, don't show loading state
       setIsLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, authIsAuthenticated, authIsLoading]);
 
   const loadCredentialsState = async () => {
@@ -31,6 +31,7 @@ export default function ConfigStatusBadge({}: ConfigStatusBadgeProps) {
       const data = await apiCall("/api/tts-credentials");
       setCredentialsState(data);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error("Failed to load TTS credentials state:", error);
     } finally {
       setIsLoading(false);

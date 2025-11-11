@@ -1,6 +1,4 @@
-import { APIContext } from "astro";
-
-export async function GET(context: APIContext) {
+export async function GET() {
   try {
     // Test importing the job worker
     const { JobWorker } = await import("../../../lib/job-worker");

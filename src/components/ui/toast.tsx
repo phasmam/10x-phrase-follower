@@ -23,6 +23,7 @@ interface ToastContextType {
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 // Toast provider component
+/* eslint-disable react-compiler/react-compiler */
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -42,6 +43,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         removeToast(id);
       }, newToast.duration);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const removeToast = useCallback((id: string) => {

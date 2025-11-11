@@ -56,11 +56,45 @@ const reactConfig = tseslint.config({
   },
 });
 
+// Node.js scripts configuration (for test scripts and utility scripts)
+const nodeScriptsConfig = tseslint.config({
+  files: ["src/test/scripts/**/*.js", "scripts/**/*.js"],
+  languageOptions: {
+    globals: {
+      // Node.js globals
+      console: "readonly",
+      process: "readonly",
+      Buffer: "readonly",
+      __dirname: "readonly",
+      __filename: "readonly",
+      global: "readonly",
+      // Node.js built-in modules
+      crypto: "readonly",
+      fs: "readonly",
+      path: "readonly",
+      // Web APIs available in Node.js 18+
+      fetch: "readonly",
+      TextEncoder: "readonly",
+      TextDecoder: "readonly",
+      URL: "readonly",
+      URLSearchParams: "readonly",
+    },
+    ecmaVersion: "latest",
+    sourceType: "module",
+  },
+  rules: {
+    "no-console": "off", // Console is expected in test/debug scripts
+    "@typescript-eslint/no-unused-vars": "off", // Allow unused vars in test scripts
+    "no-undef": "off", // We're defining globals manually
+  },
+});
+
 export default tseslint.config(
   includeIgnoreFile(gitignorePath),
   baseConfig,
   jsxA11yConfig,
   reactConfig,
+  nodeScriptsConfig,
   eslintPluginAstro.configs["flat/recommended"],
   eslintPluginPrettier
 );

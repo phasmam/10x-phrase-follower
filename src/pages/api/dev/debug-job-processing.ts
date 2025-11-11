@@ -1,10 +1,8 @@
-import { APIContext } from "astro";
 import { createClient } from "@supabase/supabase-js";
-import { JobWorker } from "../../../lib/job-worker";
 
 const DEFAULT_USER_ID = "0a1f3212-c55f-4a62-bc0f-4121a7a72283";
 
-export async function POST(context: APIContext) {
+export async function POST() {
   try {
     const supabaseUrl = import.meta.env.SUPABASE_URL;
     const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -55,7 +53,7 @@ export async function POST(context: APIContext) {
       .order("slot");
 
     // Get phrases for all notebooks
-    const { data: phrasesData, error: phrasesError } = await supabase.from("phrases").select("*").order("position");
+    const { data: phrasesData } = await supabase.from("phrases").select("*").order("position");
 
     const phrases = phrasesData || [];
 

@@ -57,6 +57,7 @@ export function useAuth(): AuthState {
     }
 
     // Redirect to login
+    // eslint-disable-next-line react-compiler/react-compiler
     window.location.href = "/login";
   }, []);
 

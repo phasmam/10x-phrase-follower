@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../db/database.types";
 
 // TTS service for Google Cloud Text-to-Speech
@@ -53,8 +53,8 @@ class TtsService {
 
 // Job worker for processing TTS generation jobs
 export class JobWorker {
-  private supabase: any;
-  private storage: any;
+  private supabase: SupabaseClient<Database>;
+  private storage: SupabaseClient<Database>["storage"];
 
   constructor(supabaseUrl: string, supabaseServiceKey: string) {
     this.supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
@@ -286,7 +286,7 @@ export class JobWorker {
     endedAt?: string,
     error?: string
   ): Promise<void> {
-    const updateData: any = { state };
+    const updateData: Partial<{ state: string; started_at: string; ended_at: string; error: string }> = { state };
     if (startedAt) updateData.started_at = startedAt;
     if (endedAt) updateData.ended_at = endedAt;
     if (error) updateData.error = error;
@@ -333,7 +333,7 @@ export class JobWorker {
         return;
       }
 
-      const phraseIds = phrases.map((p: any) => p.id);
+      const phraseIds = phrases.map((p: { id: string }) => p.id);
 
       // Deactivate old segments for this notebook's phrases
       const { error: deactivateError } = await this.supabase
@@ -398,7 +398,6 @@ export class JobWorker {
 
 // Singleton to prevent multiple worker instances
 let workerInstance: JobWorker | null = null;
-const workerInterval: NodeJS.Timeout | null = null;
 
 // Export a function to start the worker
 export async function startJobWorker(): Promise<void> {
@@ -418,7 +417,7 @@ export async function startJobWorker(): Promise<void> {
   workerInstance = new JobWorker(supabaseUrl, supabaseServiceKey);
 
   // Process jobs every 30 seconds
-  const workerInterval = setInterval(async () => {
+  setInterval(async () => {
     try {
       if (workerInstance) {
         await workerInstance.processQueuedJobs();

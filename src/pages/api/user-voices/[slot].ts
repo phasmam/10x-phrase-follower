@@ -1,8 +1,12 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
-import { ApiErrors } from "../../../lib/errors";
-import type { UpsertUserVoiceBySlotCommand, UserVoiceDTO } from "../../../types";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "../../../db/database.types";
+import { ApiError, ApiErrors } from "../../../lib/errors";
+import type { UserVoiceDTO } from "../../../types";
 import { ensureUserExists, getSupabaseClient } from "../../../lib/utils";
+
+type SupabaseClient = ReturnType<typeof createClient<Database>>;
 
 export const prerender = false;
 
@@ -36,7 +40,12 @@ function validateSlotLanguage(slot: string, language: string): void {
 }
 
 // Helper function to check for duplicate EN voices
-async function checkDuplicateEnVoices(supabase: any, userId: string, slot: string, voiceId: string): Promise<void> {
+async function checkDuplicateEnVoices(
+  supabase: SupabaseClient,
+  userId: string,
+  slot: "EN1" | "EN2" | "EN3" | "PL",
+  voiceId: string
+): Promise<void> {
   if (!["EN1", "EN2", "EN3"].includes(slot)) {
     return; // Only check for EN slots
   }
@@ -52,7 +61,7 @@ async function checkDuplicateEnVoices(supabase: any, userId: string, slot: strin
     throw ApiErrors.internal("Failed to check for duplicate voices");
   }
 
-  const duplicateVoice = existingVoices?.find((v: any) => v.voice_id === voiceId);
+  const duplicateVoice = existingVoices?.find((v) => v.voice_id === voiceId);
   if (duplicateVoice) {
     throw ApiErrors.conflict(`Voice ${voiceId} is already used in slot ${duplicateVoice.slot}`);
   }
@@ -133,12 +142,8 @@ export async function PUT(context: APIContext) {
         }
       );
     }
-    if (error instanceof Error && "code" in error) {
-      const status = (error as any).code === "unauthorized" ? 401 : 400;
-      return new Response(JSON.stringify({ error: { code: (error as any).code, message: error.message } }), {
-        status,
-        headers: { "Content-Type": "application/json" },
-      });
+    if (error instanceof ApiError) {
+      return error.toResponse();
     }
     return new Response(JSON.stringify({ error: { code: "internal", message: "Internal server error" } }), {
       status: 500,

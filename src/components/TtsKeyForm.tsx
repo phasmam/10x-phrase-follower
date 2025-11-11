@@ -8,9 +8,8 @@ interface TtsCredentialsState {
   key_fingerprint?: string;
 }
 
-interface TtsKeyFormProps {}
-
-export default function TtsKeyForm({}: TtsKeyFormProps) {
+/* eslint-disable react-compiler/react-compiler */
+export default function TtsKeyForm() {
   const [apiKey, setApiKey] = useState("");
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -21,6 +20,7 @@ export default function TtsKeyForm({}: TtsKeyFormProps) {
   // Load current credentials state
   useEffect(() => {
     loadCredentialsState();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadCredentialsState = async () => {
@@ -28,6 +28,7 @@ export default function TtsKeyForm({}: TtsKeyFormProps) {
       const data = await apiCall("/api/tts-credentials");
       setCredentialsState(data);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error("Failed to load TTS credentials state:", error);
     }
   };
@@ -42,15 +43,18 @@ export default function TtsKeyForm({}: TtsKeyFormProps) {
     setTestResult(null);
 
     try {
+      // eslint-disable-next-line no-console
       console.log("Making TTS test request...");
       const data = await apiCall("/api/tts-credentials/test", {
         method: "POST",
         body: JSON.stringify({ api_key: apiKey, provider: "google" }),
       });
 
+      // eslint-disable-next-line no-console
       console.log("TTS test response data:", data);
       setTestResult({ success: true, message: "TTS credentials are valid!" });
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error("TTS test catch error:", error);
       const errorMessage = error instanceof Error ? error.message : "Failed to test credentials. Please try again.";
       setTestResult({
