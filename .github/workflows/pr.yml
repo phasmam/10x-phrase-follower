@@ -1,0 +1,205 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  format:
+    name: Check Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.14.0"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting
+        run: npm run format:check
+
+  lint:
+    name: Check Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.14.0"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.14.0"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:run -- --coverage
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-reports
+          path: coverage/
+          retention-days: 7
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.14.0"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+  status-comment:
+    name: PR Status Comment
+    runs-on: ubuntu-latest
+    needs: [format, lint, test, build]
+    if: always()
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download coverage reports
+        uses: actions/download-artifact@v4
+        if: always()
+        with:
+          name: coverage-reports
+          path: coverage/
+
+      - name: Generate status comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const formatStatus = '${{ needs.format.result }}';
+            const lintStatus = '${{ needs.lint.result }}';
+            const testStatus = '${{ needs.test.result }}';
+            const buildStatus = '${{ needs.build.result }}';
+
+            const getStatusIcon = (status) => {
+              if (status === 'success') return '✅';
+              if (status === 'failure') return '❌';
+              if (status === 'cancelled') return '⚠️';
+              return '⏳';
+            };
+
+            const getStatusText = (status) => {
+              if (status === 'success') return 'Passed';
+              if (status === 'failure') return 'Failed';
+              if (status === 'cancelled') return 'Cancelled';
+              return 'In Progress';
+            };
+
+            const allPassed = formatStatus === 'success' && 
+                             lintStatus === 'success' && 
+                             testStatus === 'success' && 
+                             buildStatus === 'success';
+
+            let coverageInfo = '';
+            try {
+              const fs = require('fs');
+              const path = require('path');
+              const coveragePath = path.join(process.cwd(), 'coverage', 'coverage-summary.json');
+              if (fs.existsSync(coveragePath)) {
+                const coverage = JSON.parse(fs.readFileSync(coveragePath, 'utf8'));
+                const total = coverage.total;
+                coverageInfo = `\n\n### 📊 Test Coverage\n\n`;
+                coverageInfo += `| Type | Coverage |\n`;
+                coverageInfo += `|------|----------|\n`;
+                coverageInfo += `| **Lines** | ${total.lines.pct}% |\n`;
+                coverageInfo += `| **Statements** | ${total.statements.pct}% |\n`;
+                coverageInfo += `| **Functions** | ${total.functions.pct}% |\n`;
+                coverageInfo += `| **Branches** | ${total.branches.pct}% |\n`;
+              }
+            } catch (error) {
+              console.log('Could not read coverage data:', error.message);
+            }
+
+            const comment = `## 🔍 PR Status Check
+
+            ${getStatusIcon(formatStatus)} **Format Check**: ${getStatusText(formatStatus)}
+            ${getStatusIcon(lintStatus)} **Lint Check**: ${getStatusText(lintStatus)}
+            ${getStatusIcon(testStatus)} **Tests**: ${getStatusText(testStatus)}
+            ${getStatusIcon(buildStatus)} **Build**: ${getStatusText(buildStatus)}
+
+            ${allPassed ? '🎉 **All checks passed!**' : '⚠️ **Some checks failed. Please review the details above.**'}
+            ${coverageInfo}
+
+            ---
+            *This comment is automatically updated on each workflow run.*`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('PR Status Check')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment,
+              });
+            }
