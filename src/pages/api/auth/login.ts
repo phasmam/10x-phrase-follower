@@ -1,32 +1,32 @@
-import type { APIRoute } from 'astro';
-import { z } from 'zod';
-import { createClient } from '@supabase/supabase-js';
-import type { LoginRequest, LoginResponse } from '../../../types';
-import { ApiErrors, withErrorHandling } from '../../../lib/errors';
-import type { Database } from '../../../db/database.types';
+import type { APIRoute } from "astro";
+import { z } from "zod";
+import { createClient } from "@supabase/supabase-js";
+import type { LoginRequest, LoginResponse } from "../../../types";
+import { ApiErrors, withErrorHandling } from "../../../lib/errors";
+import type { Database } from "../../../db/database.types";
 
 export const prerender = false;
 
 // Validation schema
 const LoginRequestSchema = z.object({
-  email: z.string().email('Invalid email format'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 const loginHandler = async (context: { request: Request }): Promise<Response> => {
   // In development, return 404 to not interfere with DEV_JWT flow
-  if (import.meta.env.NODE_ENV === 'development') {
+  if (import.meta.env.NODE_ENV === "development") {
     return new Response(
       JSON.stringify({
         error: {
-          code: 'not_found',
-          message: 'Endpoint not available in development mode',
+          code: "not_found",
+          message: "Endpoint not available in development mode",
         },
       }),
       {
         status: 404,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       }
     );
@@ -37,7 +37,7 @@ const loginHandler = async (context: { request: Request }): Promise<Response> =>
   try {
     body = await context.request.json();
   } catch (error) {
-    throw ApiErrors.invalidBody('Request body is required and must be valid JSON');
+    throw ApiErrors.invalidBody("Request body is required and must be valid JSON");
   }
 
   // Validate request body
@@ -46,9 +46,9 @@ const loginHandler = async (context: { request: Request }): Promise<Response> =>
     loginData = LoginRequestSchema.parse(body);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      throw ApiErrors.validationError('Invalid request data', error.errors);
+      throw ApiErrors.validationError("Invalid request data", error.errors);
     }
-    throw ApiErrors.validationError('Invalid request data');
+    throw ApiErrors.validationError("Invalid request data");
   }
 
   // Get Supabase client with anon key
@@ -56,7 +56,7 @@ const loginHandler = async (context: { request: Request }): Promise<Response> =>
   const supabaseAnonKey = import.meta.env.SUPABASE_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw ApiErrors.internal('Supabase configuration is missing');
+    throw ApiErrors.internal("Supabase configuration is missing");
   }
 
   const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
@@ -75,22 +75,22 @@ const loginHandler = async (context: { request: Request }): Promise<Response> =>
   if (authError) {
     // Handle specific Supabase auth errors
     if (authError.status === 429) {
-      throw ApiErrors.tooManyRequests('Too many login attempts. Please try again later.');
+      throw ApiErrors.tooManyRequests("Too many login attempts. Please try again later.");
     }
 
     if (authError.status === 400 || authError.status === 401) {
-      throw ApiErrors.invalidCredentials('Invalid email or password');
+      throw ApiErrors.invalidCredentials("Invalid email or password");
     }
 
     // Log unexpected errors
     // eslint-disable-next-line no-console
-    console.error('Supabase auth error:', authError);
+    console.error("Supabase auth error:", authError);
 
-    throw ApiErrors.internal('Authentication failed');
+    throw ApiErrors.internal("Authentication failed");
   }
 
   if (!authData.session || !authData.user) {
-    throw ApiErrors.internal('Authentication failed - no session returned');
+    throw ApiErrors.internal("Authentication failed - no session returned");
   }
 
   const { session, user } = authData;
@@ -105,14 +105,14 @@ const loginHandler = async (context: { request: Request }): Promise<Response> =>
     refresh_token: session.refresh_token,
     user: {
       id: user.id,
-      email: user.email || '',
+      email: user.email || "",
     },
   };
 
   return new Response(JSON.stringify(response), {
     status: 200,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
   });
 };
