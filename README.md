@@ -26,7 +26,7 @@ A minimal MVP to help learners practice English phrases via sequential EN→PL p
 
 ## 1. Project name
 
-Phrase Follower
+Phrase Follower.
 
 ## 2. Project description
 
