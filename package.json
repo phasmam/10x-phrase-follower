@@ -17,6 +17,7 @@
     "generate:tts-key": "node scripts/generate-tts-encryption-key.js"
   },
   "dependencies": {
+    "@astrojs/cloudflare": "^12.6.10",
     "@astrojs/node": "^9.4.3",
     "@astrojs/react": "^4.3.1",
     "@astrojs/sitemap": "^3.5.1",

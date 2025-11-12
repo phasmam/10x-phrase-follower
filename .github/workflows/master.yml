@@ -5,6 +5,7 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+  workflow_dispatch:
 
 jobs:
   format:
@@ -92,3 +93,31 @@ jobs:
           name: dist
           path: dist/
           retention-days: 1
+
+  deploy_cloudflare_pages:
+    name: Deploy to Cloudflare Pages (manual)
+    needs: [test]
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' && secrets.CF_API_TOKEN && secrets.CF_ACCOUNT_ID && vars.CF_PAGES_PROJECT_NAME }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.14.0"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (Cloudflare adapter)
+        run: ASTRO_ADAPTER=cloudflare npm run build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: pages deploy ./dist --project-name=${{ vars.CF_PAGES_PROJECT_NAME }}

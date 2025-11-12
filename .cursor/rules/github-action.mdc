@@ -38,3 +38,37 @@ curl -s https://api.github.com/repos/{owner}/{repo} | grep '"archived":'
 ```bash
 curl -s https://raw.githubusercontent.com/{owner}/{repo}/refs/heads/{main/master}/action.yml
 ```
+
+### Cloudflare Pages deployment (optional)
+
+- Prefer a separate, optional job gated by required secrets/vars:
+  - **secrets.CF_API_TOKEN**: Cloudflare API Token (Pages Write, Account Read)
+  - **secrets.CF_ACCOUNT_ID**: Cloudflare Account ID
+  - **vars.CF_PAGES_PROJECT_NAME**: Cloudflare Pages project name
+- Build with Astro Cloudflare adapter by setting `ASTRO_ADAPTER=cloudflare` for that job only.
+- Use `cloudflare/wrangler-action@v3` (NOT deprecated `pages-action`) with command `pages deploy ./dist --project-name=${{ vars.CF_PAGES_PROJECT_NAME }}`.
+- Keep CI stages: format → lint → test → build; run deploy after tests.
+- For manual deployment, use `workflow_dispatch` trigger and check `github.event_name == 'workflow_dispatch'` in job condition.
+
+Example job gate:
+
+```yaml
+if: ${{ github.event_name == 'workflow_dispatch' && secrets.CF_API_TOKEN && secrets.CF_ACCOUNT_ID && vars.CF_PAGES_PROJECT_NAME }}
+```
+
+Example deployment step:
+
+```yaml
+- name: Deploy to Cloudflare Pages
+  uses: cloudflare/wrangler-action@v3
+  with:
+    apiToken: ${{ secrets.CF_API_TOKEN }}
+    accountId: ${{ secrets.CF_ACCOUNT_ID }}
+    command: pages deploy ./dist --project-name=${{ vars.CF_PAGES_PROJECT_NAME }}
+```
+
+Latest major version discovery for Wrangler action:
+
+```bash
+curl -s https://api.github.com/repos/cloudflare/wrangler-action/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([0-9]+).*/\1/'
+```
