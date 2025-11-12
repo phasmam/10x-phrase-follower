@@ -99,6 +99,14 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
     environment: production
+    env:
+      # or keep your ASTRO_ADAPTER=cloudflare
+      CF_PAGES: "1"
+      PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+      PUBLIC_SUPABASE_KEY: ${{ secrets.PUBLIC_SUPABASE_KEY }}
+      # if you use server-side access:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -113,7 +121,9 @@ jobs:
         run: npm ci
 
       - name: Build (Cloudflare adapter)
-        run: ASTRO_ADAPTER=cloudflare npm run build
+        run: npm run build
+        # CF_PAGES=1 already set at job level
+        # or: ASTRO_ADAPTER=cloudflare npm run build
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
