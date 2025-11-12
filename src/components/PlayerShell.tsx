@@ -300,19 +300,31 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-5xl mx-auto p-6">
       <KeyboardShortcutsHandler {...shortcuts} />
 
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-2 text-foreground">Audio Player</h1>
-        <p className="text-muted-foreground">
+      {/* Header with phrase counter */}
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Audio Player</h1>
+        </div>
+        <div className="text-sm text-muted-foreground">
           Phrase {phraseIndex + 1} of {manifest.sequence.length}
-        </p>
+        </div>
+      </div>
+
+      {/* Phrase viewer - on top */}
+      <div className="mb-6">
+        <PhraseViewer
+          phrase={currentPhrase?.phrase}
+          activeLang={currentSlot === "PL" ? "pl" : currentSlot ? "en" : null}
+          highlight={highlight}
+          onSeekToToken={handleSeekToToken}
+        />
       </div>
 
       {/* Controls */}
-      <div className="mb-8">
+      <div className="mb-6">
         <PlayerControls
           playing={playing}
           speed={speed}
@@ -329,8 +341,8 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
         />
       </div>
 
-      {/* Segment sequence bar */}
-      <div className="mb-8">
+      {/* Segment sequence bar - at the bottom */}
+      <div className="mb-6">
         <SegmentSequenceBar
           sequenceForPhrase={currentSegments}
           activeSlot={currentSlot}
@@ -338,19 +350,9 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
         />
       </div>
 
-      {/* Phrase viewer */}
-      <div className="mb-8">
-        <PhraseViewer
-          phrase={currentPhrase?.phrase}
-          activeLang={currentSlot === "PL" ? "pl" : currentSlot ? "en" : null}
-          highlight={highlight}
-          onSeekToToken={handleSeekToToken}
-        />
-      </div>
-
       {/* Refresh manifest button */}
       {needsRefresh && (
-        <div className="mb-8">
+        <div className="mb-6">
           <RefreshManifestButton loading={false} onRefresh={handleRefreshManifest} />
         </div>
       )}

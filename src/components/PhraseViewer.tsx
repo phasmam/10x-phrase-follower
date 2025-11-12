@@ -54,34 +54,42 @@ export default function PhraseViewer({ phrase, activeLang, highlight, onSeekToTo
   };
 
   return (
-    <div className="bg-gray-800 rounded-lg p-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="bg-gray-800 rounded-lg p-8 border border-gray-700">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* English text */}
         <div>
-          <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
-            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+          <h3 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2 uppercase tracking-wide">
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${activeLang === "en" ? "bg-blue-500 animate-pulse" : "bg-blue-500/50"}`}
+            ></span>
             English
-            {activeLang === "en" && <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">Active</span>}
+            {activeLang === "en" && (
+              <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full font-medium">Active</span>
+            )}
           </h3>
-          <div className="text-lg leading-relaxed">{renderTokens(phrase.tokens.en, "en")}</div>
+          <div className="text-xl leading-relaxed min-h-[60px]">{renderTokens(phrase.tokens.en, "en")}</div>
         </div>
 
         {/* Polish text */}
         <div>
-          <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
-            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+          <h3 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2 uppercase tracking-wide">
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${activeLang === "pl" ? "bg-green-500 animate-pulse" : "bg-green-500/50"}`}
+            ></span>
             Polish
-            {activeLang === "pl" && <span className="text-xs bg-green-600 text-white px-2 py-1 rounded">Active</span>}
+            {activeLang === "pl" && (
+              <span className="text-xs bg-green-600 text-white px-2 py-0.5 rounded-full font-medium">Active</span>
+            )}
           </h3>
-          <div className="text-lg leading-relaxed">{renderTokens(phrase.tokens.pl, "pl")}</div>
+          <div className="text-xl leading-relaxed min-h-[60px]">{renderTokens(phrase.tokens.pl, "pl")}</div>
         </div>
       </div>
 
       {/* Instructions */}
-      <div className="mt-6 p-4 bg-gray-700 rounded-lg">
-        <p className="text-sm text-gray-300">
-          <strong>Click-to-seek:</strong> Click on any word in the active language to jump to that position. Click the
-          first word to start playback from the beginning.
+      <div className="mt-6 pt-6 border-t border-gray-700">
+        <p className="text-xs text-gray-400">
+          <strong className="text-gray-300">Click-to-seek:</strong> Click on any word in the active language to jump to
+          that position.
         </p>
       </div>
     </div>
