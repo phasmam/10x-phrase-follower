@@ -97,9 +97,9 @@ jobs:
   deploy_cloudflare_pages:
     name: Deploy to Cloudflare Pages (manual)
     needs: [build]
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: production
-    if: ${{ github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
