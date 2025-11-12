@@ -45,29 +45,24 @@ export default function PlayerControls({
       <div className="flex items-center gap-2">
         <Button onClick={playing ? onPause : onPlay} disabled={!hasPlayable} variant="default" size="lg">
           {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-          <span className="ml-2">{playing ? "Pause" : "Play"}</span>
         </Button>
 
         <Button onClick={onStop} variant="secondary" size="lg">
           <Square className="h-5 w-5" />
-          <span className="ml-2">Stop</span>
         </Button>
 
         <Button onClick={onRestart} disabled={!hasPlayable} variant="secondary" size="lg">
           <RotateCcw className="h-5 w-5" />
-          <span className="ml-2">Restart</span>
         </Button>
 
         {/* Phrase navigation */}
         <div className="ml-2 flex items-center gap-2">
           <Button onClick={onPrevPhrase} variant="secondary" size="lg">
             <SkipBack className="h-5 w-5" />
-            <span className="ml-2">Prev</span>
           </Button>
 
           <Button onClick={onNextPhrase} variant="secondary" size="lg">
             <SkipForward className="h-5 w-5" />
-            <span className="ml-2">Next</span>
           </Button>
         </div>
       </div>

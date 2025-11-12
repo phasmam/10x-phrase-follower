@@ -53,8 +53,8 @@ export default function SegmentSequenceBar({ sequenceForPhrase, activeSlot, onJu
   };
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4">
-      <h3 className="text-sm font-medium text-gray-300 mb-3">Playback Sequence</h3>
+    <div className="bg-gray-800 rounded-lg p-3">
+      <h3 className="text-sm font-medium text-gray-300 mb-2">Playback Sequence</h3>
       <div className="flex gap-2 justify-center">
         {slotOrder.map((slot) => {
           const status = getSlotStatus(slot);
@@ -67,15 +67,12 @@ export default function SegmentSequenceBar({ sequenceForPhrase, activeSlot, onJu
               disabled={!isClickable}
               variant="outline"
               size="sm"
-              className={`flex flex-col items-center gap-1 min-w-[80px] h-16 ${
+              className={`flex flex-col items-center gap-1 min-w-[60px] h-12 ${
                 isClickable ? getSlotColor(slot) : "border-gray-700 text-gray-500 cursor-not-allowed"
               }`}
             >
-              <span className="text-lg">{getSlotIcon(slot)}</span>
+              <span className="text-base">{getSlotIcon(slot)}</span>
               <span className="text-xs font-medium">{slotLabels[slot]}</span>
-              <span className="text-xs opacity-75">
-                {status === "missing" ? "Missing" : status === "playing" ? "Playing" : "Ready"}
-              </span>
             </Button>
           );
         })}
