@@ -100,6 +100,7 @@ SUPABASE_JWT_SECRET=your-jwt-secret-here  # Wygeneruj losowy string (patrz powy�
 ```
 
 **WAŻNE:**
+
 - `.env` jest w `.gitignore` - nie commituj go do repozytorium!
 - `SUPABASE_SERVICE_ROLE_KEY` ma pełne uprawnienia - trzymaj go w tajemnicy
 - W produkcji używaj zmiennych środowiskowych serwera, nie pliku `.env`
@@ -108,16 +109,18 @@ SUPABASE_JWT_SECRET=your-jwt-secret-here  # Wygeneruj losowy string (patrz powy�
 ## Krok 5: Weryfikacja połączenia
 
 1. Uruchom aplikację:
+
    ```bash
    npm run dev
    ```
 
 2. Sprawdź konfigurację Supabase:
+
    ```powershell
    # Sprawdź status konfiguracji
    Invoke-WebRequest -Uri "http://localhost:3000/api/dev/check-supabase-config" -Headers @{"Accept"="application/json"} | Select-Object -ExpandProperty Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
    ```
-   
+
    Ten endpoint zwróci:
    - Status wszystkich zmiennych środowiskowych
    - Informację czy połączenie działa
@@ -129,6 +132,7 @@ SUPABASE_JWT_SECRET=your-jwt-secret-here  # Wygeneruj losowy string (patrz powy�
    - Spróbuj zalogować się lub utworzyć konto
 
 4. (Opcjonalnie) Przetestuj endpoint:
+
    ```powershell
    # Pobierz token JWT
    $token = (Invoke-WebRequest -Uri "http://localhost:3000/api/dev/jwt" -Headers @{"Accept"="application/json"} | Select-Object -ExpandProperty Content | ConvertFrom-Json).token
@@ -159,6 +163,7 @@ pg_dump -h localhost -p 54322 -U postgres -d postgres -t users -t notebooks -t p
 4. Wykonaj skrypt SQL
 
 **UWAGA:** Cloudowa baza ma włączone RLS (Row Level Security), więc upewnij się, że:
+
 - Użytkownicy mają odpowiednie uprawnienia
 - Dane są przypisane do właściwych użytkowników
 - Polityki RLS są poprawnie skonfigurowane
@@ -181,6 +186,7 @@ Aplikacja używa Supabase Storage do przechowywania wygenerowanych plików MP3. 
 ### 7.2. Konfiguracja polityk dostępu (Storage Policies)
 
 Po utworzeniu bucketu, musisz skonfigurować polityki dostępu, aby użytkownicy mogli:
+
 - **Zapisywać** pliki w swoich folderach (`{user_id}/{notebook_id}/{phrase_id}/`)
 - **Czytać** pliki z własnych folderów (poprzez signed URLs generowane przez backend)
 
@@ -242,21 +248,25 @@ USING (
 5. W polu **Policy definition** wklej odpowiednie wyrażenie:
 
 **Dla INSERT:**
+
 ```sql
 bucket_id = 'audio' AND (storage.foldername(name))[1] = auth.uid()::text
 ```
 
 **Dla SELECT:**
+
 ```sql
 bucket_id = 'audio' AND (storage.foldername(name))[1] = auth.uid()::text
 ```
 
 **Dla UPDATE:**
+
 ```sql
 bucket_id = 'audio' AND (storage.foldername(name))[1] = auth.uid()::text
 ```
 
 **Dla DELETE:**
+
 ```sql
 bucket_id = 'audio' AND (storage.foldername(name))[1] = auth.uid()::text
 ```
@@ -300,19 +310,23 @@ Dla środowiska produkcyjnego:
 ## Rozwiązywanie problemów
 
 ### Problem: "Invalid API key"
+
 - Sprawdź czy skopiowałeś pełny klucz (anon key, nie service_role)
 - Upewnij się, że używasz `PUBLIC_` prefix dla zmiennych dostępnych w przeglądarce
 
 ### Problem: "RLS policy violation"
+
 - Sprawdź czy użytkownik jest zalogowany
 - Zweryfikuj polityki RLS w dashboardzie Supabase (Authentication → Policies)
 - W development możesz użyć `SUPABASE_SERVICE_ROLE_KEY` do bypass RLS
 
 ### Problem: "Connection refused"
+
 - Sprawdź czy URL projektu jest poprawny
 - Upewnij się, że projekt nie jest w trybie "paused" (darmowe projekty mogą być pauzowane po nieaktywności)
 
 ### Problem: "Bucket not found" / "StorageApiError: Bucket not found"
+
 - **Sprawdź czy bucket `audio` został utworzony:**
   - Przejdź do **Storage** → **Buckets** w dashboardzie Supabase
   - Jeśli bucket nie istnieje, utwórz go zgodnie z instrukcjami w **Kroku 7.1**
@@ -328,6 +342,7 @@ Dla środowiska produkcyjnego:
 - **Sprawdź logi aplikacji** - mogą zawierać więcej szczegółów o błędzie
 
 ### Problem: Migracje nie działają
+
 - Sprawdź czy wszystkie migracje są w kolejności chronologicznej
 - Upewnij się, że nie ma konfliktów w schemacie
 - Sprawdź logi w SQL Editor
@@ -347,4 +362,3 @@ Po pomyślnej migracji:
 2. ✅ Usuń lokalną instancję Supabase (opcjonalnie): `supabase stop`
 3. ✅ Zaktualizuj CI/CD pipeline (jeśli używasz)
 4. ✅ Skonfiguruj backup dla cloudowej bazy (Supabase automatycznie tworzy backupy dla płatnych planów)
-

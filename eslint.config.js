@@ -58,7 +58,7 @@ const reactConfig = tseslint.config({
 
 // Node.js scripts configuration (for test scripts and utility scripts)
 const nodeScriptsConfig = tseslint.config({
-  files: ["src/test/scripts/**/*.js", "scripts/**/*.js"],
+  files: ["src/test/scripts/**/*.js", "scripts/**/*.js", "*.config.mjs", "*.config.js"],
   languageOptions: {
     globals: {
       // Node.js globals
