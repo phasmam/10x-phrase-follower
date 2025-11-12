@@ -6,7 +6,7 @@ import tailwindcss from "@tailwindcss/vite";
 import node from "@astrojs/node";
 import cloudflare from "@astrojs/cloudflare";
 
-const onPages = !!process.env.CF_PAGES; // true on Cloudflare Pages
+const onPages = !!process.env.CF_PAGES || !!process.env.ASTRO_ADAPTER;
 
 export default defineConfig({
   output: "server",
