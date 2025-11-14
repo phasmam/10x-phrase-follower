@@ -95,7 +95,7 @@ jobs:
           retention-days: 1
 
   deploy_cloudflare_pages:
-    name: Deploy to Cloudflare Pages (manual)
+    name: Deploy to Cloudflare Pages
     needs: [build]
     runs-on: ubuntu-latest
     environment: production
@@ -114,10 +114,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Debug PHRASE_TTS_ENCRYPTION_KEY length
-        run: node -e "console.log('TTS len:', (process.env.PHRASE_TTS_ENCRYPTION_KEY || '').length)"
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:

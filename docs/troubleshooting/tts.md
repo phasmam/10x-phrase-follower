@@ -62,7 +62,7 @@ The **"Decryption failed: The operation failed for an operation-specific reason"
 - **Result**: Found `bytea` column converts data to hex format
 - **Key finding**: **ROOT CAUSE IDENTIFIED** - PostgreSQL `bytea` column corruption
 
-## 🛠️ Solution Implemented
+## 🛠️ Solution Implemented (Database / Storage)
 
 ### Database Schema Fix
 
@@ -107,6 +107,99 @@ if (typeof encryptedData === "string") {
 **Solution**: Changed database schema to use `text` column with base64 storage.
 
 **Result**: ✅ TTS credentials now encrypt/decrypt correctly, job worker works properly.
+
+---
+
+## 🌐 Cloudflare / Env Vars: `PHRASE_TTS_ENCRYPTION_KEY` Not Visible in Production
+
+### Symptomy
+
+- W środowisku produkcyjnym na Cloudflare Pages zapis TTS kredencjałów kończył się błędem:
+
+  > `Failed to encrypt TTS credentials: Encryption failed: PHRASE_TTS_ENCRYPTION_KEY environment variable is required in production (see server logs for source diagnostics)`
+
+- Mimo że:
+  - klucz był ustawiony jako **secret** w GitHub Actions (`TTS_ENCRYPTION_KEY` → mapowany na `PHRASE_TTS_ENCRYPTION_KEY`),
+  - oraz jako **variable/secret** w Cloudflare Pages (`PHRASE_TTS_ENCRYPTION_KEY` w Production → Variables and Secrets).
+
+### Gdzie leżał problem
+
+- Początkowa logika próbowała czytać klucz z:
+  - `import.meta.env.TTS_ENCRYPTION_KEY / PHRASE_TTS_ENCRYPTION_KEY`,
+  - `process.env`,
+  - Cloudflare runtime przez `astro/runtime/server.getRuntime().env`,
+  - `globalThis.env`.
+- Diagnostyczny endpoint `GET /api/dev/env-debug` pokazał:
+  - `importMeta.keysSample` zawierało `PHRASE_TTS_ENCRYPTION_KEY`, ale `hasKey: false` → **Astro znało nazwę, ale nie wartość** (sekret nie był wstrzykiwany do `import.meta.env`),
+  - `runtimeEnv` i `processEnv` były puste.
+- Kluczowa obserwacja z `astroContext`:
+
+  ```json
+  "localsRuntimeEnvKeysSample": [
+    "PHRASE_TTS_ENCRYPTION_KEY",
+    "PUBLIC_SUPABASE_KEY",
+    "PUBLIC_SUPABASE_URL",
+    "SUPABASE_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL",
+    "TTS_ENCRYPTION_KEY"
+  ]
+  ```
+
+  → Adapter Cloudflare umieszcza **prawdziwe runtime env** w `context.locals.runtime.env`, a nie w `import.meta.env` ani `process.env`.
+
+### Rozwiązanie (kod)
+
+- **1. Centralne czytanie sekretów w `src/lib/tts-encryption.ts`:**
+
+  - Dodano nowy pierwszy krok w `readEnvWithTrace(key)`:
+    - próbuje dynamicznie zaimportować `astro:env` i odczytać `env[key]` jako główne źródło sekretów,
+    - jeśli to zadziała → zwraca wartość z `source: "astro-env"`.
+  - Następnie (fallback):
+    - używa `runtimeEnvOverride` (patrz punkt 2),
+    - `getAstroRuntimeEnv()` (`astro/runtime/server`),
+    - `import.meta.env`,
+    - `process.env`,
+    - `globalThis.env`.
+
+- **2. Podanie Cloudflare runtime env z API endpointu:**
+
+  W `src/pages/api/tts-credentials.ts` (GET/PUT/DELETE) przy starcie handlera:
+
+  ```ts
+  const localsAny = context.locals as unknown as {
+    runtime?: { env?: Record<string, string | undefined> };
+  };
+  if (localsAny.runtime?.env) {
+    setRuntimeEnv(localsAny.runtime.env);
+  }
+  ```
+
+  - `setRuntimeEnv` ustawia `runtimeEnvOverride` wewnątrz `tts-encryption.ts`.
+  - Dzięki temu `readEnvWithTrace("PHRASE_TTS_ENCRYPTION_KEY")` widzi realne wartości z Cloudflare runtime, nawet jeśli `astro:env` lub `import.meta.env` nic nie zwracają.
+
+- **3. Usunięcie zależności od Node Buffera w Cloudflare Workers:**
+
+  - W środowisku Workers nie ma globalnego `Buffer`, więc:
+    - dodano prosty `BufferCompat` (używany tylko w `encrypt()`/`decrypt()`),
+    - w endpointzie `tts-credentials` konwersja do base64 obsługuje zarówno `Buffer`, jak i `Uint8Array`.
+
+### Efekt końcowy
+
+- W produkcji:
+  - `PHRASE_TTS_ENCRYPTION_KEY` jest odczytywany z `context.locals.runtime.env` (Cloudflare bindings),
+  - `encrypt()` i `decrypt()` działają poprawnie w środowisku Workers,
+  - zapis TTS kredencjałów działa bez błędów.
+- Lokalnie:
+  - jeśli `PHRASE_TTS_ENCRYPTION_KEY` jest ustawiony w `.env` lub env shellowym, logika z `astro:env` / fallbackami również działa.
+
+### Checklist przy podobnych problemach
+
+- [ ] Sprawdź, czy sekret jest ustawiony **w GitHub Actions** (dla builda) oraz w **Cloudflare Pages → Production → Variables and Secrets**.
+- [ ] Zbadaj, gdzie adapter wystawia env w `APIContext` (`context.locals.runtime.env`, `context.env`, itp.).
+- [ ] Dla sekretów serwerowych preferuj:
+  - `astro:env` jako pierwsze źródło,
+  - fallback do runtime bindings (`locals.runtime.env`) zamiast `process.env` / `import.meta.env` na Cloudflare.
 
 ## 🧹 Cleanup
 
