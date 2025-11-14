@@ -77,8 +77,14 @@ async function readEnvWithTrace(key: string): Promise<EnvTrace> {
   }
 
   // 2) Astro's import.meta.env (works in both build and runtime)
+  // Note: Vite only inlines variables that are accessed statically like import.meta.env.MY_VAR.
+  // Dynamic indexing won't be replaced. Handle TTS_ENCRYPTION_KEY explicitly.
   const envFromImportMeta = (import.meta as unknown as { env?: Record<string, MaybeValue> }).env;
-  const importMetaVal = envFromImportMeta?.[key];
+  const importMetaStatic =
+    key === "TTS_ENCRYPTION_KEY"
+      ? (import.meta as unknown as { env: { TTS_ENCRYPTION_KEY?: string } }).env.TTS_ENCRYPTION_KEY
+      : undefined;
+  const importMetaVal = importMetaStatic ?? envFromImportMeta?.[key];
   lengths["import-meta"] = typeof importMetaVal === "string" ? importMetaVal.length : null;
   if (importMetaVal) {
     return { source: "import-meta", value: importMetaVal, lengths };
