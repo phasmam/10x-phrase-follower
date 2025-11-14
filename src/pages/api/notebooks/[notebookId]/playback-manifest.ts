@@ -233,7 +233,7 @@ export async function GET(context: APIContext) {
         notebook_id: notebookId,
         build_id: currentBuildId,
         sequence: [],
-        expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+        expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour from now
       };
       return new Response(JSON.stringify(response), {
         status: 200,
