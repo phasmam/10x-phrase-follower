@@ -94,7 +94,7 @@ async function generateSignedUrls(
         `[playback-manifest] Generating signed URL for segment ${segment.id}: path=${segment.path} (folder=${folderPath || "(root)"}, file=${fileName})`
       );
 
-      const { data: signedUrl, error } = await storageClient.storage.from("audio").createSignedUrl(segment.path, 300); // 5 minutes
+      const { data: signedUrl, error } = await storageClient.storage.from("audio").createSignedUrl(segment.path, 3600); // 1 hour
 
       if (error) {
         console.error(
@@ -202,7 +202,7 @@ export async function GET(context: APIContext) {
         notebook_id: notebookId,
         build_id: null,
         sequence: [],
-        expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(), // 5 minutes from now
+        expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour from now
       };
       return new Response(JSON.stringify(response), {
         status: 200,
