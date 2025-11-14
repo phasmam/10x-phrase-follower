@@ -225,6 +225,24 @@ export function usePlaybackEngine({
     }
   }, [speed]);
 
+  // Seek functionality
+  const seekSmall = useCallback((direction: "left" | "right") => {
+    if (!audioRef.current) return;
+    const offset = direction === "left" ? -2 : 2; // 2 seconds
+    audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime + offset);
+  }, []);
+
+  const seekLarge = useCallback((direction: "left" | "right") => {
+    if (!audioRef.current) return;
+    const offset = direction === "left" ? -5 : 5; // 5 seconds
+    audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime + offset);
+  }, []);
+
+  const seekToTime = useCallback((timeMs: number) => {
+    if (!audioRef.current) return;
+    audioRef.current.currentTime = timeMs / 1000;
+  }, []);
+
   return {
     onEndSegment: handleSegmentEnd,
     onEndPhrase: handlePhraseEnd,
@@ -234,5 +252,9 @@ export function usePlaybackEngine({
     resumePlayback,
     stopPlayback,
     playSegment,
+    seekSmall,
+    seekLarge,
+    seekToTime,
+    getAudioElement: () => audioRef.current,
   };
 }

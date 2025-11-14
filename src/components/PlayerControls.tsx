@@ -40,56 +40,115 @@ export default function PlayerControls({
   onNextPhrase,
 }: PlayerControlsProps) {
   return (
-    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-gray-800 rounded-lg p-4">
-      {/* Main playback controls */}
-      <div className="flex items-center gap-2">
-        <Button onClick={playing ? onPause : onPlay} disabled={!hasPlayable} variant="default" size="lg">
-          {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-        </Button>
-
-        <Button onClick={onStop} variant="secondary" size="lg">
-          <Square className="h-5 w-5" />
-        </Button>
-
-        <Button onClick={onRestart} disabled={!hasPlayable} variant="secondary" size="lg">
-          <RotateCcw className="h-5 w-5" />
-        </Button>
-
-        {/* Phrase navigation */}
-        <div className="ml-2 flex items-center gap-2">
-          <Button onClick={onPrevPhrase} variant="secondary" size="lg">
-            <SkipBack className="h-5 w-5" />
+    <div className="fixed md:sticky inset-x-0 bottom-0 md:bottom-auto z-30 md:z-20 bg-background/95 md:bg-background/80 backdrop-blur border-t pb-[env(safe-area-inset-bottom)] md:pb-0">
+      <div className="max-w-5xl mx-auto flex flex-col sm:flex-row gap-3 md:gap-4 items-center justify-center sm:justify-between px-4 py-3 md:py-4">
+        {/* Main playback controls */}
+        <div className="flex items-center gap-2 md:gap-2.5">
+          {/* Play/Pause - filled/solid, central */}
+          <Button
+            onClick={playing ? onPause : onPlay}
+            disabled={!hasPlayable}
+            variant="default"
+            size="icon"
+            className="h-12 w-12 md:h-10 md:w-10"
+            aria-label={playing ? "Pause" : "Play"}
+            title={playing ? "Pause (Space/K)" : "Play (Space/K)"}
+          >
+            {playing ? <Pause className="h-5 w-5 md:h-4 md:w-4" /> : <Play className="h-5 w-5 md:h-4 md:w-4" />}
           </Button>
 
-          <Button onClick={onNextPhrase} variant="secondary" size="lg">
-            <SkipForward className="h-5 w-5" />
+          {/* Stop - ghost/outline */}
+          <Button
+            onClick={onStop}
+            variant="ghost"
+            size="icon"
+            className="h-12 w-12 md:h-10 md:w-10"
+            aria-label="Stop"
+            title="Stop (S)"
+          >
+            <Square className="h-5 w-5 md:h-4 md:w-4" />
           </Button>
-        </div>
-      </div>
 
-      {/* Speed control */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-300">Speed:</span>
-        <div className="flex gap-1">
-          {speedOptions.map((option) => (
+          {/* Restart - ghost/outline */}
+          <Button
+            onClick={onRestart}
+            disabled={!hasPlayable}
+            variant="ghost"
+            size="icon"
+            className="h-12 w-12 md:h-10 md:w-10"
+            aria-label="Restart phrase"
+            title="Restart phrase (R)"
+          >
+            <RotateCcw className="h-5 w-5 md:h-4 md:w-4" />
+          </Button>
+
+          {/* Phrase navigation - ghost/outline */}
+          <div className="ml-1 md:ml-2 flex items-center gap-1 md:gap-2">
             <Button
-              key={option.value}
-              onClick={() => onSpeedChange(option.value)}
-              variant={speed === option.value ? "default" : "secondary"}
-              size="sm"
+              onClick={onPrevPhrase}
+              variant="ghost"
+              size="icon"
+              className="h-12 w-12 md:h-10 md:w-10"
+              aria-label="Previous phrase"
+              title="Previous phrase (P)"
             >
-              {option.label}
+              <SkipBack className="h-5 w-5 md:h-4 md:w-4" />
             </Button>
-          ))}
-        </div>
-      </div>
 
-      {/* Highlight toggle */}
-      <div className="flex items-center gap-2">
-        <Button onClick={onToggleHighlight} variant={"default"} size="sm">
-          {highlight ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-          <span className="ml-2">Highlight</span>
-        </Button>
+            <Button
+              onClick={onNextPhrase}
+              variant="ghost"
+              size="icon"
+              className="h-12 w-12 md:h-10 md:w-10"
+              aria-label="Next phrase"
+              title="Next phrase (N)"
+            >
+              <SkipForward className="h-5 w-5 md:h-4 md:w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Speed control + highlight */}
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-center sm:justify-end flex-wrap sm:flex-nowrap">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground hidden md:inline">Speed:</span>
+            <div className="flex gap-1 rounded-md border bg-muted/50 p-1">
+              {speedOptions.map((option) => (
+                <Button
+                  key={option.value}
+                  onClick={() => onSpeedChange(option.value)}
+                  variant={speed === option.value ? "default" : "ghost"}
+                  size="sm"
+                  className={`h-8 px-2 md:px-3 text-xs md:text-sm ${
+                    speed === option.value ? "" : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/80"
+                  }`}
+                  aria-label={`Set speed to ${option.label}`}
+                  aria-pressed={speed === option.value}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={onToggleHighlight}
+              variant={highlight ? "default" : "ghost"}
+              size="icon"
+              className="h-12 w-12 md:h-10 md:w-10"
+              aria-label={highlight ? "Disable highlight" : "Enable highlight"}
+              aria-pressed={highlight}
+              title={highlight ? "Disable highlight" : "Enable highlight"}
+            >
+              {highlight ? (
+                <Volume2 className="h-5 w-5 md:h-4 md:w-4" />
+              ) : (
+                <VolumeX className="h-5 w-5 md:h-4 md:w-4" />
+              )}
+            </Button>
+            <span className="text-sm text-muted-foreground hidden md:inline">Highlight</span>
+          </div>
+        </div>
       </div>
     </div>
   );

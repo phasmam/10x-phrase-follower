@@ -7,9 +7,10 @@ interface UseClickToSeekProps {
     pl: Token[];
   };
   timings?: TokenTimingsHint[];
+  getAudioElement?: () => HTMLAudioElement | null;
 }
 
-export function useClickToSeek({ tokens, timings }: UseClickToSeekProps) {
+export function useClickToSeek({ tokens, timings, getAudioElement }: UseClickToSeekProps) {
   const seekToToken = useCallback(
     (tokenIndex: number) => {
       if (!tokens || !timings || tokenIndex < 0 || tokenIndex >= timings.length) {
@@ -22,16 +23,25 @@ export function useClickToSeek({ tokens, timings }: UseClickToSeekProps) {
       // Calculate the start time for the token
       const startTime = timing.startMs / 1000; // Convert to seconds for audio element
 
-      // Find the audio element and seek to the position
+      // Use provided audio element getter, or fallback to finding audio elements
+      if (getAudioElement) {
+        const audio = getAudioElement();
+        if (audio) {
+          audio.currentTime = startTime;
+          return;
+        }
+      }
+
+      // Fallback: find the audio element
       const audioElements = document.querySelectorAll("audio");
       for (const audio of audioElements) {
-        if (audio.src && !audio.paused) {
+        if (audio.src) {
           audio.currentTime = startTime;
           break;
         }
       }
     },
-    [tokens, timings]
+    [tokens, timings, getAudioElement]
   );
 
   return { seekToToken };

@@ -1,49 +1,90 @@
-import React from "react";
+import React, { useRef, useCallback } from "react";
 import type { PhraseVM } from "../types";
+import { useTouchGestures } from "../lib/hooks/useTouchGestures";
 
 interface PhraseViewerProps {
   phrase?: PhraseVM;
   activeLang: "en" | "pl" | null;
   highlight: boolean;
-  onSeekToToken: (tokenIndex: number) => void;
+  onSeekToToken: (tokenIndex: number, language: "en" | "pl") => void;
+  onSwipeLeft?: () => void;
+  onSwipeRight?: () => void;
+  onDoubleTap?: () => void;
+  onDoubleTapLeft?: () => void;
+  onDoubleTapRight?: () => void;
 }
 
-export default function PhraseViewer({ phrase, activeLang, highlight, onSeekToToken }: PhraseViewerProps) {
+export default function PhraseViewer({
+  phrase,
+  activeLang,
+  highlight,
+  onSeekToToken,
+  onSwipeLeft,
+  onSwipeRight,
+  onDoubleTap,
+  onDoubleTapLeft,
+  onDoubleTapRight,
+}: PhraseViewerProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { getTouchHandlers } = useTouchGestures({
+    onSwipeLeft,
+    onSwipeRight,
+    onDoubleTap,
+    onDoubleTapLeft,
+    onDoubleTapRight,
+  });
+
+  const touchHandlers = getTouchHandlers();
+
+  // Merge refs
+  const mergedRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      containerRef.current = el;
+      if (touchHandlers.ref) {
+        touchHandlers.ref.current = el;
+      }
+    },
+    [touchHandlers.ref]
+  );
+
   if (!phrase) {
     return (
-      <div className="bg-gray-800 rounded-lg p-6 text-center">
-        <p className="text-gray-400">No phrase selected</p>
+      <div className="h-[clamp(240px,32vh,360px)] rounded-lg border bg-card px-4 py-3 flex items-center justify-center">
+        <p className="text-muted-foreground">No phrase selected</p>
       </div>
     );
   }
 
   const renderTokens = (tokens: PhraseVM["tokens"]["en"] | PhraseVM["tokens"]["pl"], language: "en" | "pl") => {
     if (!tokens || tokens.length === 0) {
-      return <span className="text-gray-500 italic">No tokens available</span>;
+      return <span className="text-muted-foreground italic">No tokens available</span>;
     }
 
+    const isActive = activeLang === language;
+    const isHighlighted = highlight && isActive;
+
     return (
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap items-center gap-2 md:gap-2.5">
         {tokens.map((token, index) => {
-          const isActive = activeLang === language;
-          const isHighlighted = highlight && isActive;
+          const isTokenActive = isHighlighted && isActive;
 
           return (
             <button
               key={index}
-              onClick={() => onSeekToToken(index)}
+              onClick={() => onSeekToToken(index, language)}
               className={`
-                px-2 py-1 rounded transition-all duration-200
+                rounded-md px-2.5 py-1.5 text-base md:text-lg leading-7
+                transition-all duration-200
                 ${
-                  isHighlighted
-                    ? "bg-yellow-400 text-black font-medium"
+                  isTokenActive
+                    ? "bg-yellow-400/25 ring-1 ring-yellow-400/60 text-foreground"
                     : isActive
-                      ? "bg-blue-600 text-white hover:bg-blue-700"
-                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                      ? "bg-muted text-foreground hover:bg-muted/80 cursor-pointer"
+                      : "text-muted-foreground cursor-default"
                 }
-                ${isActive ? "cursor-pointer" : "cursor-default"}
               `}
               disabled={!isActive}
+              aria-label={`Seek to word: ${token.text}`}
             >
               {token.text}
             </button>
@@ -53,44 +94,44 @@ export default function PhraseViewer({ phrase, activeLang, highlight, onSeekToTo
     );
   };
 
-  return (
-    <div className="bg-gray-800 rounded-lg p-8 border border-gray-700">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* English text */}
-        <div>
-          <h3 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2 uppercase tracking-wide">
-            <span
-              className={`w-2.5 h-2.5 rounded-full ${activeLang === "en" ? "bg-blue-500 animate-pulse" : "bg-blue-500/50"}`}
-            ></span>
-            English
-            {activeLang === "en" && (
-              <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full font-medium">Active</span>
-            )}
-          </h3>
-          <div className="text-xl leading-relaxed min-h-[60px]">{renderTokens(phrase.tokens.en, "en")}</div>
-        </div>
+  const renderLanguageBadge = (language: "en" | "pl", label: string) => {
+    const isActive = activeLang === language;
+    return (
+      <div className="flex items-center gap-2 mb-2">
+        <span
+          className={`text-xs font-medium px-2 py-0.5 rounded ${
+            isActive
+              ? language === "en"
+                ? "bg-blue-500/20 text-blue-300 border border-blue-500/40"
+                : "bg-green-500/20 text-green-300 border border-green-500/40"
+              : "bg-muted text-muted-foreground"
+          }`}
+        >
+          {label}
+        </span>
+        {isActive && <span className="text-xs text-muted-foreground animate-pulse">●</span>}
+      </div>
+    );
+  };
 
-        {/* Polish text */}
-        <div>
-          <h3 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2 uppercase tracking-wide">
-            <span
-              className={`w-2.5 h-2.5 rounded-full ${activeLang === "pl" ? "bg-green-500 animate-pulse" : "bg-green-500/50"}`}
-            ></span>
-            Polish
-            {activeLang === "pl" && (
-              <span className="text-xs bg-green-600 text-white px-2 py-0.5 rounded-full font-medium">Active</span>
-            )}
-          </h3>
-          <div className="text-xl leading-relaxed min-h-[60px]">{renderTokens(phrase.tokens.pl, "pl")}</div>
-        </div>
+  return (
+    <div
+      ref={mergedRef}
+      onTouchStart={touchHandlers.onTouchStart}
+      onTouchMove={touchHandlers.onTouchMove}
+      onTouchEnd={touchHandlers.onTouchEnd}
+      className="h-auto md:h-[clamp(240px,32vh,360px)] overflow-visible md:overflow-y-auto rounded-lg border bg-card px-4 py-3"
+    >
+      {/* English text - on top */}
+      <div className="min-h-[64px] md:min-h-[72px] mb-4">
+        {renderLanguageBadge("en", "EN")}
+        {renderTokens(phrase.tokens.en, "en")}
       </div>
 
-      {/* Instructions */}
-      <div className="mt-6 pt-6 border-t border-gray-700">
-        <p className="text-xs text-gray-400">
-          <strong className="text-gray-300">Click-to-seek:</strong> Click on any word in the active language to jump to
-          that position.
-        </p>
+      {/* Polish text - below */}
+      <div className="min-h-[64px] md:min-h-[72px]">
+        {renderLanguageBadge("pl", "PL")}
+        {renderTokens(phrase.tokens.pl, "pl")}
       </div>
     </div>
   );

@@ -4,8 +4,8 @@ interface KeyboardShortcutsHandlerProps {
   onPlayPause: () => void;
   onStop: () => void;
   onRestart: () => void;
-  onSeekSmall: (direction: "left" | "right") => void;
-  onSeekLarge: (direction: "left" | "right") => void;
+  onSeekSmall?: (direction: "left" | "right") => void;
+  onSeekLarge?: (direction: "left" | "right") => void;
   onPrevPhrase: () => void;
   onNextPhrase: () => void;
 }
@@ -48,20 +48,24 @@ export default function KeyboardShortcutsHandler({
           break;
 
         case "arrowleft":
-          preventDefault();
-          if (event.shiftKey) {
-            onSeekLarge("left");
-          } else {
-            onSeekSmall("left");
+          if (onSeekSmall || onSeekLarge) {
+            preventDefault();
+            if (event.shiftKey && onSeekLarge) {
+              onSeekLarge("left");
+            } else if (onSeekSmall) {
+              onSeekSmall("left");
+            }
           }
           break;
 
         case "arrowright":
-          preventDefault();
-          if (event.shiftKey) {
-            onSeekLarge("right");
-          } else {
-            onSeekSmall("right");
+          if (onSeekSmall || onSeekLarge) {
+            preventDefault();
+            if (event.shiftKey && onSeekLarge) {
+              onSeekLarge("right");
+            } else if (onSeekSmall) {
+              onSeekSmall("right");
+            }
           }
           break;
 

@@ -26,7 +26,7 @@ if (startPhraseId && !uuidRegex.test(startPhraseId)) {
 // 3. RLS policies will enforce access control when the API is called
 ---
 
-<Layout title="Player - 10x Phrase Follower">
+<Layout title="Player - 10x Phrase Follower" fullWidth={true}>
   <main class="min-h-screen">
     <AuthGuard client:load>
       <PlayerShell notebookId={notebookId} startPhraseId={startPhraseId || undefined} client:load />

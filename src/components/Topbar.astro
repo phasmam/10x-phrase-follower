@@ -18,7 +18,7 @@ const isDev = import.meta.env.NODE_ENV === "development";
     <div class="flex h-16 items-center justify-between">
       <!-- Logo and main navigation -->
       <div class="flex items-center space-x-6">
-        <a href="/notebooks" class="text-xl font-bold text-foreground hover:text-primary transition-colors">
+        <a href="/notebooks" class="text-sm md:text-xl font-bold text-foreground hover:text-primary transition-colors">
           10x Phrase Follower
         </a>
 
@@ -46,8 +46,8 @@ const isDev = import.meta.env.NODE_ENV === "development";
 
       <!-- Right side navigation -->
       <div class="flex items-center space-x-4">
-        <!-- TTS Config Status Badge -->
-        <div class="flex items-center">
+        <!-- TTS Config Status Badge - hidden on mobile -->
+        <div class="hidden md:flex items-center">
           <ConfigStatusBadge client:load />
         </div>
 

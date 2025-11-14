@@ -5,6 +5,7 @@ Główny indeks dokumentacji projektu.
 ## 📋 Spis treści
 
 ### [Product Requirements Document](./prd.md)
+
 Główny dokument wymagań produktu (PRD) - opis funkcjonalności, wymagań biznesowych i historyjek użytkownika.
 
 ### Architektura
@@ -19,6 +20,7 @@ Główny dokument wymagań produktu (PRD) - opis funkcjonalności, wymagań bizn
 ### Implementacja
 
 #### Plany faz
+
 - [Przegląd wszystkich faz](./implementation/phases/phases-plan.md)
 - [Phase 0 - Auth/RLS](./implementation/phases/phase0-implementation-plan.md)
 - [Phase 1 - Notatnik + Import](./implementation/phases/phase1-implementation-plan.md)
@@ -26,6 +28,7 @@ Główny dokument wymagań produktu (PRD) - opis funkcjonalności, wymagań bizn
 - [Phase 3 - Klik-to-seek + highlight](./implementation/phases/phase3-implementation-plan.md)
 
 #### Zaimplementowane funkcje
+
 - [Phase 2 - Implementacja](./implementation/phase2-implementation.md) - Dokumentacja zaimplementowanego Phase 2
 - [Auth DEV Mode Fix](./implementation/auth-dev-fix-summary.md) - Podsumowanie naprawy trybu developerskiego
 
@@ -69,4 +72,3 @@ docs/
 
 - [README główny](../README.md) - Główny plik README projektu
 - [Reguły Cursor](../.cursor/rules/) - Reguły dla AI w Cursor
-

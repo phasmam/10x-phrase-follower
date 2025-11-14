@@ -5,9 +5,10 @@ import Topbar from "../components/Topbar.astro";
 interface Props {
   title?: string;
   currentPath?: string;
+  fullWidth?: boolean;
 }
 
-const { title = "10x Phrase Follower", currentPath } = Astro.props;
+const { title = "10x Phrase Follower", currentPath, fullWidth = false } = Astro.props;
 ---
 
 <!doctype html>
@@ -19,10 +20,10 @@ const { title = "10x Phrase Follower", currentPath } = Astro.props;
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
   </head>
-  <body>
-    <div class="min-h-screen bg-background dark">
+  <body class="bg-background text-foreground overflow-x-hidden">
+    <div class="min-h-screen bg-background dark w-full">
       <Topbar currentPath={currentPath} />
-      <main class="container mx-auto px-4 py-6">
+      <main class={fullWidth ? "w-full px-0 md:px-4 py-6" : "container mx-auto px-4 py-6"}>
         <slot />
       </main>
     </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import type {
   PlaybackManifestVM,
   PlaybackManifestDTO,
@@ -13,6 +13,8 @@ import SegmentSequenceBar from "./SegmentSequenceBar";
 import PhraseViewer from "./PhraseViewer";
 import KeyboardShortcutsHandler from "./KeyboardShortcutsHandler";
 import RefreshManifestButton from "./RefreshManifestButton";
+import { Button } from "./ui/button";
+import { SkipBack, SkipForward } from "lucide-react";
 import { usePlaybackEngine } from "../lib/hooks/usePlaybackEngine";
 import { useSignedUrlGuard } from "../lib/hooks/useSignedUrlGuard";
 import { useClickToSeek } from "../lib/hooks/useClickToSeek";
@@ -39,6 +41,18 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
   const [, setClockMs] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const toastRef = useRef<{ show: (message: string) => void } | null>(null);
+
+  // Detect mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   // Find initial phrase index from startPhraseId
   useEffect(() => {
@@ -68,14 +82,6 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
 
       // eslint-disable-next-line no-console
       console.log("[PlayerShell] Playback manifest loaded:", data);
-      // eslint-disable-next-line no-console
-      console.log("[PlayerShell] Sequence items:", data.sequence?.length || 0);
-      if (data.sequence && data.sequence.length > 0) {
-        // eslint-disable-next-line no-console
-        console.log("[PlayerShell] First phrase segments:", data.sequence[0]?.segments?.length || 0);
-        // eslint-disable-next-line no-console
-        console.log("[PlayerShell] First phrase segments details:", data.sequence[0]?.segments);
-      }
 
       // Transform DTO to VM
       const manifestVM: PlaybackManifestVM = {
@@ -85,11 +91,21 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
           phrase: {
             id: item.phrase.id,
             position: item.phrase.position,
-            en: item.phrase.en_text,
-            pl: item.phrase.pl_text,
+            en_text: item.phrase.en_text,
+            pl_text: item.phrase.pl_text,
             tokens: {
-              en: item.phrase.tokens?.en || [],
-              pl: item.phrase.tokens?.pl || [],
+              en:
+                item.phrase.tokens?.en?.map((t) => ({
+                  text: t.text,
+                  charStart: t.start,
+                  charEnd: t.end,
+                })) || [],
+              pl:
+                item.phrase.tokens?.pl?.map((t) => ({
+                  text: t.text,
+                  charStart: t.start,
+                  charEnd: t.end,
+                })) || [],
             },
           },
           segments: item.segments.map((segment: PlaybackManifestSegment) => ({
@@ -97,17 +113,17 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
             status: segment.status,
             url: segment.url,
             durationMs: segment.duration_ms,
-            timings: segment.word_timings?.map((wt: WordTiming) => ({
-              startMs: wt.start_ms,
-              endMs: wt.end_ms,
-            })),
+            timings: segment.word_timings
+              ?.filter((wt): wt is WordTiming => wt !== undefined)
+              .map((wt: WordTiming) => ({
+                startMs: wt.start_ms,
+                endMs: wt.end_ms,
+              })),
           })),
         })),
         expiresAt: data.expires_at,
       };
 
-      // eslint-disable-next-line no-console
-      console.log("[PlayerShell] Manifest VM created:", manifestVM);
       setManifest(manifestVM);
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -128,11 +144,21 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
 
   // Current phrase and segments
   const currentPhrase = manifest?.sequence[phraseIndex];
-  const currentSegments = currentPhrase?.segments || [];
+  const currentSegments = useMemo(() => currentPhrase?.segments || [], [currentPhrase?.segments]);
   const hasPlayableSegments = currentSegments.length > 0;
 
   // Playback engine
-  const { onAdvanceNext, onAdvancePrev, playSegment, pausePlayback, resumePlayback, stopPlayback } = usePlaybackEngine({
+  const {
+    onAdvanceNext,
+    onAdvancePrev,
+    playSegment,
+    pausePlayback,
+    resumePlayback,
+    stopPlayback,
+    seekSmall,
+    seekLarge,
+    getAudioElement,
+  } = usePlaybackEngine({
     manifest,
     phraseIndex,
     speed,
@@ -147,31 +173,41 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
       // Find the first available segment to start with (EN1)
       const firstSegment = currentSegments.find((s) => s.slot === "EN1" && s.url);
       if (firstSegment && firstSegment.url) {
-        // eslint-disable-next-line no-console
-        console.log("[PlayerShell] Starting playback with segment:", {
-          slot: firstSegment.slot,
-          url: firstSegment.url,
-        });
         playSegment("EN1", firstSegment.url);
       } else {
-        // eslint-disable-next-line no-console
-        console.warn(
-          "[PlayerShell] No playable segment found. Available segments:",
-          currentSegments.map((s) => ({ slot: s.slot, hasUrl: !!s.url, status: s.status }))
-        );
+        // Show toast if no playable segments
+        if (toastRef.current) {
+          toastRef.current.show("Brak dostępnych segmentów – pomijam frazę");
+        }
+        setPlaying(false);
       }
     }
   }, [playing, currentSegments, currentSlot, playSegment]);
 
   // Click-to-seek functionality
+  const currentSegmentTimings = currentSegments.find((s) => s.slot === currentSlot)?.timings;
+  const tokenTimings: { word: string; startMs: number; endMs: number }[] | undefined = currentSegmentTimings
+    ?.filter((t): t is { startMs: number; endMs: number } => t !== undefined)
+    .map((t) => ({
+      word: "",
+      startMs: t.startMs,
+      endMs: t.endMs,
+    }));
+
   const { seekToToken } = useClickToSeek({
     tokens: currentPhrase?.phrase.tokens,
-    timings: currentSegments.find((s) => s.slot === currentSlot)?.timings,
+    timings: tokenTimings,
+    getAudioElement,
   });
 
   // Event handlers
   const handlePlay = useCallback(() => {
-    if (!hasPlayableSegments) return;
+    if (!hasPlayableSegments) {
+      if (toastRef.current) {
+        toastRef.current.show("Brak dostępnych segmentów – pomijam frazę");
+      }
+      return;
+    }
     if (currentSlot) {
       resumePlayback();
       setPlaying(true);
@@ -205,38 +241,90 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
   }, []);
 
   const handleSeekToToken = useCallback(
-    (tokenIndex: number) => {
+    (tokenIndex: number, language: "en" | "pl") => {
+      // If clicking EN while PL is active, restart from EN1
+      if (currentSlot === "PL" && language === "en") {
+        const en1Segment = currentSegments.find((s) => s.slot === "EN1");
+        if (en1Segment && en1Segment.url) {
+          setCurrentSlot("EN1");
+          setClockMs(0);
+          playSegment("EN1", en1Segment.url);
+          setPlaying(true);
+        }
+        return;
+      }
+
+      // Only allow seeking in active segment
       if (currentSlot && seekToToken) {
-        seekToToken(tokenIndex);
+        const activeLang = currentSlot === "PL" ? "pl" : "en";
+        if (activeLang === language) {
+          seekToToken(tokenIndex);
+        }
+      } else if (!currentSlot && language === "en") {
+        // If no segment is active and clicking EN, start from EN1
+        const en1Segment = currentSegments.find((s) => s.slot === "EN1");
+        if (en1Segment && en1Segment.url) {
+          setCurrentSlot("EN1");
+          setClockMs(0);
+          playSegment("EN1", en1Segment.url);
+          setPlaying(true);
+        }
       }
     },
-    [currentSlot, seekToToken]
+    [currentSlot, seekToToken, currentSegments, playSegment]
   );
 
   const handleJumpToSlot = useCallback(
     (slot: VoiceSlot) => {
       const segment = currentSegments.find((s) => s.slot === slot);
-      if (segment) {
+      if (segment && segment.url) {
         setCurrentSlot(slot);
         setClockMs(0);
+        playSegment(slot, segment.url);
+        setPlaying(true);
       }
     },
-    [currentSegments]
+    [currentSegments, playSegment]
   );
 
   const handleRefreshManifest = useCallback(async () => {
     await fetchManifest();
   }, [fetchManifest]);
 
+  // Touch gesture handlers
+  const handleSwipeLeft = useCallback(() => {
+    onAdvanceNext();
+  }, [onAdvanceNext]);
+
+  const handleSwipeRight = useCallback(() => {
+    onAdvancePrev();
+  }, [onAdvancePrev]);
+
+  const handleDoubleTap = useCallback(() => {
+    if (playing) {
+      handlePause();
+    } else {
+      handlePlay();
+    }
+  }, [playing, handlePlay, handlePause]);
+
+  const handleDoubleTapLeft = useCallback(() => {
+    seekSmall("left");
+  }, [seekSmall]);
+
+  const handleDoubleTapRight = useCallback(() => {
+    seekSmall("right");
+  }, [seekSmall]);
+
+  // Long press handled via PhraseViewer touch gestures
+
   // Keyboard shortcuts
   const shortcuts = {
     onPlayPause: playing ? handlePause : handlePlay,
     onStop: handleStop,
     onRestart: handleRestartPhrase,
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    onSeekSmall: () => {}, // TODO: Implement small seek
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    onSeekLarge: () => {}, // TODO: Implement large seek
+    onSeekSmall: seekSmall,
+    onSeekLarge: seekLarge,
     onPrevPhrase: onAdvancePrev,
     onNextPhrase: onAdvanceNext,
   };
@@ -300,62 +388,96 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="max-w-5xl mx-auto px-4 pt-4 pb-32 md:p-6 md:pb-6">
       <KeyboardShortcutsHandler {...shortcuts} />
 
-      {/* Header with phrase counter */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Audio Player</h1>
-        </div>
-        <div className="text-sm text-muted-foreground">
-          Phrase {phraseIndex + 1} of {manifest.sequence.length}
+      {/* Header with title, pager, and Prev/Next buttons */}
+      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-foreground">Audio Player</h1>
+        <div className="flex items-center gap-3">
+          <div className="text-sm text-muted-foreground" aria-live="polite" aria-atomic="true">
+            Phrase <span className="font-medium text-foreground">{phraseIndex + 1}</span> of{" "}
+            <span className="font-medium text-foreground">{manifest.sequence.length}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              onClick={onAdvancePrev}
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              aria-label="Previous phrase"
+              title="Previous phrase (P)"
+              disabled={phraseIndex === 0}
+            >
+              <SkipBack className="h-4 w-4" />
+            </Button>
+            <Button
+              onClick={onAdvanceNext}
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              aria-label="Next phrase"
+              title="Next phrase (N)"
+              disabled={phraseIndex >= manifest.sequence.length - 1}
+            >
+              <SkipForward className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Phrase viewer - on top */}
-      <div className="mb-6">
+      {/* Phrase viewer - vertical layout: EN on top, PL below */}
+      <div className="mb-4">
         <PhraseViewer
           phrase={currentPhrase?.phrase}
           activeLang={currentSlot === "PL" ? "pl" : currentSlot ? "en" : null}
           highlight={highlight}
           onSeekToToken={handleSeekToToken}
+          onSwipeLeft={handleSwipeLeft}
+          onSwipeRight={handleSwipeRight}
+          onDoubleTap={handleDoubleTap}
+          onDoubleTapLeft={handleDoubleTapLeft}
+          onDoubleTapRight={handleDoubleTapRight}
         />
       </div>
 
-      {/* Controls */}
-      <div className="mb-6">
-        <PlayerControls
-          playing={playing}
-          speed={speed}
-          highlight={highlight}
-          hasPlayable={hasPlayableSegments}
-          onPlay={handlePlay}
-          onPause={handlePause}
-          onStop={handleStop}
-          onRestart={handleRestartPhrase}
-          onSpeedChange={handleSpeedChange}
-          onToggleHighlight={handleToggleHighlight}
-          onPrevPhrase={onAdvancePrev}
-          onNextPhrase={onAdvanceNext}
-        />
-      </div>
-
-      {/* Segment sequence bar - at the bottom */}
-      <div className="mb-6">
+      {/* Segment sequence bar - right below phrases */}
+      <div className="mb-4">
         <SegmentSequenceBar
           sequenceForPhrase={currentSegments}
           activeSlot={currentSlot}
           onJumpToSlot={handleJumpToSlot}
+          compact={isMobile}
         />
       </div>
 
+      {/* Controls - sticky on desktop, fixed on mobile */}
+      <PlayerControls
+        playing={playing}
+        speed={speed}
+        highlight={highlight}
+        hasPlayable={hasPlayableSegments}
+        onPlay={handlePlay}
+        onPause={handlePause}
+        onStop={handleStop}
+        onRestart={handleRestartPhrase}
+        onSpeedChange={handleSpeedChange}
+        onToggleHighlight={handleToggleHighlight}
+        onPrevPhrase={onAdvancePrev}
+        onNextPhrase={onAdvanceNext}
+      />
+
       {/* Refresh manifest button */}
       {needsRefresh && (
-        <div className="mb-6">
+        <div className="mt-4">
           <RefreshManifestButton loading={false} onRefresh={handleRefreshManifest} />
         </div>
       )}
+
+      {/* Aria live region for playback state */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {playing ? "Playing" : "Paused"} - {currentSlot || "Stopped"}
+      </div>
     </div>
   );
 }
