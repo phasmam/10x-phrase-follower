@@ -7,6 +7,8 @@ import type { TtsCredentialsStateDTO, UserVoicesListResponse, JobDTO } from "../
 interface GenerateAudioButtonProps {
   notebookId: string;
   onJobCreated?: (job: JobDTO) => void;
+  onJobCompleted?: (job: JobDTO) => void;
+  activeJobId?: string | null;
 }
 
 interface GenerationState {
@@ -17,7 +19,12 @@ interface GenerationState {
   error: string | null;
 }
 
-export default function GenerateAudioButton({ notebookId, onJobCreated }: GenerateAudioButtonProps) {
+export default function GenerateAudioButton({
+  notebookId,
+  onJobCreated,
+  onJobCompleted,
+  activeJobId,
+}: GenerateAudioButtonProps) {
   const { apiCall } = useApi();
   const { addToast } = useToast();
   const [state, setState] = useState<GenerationState>({
@@ -29,6 +36,7 @@ export default function GenerateAudioButton({ notebookId, onJobCreated }: Genera
   });
 
   const hasCheckedPrerequisites = useRef(false);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Memoize the checkPrerequisites function to prevent infinite loops
   const checkPrerequisites = useCallback(async () => {
@@ -78,6 +86,79 @@ export default function GenerateAudioButton({ notebookId, onJobCreated }: Genera
     checkPrerequisites();
   }, [checkPrerequisites]);
 
+  // Poll job status when there's an active job
+  useEffect(() => {
+    if (!activeJobId) {
+      // Clear polling if no active job
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      setState((prev) => ({ ...prev, isGenerating: false }));
+      return;
+    }
+
+    // Start polling for job status
+    const pollJobStatus = async () => {
+      try {
+        const job = await apiCall<JobDTO>(`/api/jobs/${activeJobId}`, {
+          method: "GET",
+        });
+
+        // Check if job is in a terminal state
+        const isTerminal =
+          job.state === "succeeded" || job.state === "failed" || job.state === "canceled" || job.state === "timeout";
+
+        if (isTerminal) {
+          // Stop polling
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+
+          setState((prev) => ({ ...prev, isGenerating: false }));
+
+          if (onJobCompleted) {
+            onJobCompleted(job);
+          }
+
+          // Show completion toast
+          if (job.state === "succeeded") {
+            addToast({
+              type: "success",
+              title: "Audio generation completed",
+              description: "Your audio has been successfully generated.",
+            });
+          } else if (job.state === "failed") {
+            addToast({
+              type: "error",
+              title: "Audio generation failed",
+              description: job.error || "An error occurred during audio generation.",
+            });
+          }
+        } else {
+          // Job is still running, keep button disabled
+          setState((prev) => ({ ...prev, isGenerating: true }));
+        }
+      } catch (err) {
+        console.error("Failed to poll job status:", err);
+        // Don't stop polling on error, just log it
+      }
+    };
+
+    // Poll immediately, then every 3 seconds
+    pollJobStatus();
+    pollingIntervalRef.current = setInterval(pollJobStatus, 3000);
+
+    // Cleanup on unmount or when activeJobId changes
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [activeJobId, apiCall, onJobCompleted, addToast]);
+
   const handleGenerateAudio = async () => {
     if (!state.canGenerate || state.isGenerating) return;
 
@@ -97,7 +178,8 @@ export default function GenerateAudioButton({ notebookId, onJobCreated }: Genera
         }),
       });
 
-      setState((prev) => ({ ...prev, isGenerating: false }));
+      // Keep button disabled - polling will handle re-enabling when job completes
+      setState((prev) => ({ ...prev, isGenerating: true }));
 
       addToast({
         type: "success",

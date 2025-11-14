@@ -46,10 +46,27 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
           }),
         ]);
 
+        // Check if there's an active job
+        let activeJob: JobDTO | null = null;
+        if (notebookData.last_generate_job_id) {
+          try {
+            const job = await apiCall<JobDTO>(`/api/jobs/${notebookData.last_generate_job_id}`, {
+              method: "GET",
+            });
+            // Only consider it active if it's queued or running
+            if (job.state === "queued" || job.state === "running") {
+              activeJob = job;
+            }
+          } catch {
+            // Job might not exist or be inaccessible, ignore
+          }
+        }
+
         setState((prev) => ({
           ...prev,
           notebook: notebookData,
           phrases: phrasesData.items,
+          activeJob,
           isLoading: false,
         }));
       } catch (err) {
@@ -62,7 +79,7 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
     };
 
     loadData();
-  }, [notebookId, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [notebookId, isAuthenticated, apiCall]);
 
   // Handle phrase deletion
   const handleDeletePhrase = async (phraseId: string) => {
@@ -108,6 +125,37 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
       ...prev,
       activeJob: job,
     }));
+  };
+
+  // Handle job completion
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleJobCompleted = (_job: JobDTO) => {
+    setState((prev) => ({
+      ...prev,
+      activeJob: null,
+    }));
+
+    // Reload notebook data to reflect new audio status
+    const loadData = async () => {
+      try {
+        const [notebookData, phrasesData] = await Promise.all([
+          apiCall<NotebookDTO>(`/api/notebooks/${notebookId}`, { method: "GET" }),
+          apiCall<PhraseListResponse>(`/api/notebooks/${notebookId}/phrases?sort=position&order=asc&limit=100`, {
+            method: "GET",
+          }),
+        ]);
+
+        setState((prev) => ({
+          ...prev,
+          notebook: notebookData,
+          phrases: phrasesData.items,
+        }));
+      } catch {
+        // Silently fail - user can refresh manually if needed
+      }
+    };
+
+    loadData();
   };
 
   if (!isAuthenticated) {
@@ -197,7 +245,12 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
                   Open Player
                 </a>
               </Button>
-              <GenerateAudioButton notebookId={notebookId} onJobCreated={handleJobCreated} />
+              <GenerateAudioButton
+                notebookId={notebookId}
+                onJobCreated={handleJobCreated}
+                onJobCompleted={handleJobCompleted}
+                activeJobId={state.activeJob?.id || null}
+              />
             </div>
           </div>
         </div>
