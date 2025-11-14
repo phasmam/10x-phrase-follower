@@ -135,7 +135,6 @@ Planned next steps:
 
 - Version: 0.0.1 (pre-release)
 - Status: MVP in progress; not production-ready
-- CI: not configured in this repository
 - Documentation: primary spec in [docs/prd.md](./docs/prd.md)
 
 ## 8. License
