@@ -71,17 +71,12 @@ async function testTtsCredentials(apiKey: string): Promise<{ ok: boolean; voice_
 
 export async function GET(context: APIContext) {
   try {
-    // Pass Cloudflare runtime env to crypto utils if available
-    try {
-      const id = ["astro", "runtime", "server"].join("/");
-      const dynImport = new Function("m", "return import(m);") as (m: string) => Promise<unknown>;
-      const mod = (await dynImport(id)) as { getRuntime?: () => { env?: Record<string, string | undefined> } };
-      const runtime = typeof mod?.getRuntime === "function" ? mod.getRuntime() : undefined;
-      if (runtime?.env) {
-        setRuntimeEnv(runtime.env as Record<string, string | undefined>);
-      }
-    } catch {
-      // ignore - non-Cloudflare or during build
+    // Pass Cloudflare runtime env to crypto utils if available (adapter puts it on locals.runtime.env)
+    const localsAny = context.locals as unknown as {
+      runtime?: { env?: Record<string, string | undefined> };
+    };
+    if (localsAny.runtime?.env) {
+      setRuntimeEnv(localsAny.runtime.env);
     }
     const userId = getUserId(context);
     const supabase = getSupabaseClient(context);
@@ -123,17 +118,12 @@ export async function GET(context: APIContext) {
 
 export async function PUT(context: APIContext) {
   try {
-    // Pass Cloudflare runtime env to crypto utils if available
-    try {
-      const id = ["astro", "runtime", "server"].join("/");
-      const dynImport = new Function("m", "return import(m);") as (m: string) => Promise<unknown>;
-      const mod = (await dynImport(id)) as { getRuntime?: () => { env?: Record<string, string | undefined> } };
-      const runtime = typeof mod?.getRuntime === "function" ? mod.getRuntime() : undefined;
-      if (runtime?.env) {
-        setRuntimeEnv(runtime.env as Record<string, string | undefined>);
-      }
-    } catch {
-      // ignore - non-Cloudflare or during build
+    // Pass Cloudflare runtime env to crypto utils if available (adapter puts it on locals.runtime.env)
+    const localsAny = context.locals as unknown as {
+      runtime?: { env?: Record<string, string | undefined> };
+    };
+    if (localsAny.runtime?.env) {
+      setRuntimeEnv(localsAny.runtime.env);
     }
     const userId = getUserId(context);
     const supabase = getSupabaseClient(context);
@@ -252,17 +242,12 @@ export async function PUT(context: APIContext) {
 
 export async function DELETE(context: APIContext) {
   try {
-    // Pass Cloudflare runtime env to crypto utils if available
-    try {
-      const id = ["astro", "runtime", "server"].join("/");
-      const dynImport = new Function("m", "return import(m);") as (m: string) => Promise<unknown>;
-      const mod = (await dynImport(id)) as { getRuntime?: () => { env?: Record<string, string | undefined> } };
-      const runtime = typeof mod?.getRuntime === "function" ? mod.getRuntime() : undefined;
-      if (runtime?.env) {
-        setRuntimeEnv(runtime.env as Record<string, string | undefined>);
-      }
-    } catch {
-      // ignore - non-Cloudflare or during build
+    // Pass Cloudflare runtime env to crypto utils if available (adapter puts it on locals.runtime.env)
+    const localsAny = context.locals as unknown as {
+      runtime?: { env?: Record<string, string | undefined> };
+    };
+    if (localsAny.runtime?.env) {
+      setRuntimeEnv(localsAny.runtime.env);
     }
     const userId = getUserId(context);
     const supabase = getSupabaseClient(context);
