@@ -11,6 +11,50 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Reads Supabase environment variables from multiple sources (Cloudflare runtime, import.meta.env, etc.)
+ * Similar to readEnvWithTrace in tts-encryption.ts, but specifically for Supabase config
+ * @param context - Astro API context (optional, for Cloudflare runtime env access)
+ * @returns Object with supabaseUrl and supabaseServiceKey
+ */
+export function getSupabaseEnvVars(context?: APIContext): {
+  supabaseUrl: string | undefined;
+  supabaseServiceKey: string | undefined;
+} {
+  // 1) Try Cloudflare runtime env from context.locals.runtime.env (preferred on CF Pages)
+  // This is where Cloudflare adapter puts runtime bindings (secrets/variables)
+  if (context) {
+    const localsAny = context.locals as unknown as {
+      runtime?: { env?: Record<string, string | undefined> };
+    };
+    if (localsAny.runtime?.env) {
+      const runtimeUrl = localsAny.runtime.env.SUPABASE_URL;
+      const runtimeKey = localsAny.runtime.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (runtimeUrl && runtimeKey) {
+        return { supabaseUrl: runtimeUrl, supabaseServiceKey: runtimeKey };
+      }
+    }
+  }
+
+  // 2) Try import.meta.env (works in both build and runtime, but may not have secrets in CF)
+  const importMetaUrl = import.meta.env.SUPABASE_URL;
+  const importMetaKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (importMetaUrl && importMetaKey) {
+    return { supabaseUrl: importMetaUrl, supabaseServiceKey: importMetaKey };
+  }
+
+  // 3) Try process.env (fallback for Node.js runtime)
+  if (typeof process !== "undefined" && process.env) {
+    const processUrl = process.env.SUPABASE_URL;
+    const processKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (processUrl && processKey) {
+      return { supabaseUrl: processUrl, supabaseServiceKey: processKey };
+    }
+  }
+
+  return { supabaseUrl: undefined, supabaseServiceKey: undefined };
+}
+
+/**
  * Gets the appropriate Supabase client for the current request context.
  * In development with DEFAULT_USER_ID, uses service role key to bypass RLS.
  * In production, creates an authenticated client with the user's JWT token.

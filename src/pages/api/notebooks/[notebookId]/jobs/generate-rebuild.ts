@@ -5,7 +5,7 @@ import type { Database } from "../../../../../db/database.types";
 import { ApiError, ApiErrors } from "../../../../../lib/errors";
 import type { JobDTO } from "../../../../../types";
 import { JobWorker } from "../../../../../lib/job-worker";
-import { ensureUserExists, getSupabaseClient } from "../../../../../lib/utils";
+import { ensureUserExists, getSupabaseClient, getSupabaseEnvVars } from "../../../../../lib/utils";
 
 type SupabaseClient = ReturnType<typeof createClient<Database>>;
 
@@ -127,8 +127,8 @@ export async function POST(context: APIContext) {
     // Process the job immediately
     console.log("Starting job processing...");
     try {
-      const supabaseUrl = import.meta.env.SUPABASE_URL;
-      const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+      // Read Supabase env vars from multiple sources (including Cloudflare runtime)
+      const { supabaseUrl, supabaseServiceKey } = getSupabaseEnvVars(context);
 
       console.log("Supabase URL configured:", !!supabaseUrl);
       console.log("Supabase Service Key configured:", !!supabaseServiceKey);

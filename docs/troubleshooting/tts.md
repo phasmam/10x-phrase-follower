@@ -151,7 +151,6 @@ if (typeof encryptedData === "string") {
 ### Rozwiązanie (kod)
 
 - **1. Centralne czytanie sekretów w `src/lib/tts-encryption.ts`:**
-
   - Dodano nowy pierwszy krok w `readEnvWithTrace(key)`:
     - próbuje dynamicznie zaimportować `astro:env` i odczytać `env[key]` jako główne źródło sekretów,
     - jeśli to zadziała → zwraca wartość z `source: "astro-env"`.
@@ -179,7 +178,6 @@ if (typeof encryptedData === "string") {
   - Dzięki temu `readEnvWithTrace("PHRASE_TTS_ENCRYPTION_KEY")` widzi realne wartości z Cloudflare runtime, nawet jeśli `astro:env` lub `import.meta.env` nic nie zwracają.
 
 - **3. Usunięcie zależności od Node Buffera w Cloudflare Workers:**
-
   - W środowisku Workers nie ma globalnego `Buffer`, więc:
     - dodano prosty `BufferCompat` (używany tylko w `encrypt()`/`decrypt()`),
     - w endpointzie `tts-credentials` konwersja do base64 obsługuje zarówno `Buffer`, jak i `Uint8Array`.
