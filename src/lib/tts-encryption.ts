@@ -23,6 +23,12 @@ async function getAstroRuntimeEnv(): Promise<Record<string, string | undefined> 
 
 type MaybeValue = string | undefined;
 
+// Allow request handlers to provide runtime env explicitly (e.g., Cloudflare bindings)
+let runtimeEnvOverride: Record<string, string | undefined> | null = null;
+export function setRuntimeEnv(env: Record<string, string | undefined> | undefined): void {
+  runtimeEnvOverride = env ?? null;
+}
+
 function isJsonBuffer(value: unknown): value is { type: "Buffer"; data: number[] } {
   return (
     !!value &&
@@ -40,6 +46,21 @@ interface EnvTrace {
 }
 
 async function readEnvWithTrace(key: string): Promise<EnvTrace> {
+  // Optional override provided by request handlers (e.g., Cloudflare runtime bind)
+  if (runtimeEnvOverride && runtimeEnvOverride[key]) {
+    const value = runtimeEnvOverride[key];
+    return {
+      source: "astro-runtime",
+      value,
+      lengths: {
+        "astro-runtime": typeof value === "string" ? value.length : null,
+        "import-meta": null,
+        process: null,
+        globalThis: null,
+      },
+    };
+  }
+
   const lengths: EnvTrace["lengths"] = {
     "astro-runtime": null,
     "import-meta": null,
