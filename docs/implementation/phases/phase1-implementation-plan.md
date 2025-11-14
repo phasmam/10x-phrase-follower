@@ -1,8 +1,8 @@
-# Stage Implementation Plan: Etap 1 — Notatnik + Import (CRUD, limity, raport odrzuceń)
+# Phase Implementation Plan: Etap 1 — Notatnik + Import (CRUD, limity, raport odrzuceń)
 
 ## 1) Przegląd etapu
 
-**Fragment z @stages-plan.md (dokładny):**
+**Fragment z @phases-plan.md (dokładny):**
 **Etap 1 — Notatnik + Import (CRUD, limity, raport odrzuceń)**
 
 **Cel:** wprowadzić dane do nauki, gwarantując walidacje.
@@ -99,7 +99,7 @@ Client
        ├─ For each line:
        │    - Normalize (opcjonalnie) → validate `EN ::: PL`
        │    - If invalid → push rejection (line_no, reason) → persist to import_logs
-       │    - If valid   → stage Phrase {position=10*k}
+       │    - If valid   → create Phrase {position=10*k}
        ├─ Create Notebook (CITEXT uniqueness)
        ├─ Bulk insert Phrases (ordered positions)
        └─ 201 { notebook, import:{accepted,rejected,logs[]} }

@@ -211,5 +211,5 @@ PlayerPage (route)
 - PRD: @prd.md
 - Opis widoku: ui-plan.md
 - Endpointy: @api-plan.md
-- Etapy: stages-plan.md
+- Etapy: phases-plan.md
 - Typy DTO: @types.ts (lokalny plik, źródło prawdy dla kontraktów)

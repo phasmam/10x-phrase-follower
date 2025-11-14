@@ -1,18 +1,18 @@
-Jesteś doświadczonym architektem oprogramowania. Twoim zadaniem jest przygotować **kompleksowy plan wdrożenia dla całego etapu (stage)** obejmującego wiele punktów końcowych, przepływów i zasobów. Plan ma prowadzić zespół do poprawnego, bezpiecznego i wydajnego wdrożenia **całego etapu**, a nie tylko pojedynczego endpointu.
+Jesteś doświadczonym architektem oprogramowania. Twoim zadaniem jest przygotować **kompleksowy plan wdrożenia dla całego etapu (phase)** obejmującego wiele punktów końcowych, przepływów i zasobów. Plan ma prowadzić zespół do poprawnego, bezpiecznego i wydajnego wdrożenia **całego etapu**, a nie tylko pojedynczego endpointu.
 
 ### Materiały wejściowe (referencje, bez kopiowania treści):
 
-1. **PRD (zakres i wymagania biznesowe)**: @prd.md
-2. **Definicja etapów (zakres per etap)**: @stages-plan.md
-3. **Plan API (konwencje, katalog endpointów, kontrakty)**: @api-plan.md
-4. **Plan DB (tabele, relacje, RLS, indeksy)**: @plan-db.md
+1. **PRD (zakres i wymagania biznesowe)**: @docs/prd.md
+2. **Definicja etapów (zakres per etap)**: @docs/implementation/phases/phases-plan.md
+3. **Plan API (konwencje, katalog endpointów, kontrakty)**: @docs/architecture/api-plan.md
+4. **Plan DB (tabele, relacje, RLS, indeksy)**: @docs/architecture/db-plan.md
 5. **Definicje typów**: @database.types.ts / @types
 6. **Zasady implementacji / reguły projektowe**: @shared.mdc, @backend.mdc, @astro.mdc
-7. **Tech stack**: @tech-stack.md (zgodnie z @api-plan.md)
+7. **Tech stack**: @docs/architecture/tech-stack.md (zgodnie z @docs/architecture/api-plan.md)
 
 ### Kontekst do wykonania:
 
-- **Etap do opracowania**: {{ETAP_ID}} — wklej dokładny fragment z @stages-plan.md (sekcja Etap N wraz z „Cel”, „Zakres”).
+- **Etap do opracowania**: {{ETAP_ID}} — wklej dokładny fragment z @docs/implementation/phases/phases-plan.md (sekcja Etap N wraz z „Cel", „Zakres").
 - **Załóż ścisłą zgodność z**: RLS, konwencjami API (idempotency, paginacja, katalog błędów), limitami i walidacjami z PRD.
 - **Nie duplikuj definicji** — odwołuj się do referencji (@…).
 
@@ -22,30 +22,30 @@ Najpierw wykonaj sekcję `<analysis>` dla **całego etapu**:
 
 <analysis>
 1. **Podsumowanie celu etapu** i powiązanie z wymaganiami PRD (kluczowe UC).
-2. **Zakres API etapu**: wypisz wszystkie zasoby/endpointy dotknięte w tym etapie z @api-plan.md; oznacz które są *nowe*, *modyfikowane* oraz *poza zakresem etapu*.
+2. **Zakres API etapu**: wypisz wszystkie zasoby/endpointy dotknięte w tym etapie z @docs/architecture/api-plan.md; oznacz które są *nowe*, *modyfikowane* oraz *poza zakresem etapu*.
 3. **Zależności i kolejność wdrożenia**: Auth/JWT, RLS, CORS, Storage signing, job worker, MV (jeśli dotyczy).
 4. **Model danych**: kluczowe tabele/relacje, indeksy krytyczne i ewentualne dodatkowe indeksy pod ten etap.
 5. **Typy/DTO/komendy**: nazwy DTO/typów (odwołania do @database.types.ts/@types), wymagane pola, warianty statusów.
 6. **Walidacje i limity**: wejścia (body/query/path), limity z PRD i API (z kodami błędów).
 7. **Bezpieczeństwo**: uwierzytelnianie, autoryzacja (RLS + asercje własności), polityka Storage URLs, brak ekspozycji sekretów.
 8. **Scenariusze błędów**: katalog błędów (HTTP + `error.code`), retry/idempotency, 409/422.
-9. **Wydajność**: wąskie gardła, zapytania krytyczne, użycie indeksów z @plan-db.md.
+9. **Wydajność**: wąskie gardła, zapytania krytyczne, użycie indeksów z @docs/architecture/db-plan.md.
 10. **Testy jednostkowe**: plan na maksymalnie 10 testów jednostkowych. Brak testów e2e
 </analysis>
 
-Następnie przygotuj **Plan Wdrożenia Etapu** w Markdown — tylko ta część będzie wynikiem końcowym. Zapisz jako **`stage-implementation-plan.md`**.
+Następnie przygotuj **Plan Wdrożenia Etapu** w Markdown — tylko ta część będzie wynikiem końcowym. Zapisz jako **`phase-implementation-plan.md`**.
 
-# Stage Implementation Plan: Etap {{ETAP_ID}} — [Nazwa]
+# Phase Implementation Plan: Etap {{ETAP_ID}} — [Nazwa]
 
 ## 1) Przegląd etapu
 
-- Cel biznesowy i zakres (odwołanie: @stages-plan.md / @prd.md)
+- Cel biznesowy i zakres (odwołanie: @docs/implementation/phases/phases-plan.md / @docs/prd.md)
 - Zależności między komponentami (Auth/RLS/Storage/Jobs)
 
 ## 2) Zakres API w tym etapie
 
 - Tabela: Endpoint | Operacja | Status (nowy/modyfikowany/bez zmian) | Walidacje kluczowe | Kody błędów
-- Linki do kontraktów: @api-plan.md sekcja …
+- Linki do kontraktów: @docs/architecture/api-plan.md sekcja …
 
 ## 3) Model danych i RLS
 
@@ -61,7 +61,7 @@ Następnie przygotuj **Plan Wdrożenia Etapu** w Markdown — tylko ta część 
 ## 5) Walidacja i limity
 
 - Schematy payloadów (pola wymagane/opcjonalne)
-- Limity z PRD i @api-plan.md
+- Limity z PRD i @docs/architecture/api-plan.md
 
 ## 6) Przepływy (E2E) w ramach etapu
 
@@ -96,7 +96,7 @@ Następnie przygotuj **Plan Wdrożenia Etapu** w Markdown — tylko ta część 
 
 **Wymagania stałe:**
 
-- Kody statusu: 200/201/400/401/404/409/422/500 (oraz ewentualne `402 quota_exceeded` jeśli przewidziano w @api-plan.md).
+- Kody statusu: 200/201/400/401/404/409/422/500 (oraz ewentualne `402 quota_exceeded` jeśli przewidziano w @docs/architecture/api-plan.md).
 - Zgodność z RLS i regułami implementacji (@shared.mdc, @backend.mdc, @astro.mdc).
 - Dostosowanie do stacku (Astro/TS/React/Tailwind/Supabase).
-- Plik wyjściowy: **`stage-implementation-plan.md`**.
+- Plik wyjściowy: **`phase-implementation-plan.md`**.

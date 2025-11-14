@@ -15,7 +15,7 @@ Odrzuć linię, jeśli:
 
 Raport: pokaż tylko odrzucone linie z numerem i powodem.
 
-## Normalizacja (spójna z tokenizacja.md)
+## Normalizacja (spójna z tokenization.md)
 
 - NIE usuwamy i NIE zamieniamy „-" ani „—".
 - Redukujemy ≥2 spacje do pojedynczej (pojedyncze spacje zostają).

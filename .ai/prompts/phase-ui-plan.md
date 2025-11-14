@@ -6,12 +6,12 @@ Najpierw przejrzyj następujące informacje:
 
 1. Product Requirements Document (PRD):
    <prd>
-   {{prd}} <- zamień na referencję do pliku @prd.md
+   {{prd}} <- zamień na referencję do pliku @docs/prd.md
    </prd>
 
 2. Opis widoku:
    <view_description>
-   ui-plan.md
+   @docs/architecture/ui-architecture.md
    </view_description>
 
 3. User Stories:
@@ -21,7 +21,7 @@ Najpierw przejrzyj następujące informacje:
 
 4. Endpoint Description:
    <endpoint_description>
-   api-plan.md
+   @docs/architecture/api-plan.md
    </endpoint_description>
 
 5. Endpoint Implementation:

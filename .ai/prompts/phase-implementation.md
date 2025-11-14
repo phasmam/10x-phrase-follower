@@ -1,9 +1,9 @@
-Twoim zadaniem jest wdrożenie **całego etapu (stage)** obejmującego wiele endpointów i zmian w modelu danych, zgodnie z zatwierdzonym planem etapu. Celem jest solidna, czytelna implementacja z poprawną walidacją, obsługą błędów i zgodnością z regułami projektu.
+Twoim zadaniem jest wdrożenie **całego etapu (phase)** obejmującego wiele endpointów i zmian w modelu danych, zgodnie z zatwierdzonym planem etapu. Celem jest solidna, czytelna implementacja z poprawną walidacją, obsługą błędów i zgodnością z regułami projektu.
 
 ### Wejście (referencje):
 
 <implementation_plan>
-{{stage-implementation-plan}} ← dodaj referencję do planu etapu (np. @stage-implementation-plan.md)
+{{phase-implementation-plan}} ← dodaj referencję do planu etapu (np. @phase-implementation-plan.md)
 </implementation_plan>
 
 <types>
@@ -15,13 +15,13 @@ Twoim zadaniem jest wdrożenie **całego etapu (stage)** obejmującego wiele end
 </implementation_rules>
 
 <api_and_db_plans>
-@api-plan.md, @plan-db.md, @prd.md, @stages-plan.md
+@docs/architecture/api-plan.md, @docs/architecture/db-plan.md, @docs/prd.md, @docs/implementation/phases/phases-plan.md
 </api_and_db_plans>
 
 ### Tryb pracy (inkrementalny)
 
 <implementation_approach>
-W jednym przebiegu zrealizuj **maksymalnie 3 konkretne zadania** (work items) ze Stage Planu — np.:
+W jednym przebiegu zrealizuj **maksymalnie 3 konkretne zadania** (work items) z Phase Planu — np.:
 
 - zestaw endpointów w jednym obszarze (CRUD/akcje),
 - migracje/indeksy/RLS dla powiązanego modułu,
@@ -36,7 +36,7 @@ Na końcu:
 
 ### Kroki wykonania
 
-1. **Analiza Stage Planu (bez kodu)**
+1. **Analiza Phase Planu (bez kodu)**
 
 - Wypisz elementy w scope: endpointy (z metodami), zmiany DB (tabele/indeksy/RLS), zależności (Auth/JWT, CORS, Storage, job worker, MV jeśli dotyczy).
 - Oznacz statusy: _nowe_, _modyfikowane_, _poza zakresem_.
@@ -57,7 +57,7 @@ Na końcu:
 - **RLS i autoryzacja**: egzekwuj własność i role; brak bocznych kanałów dostępu.
 - **Idempotency/pagination** (jeśli dotyczy): honoruj `Idempotency-Key`, stałe kursory/limit.
 - **Obsługa błędów**: mapuj do 200/201/400/401/404/409/422/500 (+ ewentualnie `402 quota_exceeded` jeśli przewidziano); zwracaj `error.code` i spójne komunikaty.
-- **Kontrakty**: utrzymuj zgodność z @api-plan.md (nazwy pól, statusy, formaty).
+- **Kontrakty**: utrzymuj zgodność z @docs/architecture/api-plan.md (nazwy pól, statusy, formaty).
 
 4. **Zmiany DB (jeśli w danym work itemie)**
 
@@ -77,6 +77,6 @@ Na końcu:
 ### Wymagania stałe
 
 - Kody statusu: 200/201/400/401/404/409/422/500 (opcjonalnie `402 quota_exceeded` jeśli przewidziano).
-- Zgodność z @api-plan.md, @plan-db.md (RLS) oraz @shared.mdc, @backend.mdc, @astro.mdc.
+- Zgodność z @docs/architecture/api-plan.md, @docs/architecture/db-plan.md (RLS) oraz @shared.mdc, @backend.mdc, @astro.mdc.
 - Brak ekspozycji sekretów; walidacje i limity zgodne z PRD/API.
 - Styl i czystość kodu wg reguł projektu.

@@ -27,7 +27,7 @@
 ## Highlight
 
 - Przełączalny: on/off.
-- Token = słowo + przyległa interpunkcja (zob. tokenizacja.md).
+- Token = słowo + przyległa interpunkcja (zob. tokenization.md).
 - Synchronizacja heurystyczna; cel offsetu ≤ ~80 ms (best effort).
 - Tokeny typu „pauza-dash" (samodzielny „-"/„—" między słowami) nie są klikalne ani highlightowane.
 

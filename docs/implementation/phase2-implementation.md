@@ -1,10 +1,10 @@
-# Stage 2 Implementation - Audio Loop
+# Phase 2 Implementation - Audio Loop
 
-This document describes the implementation of Stage 2 of the Phrase Follower application, which provides the complete audio generation and playback functionality.
+This document describes the implementation of Phase 2 of the Phrase Follower application, which provides the complete audio generation and playback functionality.
 
 ## Overview
 
-Stage 2 implements the "Audio loop" that closes the value chain: phrase → audio → playback. It includes:
+Phase 2 implements the "Audio loop" that closes the value chain: phrase → audio → playback. It includes:
 
 - TTS credentials management (secure storage and testing)
 - User voice configuration (4 slots: EN1, EN2, EN3, PL)
@@ -117,7 +117,7 @@ Required environment variables:
 
 ## Next Steps
 
-Stage 3 will add:
+Phase 3 will add:
 
 - Click-to-seek functionality
 - Word highlighting

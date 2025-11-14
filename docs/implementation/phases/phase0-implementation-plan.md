@@ -52,13 +52,13 @@ Dotykamy wyłącznie cross-cutting: nagłówki `Authorization`, polityki CORS, R
 
 ---
 
-# stage-implementation-plan.md
+# phase-implementation-plan.md
 
-# Stage Implementation Plan: Etap 0 — Auth/RLS „walking skeleton” + DEV_JWT
+# Phase Implementation Plan: Etap 0 — Auth/RLS „walking skeleton" + DEV_JWT
 
 ## 1) Przegląd etapu
 
-- **Cel i zakres:** uruchomić szkielet aplikacji z Supabase Auth (Bearer JWT), włączonym RLS na wszystkich tabelach, restrykcyjnym CORS oraz publicznym `GET /api/health`. W DEV dodać **DEV_JWT** (podpisany `SUPABASE_JWT_SECRET`, `sub=DEFAULT_USER_ID`), automatycznie wstrzykiwany do żądań wyłącznie przy `NODE_ENV=development`. Brak użycia service-role w ścieżkach UI. Kryteria: użytkownik widzi tylko swoje zasoby; obcy zasób → 404/403; health żyje. Odniesienie: @stages-plan.md (Etap 0), @prd.md (UC-01).
+- **Cel i zakres:** uruchomić szkielet aplikacji z Supabase Auth (Bearer JWT), włączonym RLS na wszystkich tabelach, restrykcyjnym CORS oraz publicznym `GET /api/health`. W DEV dodać **DEV_JWT** (podpisany `SUPABASE_JWT_SECRET`, `sub=DEFAULT_USER_ID`), automatycznie wstrzykiwany do żądań wyłącznie przy `NODE_ENV=development`. Brak użycia service-role w ścieżkach UI. Kryteria: użytkownik widzi tylko swoje zasoby; obcy zasób → 404/403; health żyje. Odniesienie: @phases-plan.md (Etap 0), @prd.md (UC-01).
 - **Zależności:** Supabase Auth/JWT, PostgreSQL z RLS wg @plan-db.md, konfiguracja CORS do origin aplikacji (Astro), brak ekspozycji sekretów.
 
 ## 2) Zakres API w tym etapie
@@ -126,7 +126,7 @@ Dev client boot → fetch DEV_JWT from local dev helper
   → API: akceptuje token (sub=DEFAULT_USER_ID), tylko przy NODE_ENV=development
 ```
 
-Zasady wg @stages-plan.md (Etap 0).
+Zasady wg @phases-plan.md (Etap 0).
 
 ## 7) Bezpieczeństwo
 
@@ -165,10 +165,10 @@ Zasady wg @stages-plan.md (Etap 0).
 2. **Włączenie RLS:** `ENABLE ROW LEVEL SECURITY` + polityki z @plan-db.md dla wszystkich tabel. Zweryfikować `auth.uid()` na środowiskach.
 3. **Endpoint `/api/health` (public):** sprawdzenie DB connectivity, format odpowiedzi.
 4. **Endpoint `/api/users/me` (priv):** SELECT po `auth.uid()`; odpowiedź wg kontraktu.
-5. **DEV_JWT (dev only):** generator + wstrzykiwanie w fetch/axios w DEV; feature flag, krótkie TTL; wycięcie z buildów prod. @stages-plan.md.
+5. **DEV_JWT (dev only):** generator + wstrzykiwanie w fetch/axios w DEV; feature flag, krótkie TTL; wycięcie z buildów prod. @phases-plan.md.
 6. **Hardening nagłówków i błędów:** jednolite `{"error":{...}}`, maskowanie 404/403, brak logowania JWT.
 7. **Testy jednostkowe:** uruchomić zestaw z pkt 10.
 8. **Review zgodności:** checklista @shared.mdc/@backend.mdc/@astro.mdc (konwencje kodu, brak sekretów w kliencie).
-9. **Deploy:** środowisko e2e/prod bez DEV_JWT; smoke: `health`, `users/me` z prawidłowym JWT. @stages-plan.md kryteria akceptacji.
+9. **Deploy:** środowisko e2e/prod bez DEV_JWT; smoke: `health`, `users/me` z prawidłowym JWT. @phases-plan.md kryteria akceptacji.
 
 **Stałe wymagania spełnione:** kody statusu (200/201/400/401/404/409/422/500; 402 w przyszłych etapach), zgodność z RLS i zasadami implementacji, stack Astro/TS/React/Tailwind/Supabase. @api-plan.md, @plan-db.md.

@@ -1,10 +1,10 @@
-# stage-implementation-plan.md
+# phase-implementation-plan.md
 
-# Stage Implementation Plan: Etap 3 — Klik-to-seek + highlight + statusy
+# Phase Implementation Plan: Etap 3 — Klik-to-seek + highlight + statusy
 
 ## 1) Przegląd etapu
 
-**Fragment ze @stages-plan.md (dokładny):**
+**Fragment z @phases-plan.md (dokładny):**
 **Etap 3 — Klik-to-seek + highlight + statusy**
 
 **Cel:** lepsza kontrola nauki i widoczność postępu.

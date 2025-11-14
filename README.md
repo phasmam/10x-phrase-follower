@@ -38,7 +38,7 @@ Phrase Follower is an Astro-based web app that streamlines learning English phra
 - Import phrases via simple `EN sentence ::: PL sentence` files
 - Generate and store MP3 per phrase × voice using Google TTS (cost-conscious settings)
 
-See the Product Requirements Document for full details: [.ai/prd.md](./.ai/prd.md)
+See the Product Requirements Document for full details: [docs/prd.md](./docs/prd.md)
 
 ## 3. Tech stack
 
@@ -136,7 +136,7 @@ Planned next steps:
 - Version: 0.0.1 (pre-release)
 - Status: MVP in progress; not production-ready
 - CI: not configured in this repository
-- Documentation: primary spec in [.ai/prd.md](./.ai/prd.md)
+- Documentation: primary spec in [docs/prd.md](./docs/prd.md)
 
 ## 8. License
 

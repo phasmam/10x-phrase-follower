@@ -70,13 +70,13 @@ Etap 2 domyka pętlę wartości „fraza → audio → odsłuch”: zapis i test
 
 ---
 
-# stage-implementation-plan.md
+# phase-implementation-plan.md
 
-# Stage Implementation Plan: Etap 2 — „Audio loop” (TTS konfiguracja → generowanie → minimalny odsłuch)
+# Phase Implementation Plan: Etap 2 — „Audio loop" (TTS konfiguracja → generowanie → minimalny odsłuch)
 
 ## 1) Przegląd etapu
 
-**Cel i zakres — cytat ze @stages-plan.md:**
+**Cel i zakres — cytat z @phases-plan.md:**
 
 > **Etap 2 — „Audio loop” (TTS konfiguracja → generowanie → minimalny odsłuch)**
 > **Cel:** domknięta pętla wartości: fraza → audio → odsłuch.

@@ -271,7 +271,7 @@ useEffect(() => {
 - `src/components/AuthGuard.tsx` - Route protection component
 - `src/components/AuthCard.tsx` - Login form component
 - `src/pages/api/dev/jwt.ts` - DEV_JWT endpoint
-- `.ai/auth-spec.md` - Original specification
+- `docs/architecture/auth-spec.md` - Original specification
 
 ## Status
 
