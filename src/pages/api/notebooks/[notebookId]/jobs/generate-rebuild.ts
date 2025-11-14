@@ -159,28 +159,48 @@ export async function POST(context: APIContext) {
         });
 
         // Try to use waitUntil() if available (Cloudflare Workers)
-        // Astro Cloudflare adapter may expose waitUntil through context.platform or context.locals
-        const platformAny = (context as unknown as { platform?: { waitUntil?: (promise: Promise<unknown>) => void } })
-          .platform;
+        // Astro Cloudflare adapter may expose waitUntil through different paths
+        // Check multiple possible locations where waitUntil might be available
+        const contextAny = context as unknown as {
+          waitUntil?: (promise: Promise<unknown>) => void;
+          platform?: { waitUntil?: (promise: Promise<unknown>) => void };
+        };
         const localsAny = context.locals as unknown as {
           waitUntil?: (promise: Promise<unknown>) => void;
           runtime?: { waitUntil?: (promise: Promise<unknown>) => void };
+          cf?: { waitUntil?: (promise: Promise<unknown>) => void };
         };
 
-        if (platformAny?.waitUntil) {
-          platformAny.waitUntil(jobPromise);
+        let waitUntilUsed = false;
+        if (contextAny.waitUntil) {
+          contextAny.waitUntil(jobPromise);
+          console.log("Job processing started in background (using context.waitUntil)");
+          waitUntilUsed = true;
+        } else if (contextAny.platform?.waitUntil) {
+          contextAny.platform.waitUntil(jobPromise);
           console.log("Job processing started in background (using platform.waitUntil)");
+          waitUntilUsed = true;
         } else if (localsAny.waitUntil) {
           localsAny.waitUntil(jobPromise);
           console.log("Job processing started in background (using locals.waitUntil)");
+          waitUntilUsed = true;
         } else if (localsAny.runtime?.waitUntil) {
           localsAny.runtime.waitUntil(jobPromise);
           console.log("Job processing started in background (using runtime.waitUntil)");
-        } else {
+          waitUntilUsed = true;
+        } else if (localsAny.cf?.waitUntil) {
+          localsAny.cf.waitUntil(jobPromise);
+          console.log("Job processing started in background (using cf.waitUntil)");
+          waitUntilUsed = true;
+        }
+
+        if (!waitUntilUsed) {
           // Fallback: just start the promise (may be interrupted in Cloudflare Workers)
           // In Node.js adapter, this will work fine
           void jobPromise;
-          console.log("Job processing started in background (no waitUntil available)");
+          console.log("Job processing started in background (no waitUntil available - job may be interrupted)");
+          console.log("Available context keys:", Object.keys(context));
+          console.log("Available locals keys:", Object.keys(context.locals));
         }
       } else {
         console.error("Missing Supabase configuration for job processing");

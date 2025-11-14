@@ -102,9 +102,9 @@ export class JobWorker {
   }
 
   async processJob(jobId: string): Promise<void> {
-    console.log(`Starting job processing for job: ${jobId}`);
+    console.log(`[processJob] Starting job processing for job: ${jobId}`);
     try {
-      console.log("Job worker initialized successfully");
+      console.log("[processJob] Job worker initialized successfully");
       // Get job details
       const { data: job, error: jobError } = await this.supabase
         .from("jobs")
@@ -122,7 +122,9 @@ export class JobWorker {
       }
 
       // Update job state to running
+      console.log(`[processJob] Updating job ${jobId} state to running...`);
       await this.updateJobState(jobId, "running", new Date().toISOString());
+      console.log(`[processJob] Job ${jobId} state updated to running`);
 
       // Get TTS credentials for the user
       const { data: credentials, error: credError } = await this.supabase
