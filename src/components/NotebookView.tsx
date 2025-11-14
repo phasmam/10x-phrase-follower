@@ -3,6 +3,7 @@ import { Button } from "./ui/button";
 import { useApi } from "../lib/hooks/useApi";
 import { ToastProvider, useToast } from "./ui/toast";
 import GenerateAudioButton from "./GenerateAudioButton";
+import { Trash2 } from "lucide-react";
 import type { PhraseDTO, PhraseListResponse, NotebookDTO, JobDTO } from "../types";
 
 interface NotebookViewProps {
@@ -40,7 +41,9 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
         // Load notebook and phrases in parallel
         const [notebookData, phrasesData] = await Promise.all([
           apiCall<NotebookDTO>(`/api/notebooks/${notebookId}`, { method: "GET" }),
-          apiCall<PhraseListResponse>(`/api/notebooks/${notebookId}/phrases`, { method: "GET" }),
+          apiCall<PhraseListResponse>(`/api/notebooks/${notebookId}/phrases?sort=position&order=asc`, {
+            method: "GET",
+          }),
         ]);
 
         setState((prev) => ({
@@ -94,55 +97,6 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
       addToast({
         type: "error",
         title: "Delete failed",
-        description: errorMessage,
-      });
-    }
-  };
-
-  // Handle phrase reorder
-  const handleMovePhrase = async (phraseId: string, direction: "up" | "down") => {
-    const currentPhrase = state.phrases.find((p) => p.id === phraseId);
-    if (!currentPhrase) return;
-
-    const currentIndex = state.phrases.findIndex((p) => p.id === phraseId);
-    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
-
-    if (targetIndex < 0 || targetIndex >= state.phrases.length) return;
-
-    const targetPhrase = state.phrases[targetIndex];
-
-    try {
-      // Call reorder API
-      await apiCall(`/api/notebooks/${notebookId}/phrases/reorder`, {
-        method: "POST",
-        body: JSON.stringify({
-          moves: [
-            { phrase_id: currentPhrase.id, position: targetPhrase.position },
-            { phrase_id: targetPhrase.id, position: currentPhrase.position },
-          ],
-        }),
-      });
-
-      // Update local state optimistically
-      const newPhrases = [...state.phrases];
-      [newPhrases[currentIndex], newPhrases[targetIndex]] = [newPhrases[targetIndex], newPhrases[currentIndex]];
-
-      setState((prev) => ({
-        ...prev,
-        phrases: newPhrases,
-      }));
-
-      addToast({
-        type: "success",
-        title: "Phrase reordered",
-        description: "The phrase position has been updated.",
-      });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to reorder phrase";
-
-      addToast({
-        type: "error",
-        title: "Reorder failed",
         description: errorMessage,
       });
     }
@@ -243,7 +197,6 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
                   Open Player
                 </a>
               </Button>
-              <span className="text-xs text-muted-foreground">Reorder temporarily disabled</span>
               <GenerateAudioButton notebookId={notebookId} onJobCreated={handleJobCreated} />
             </div>
           </div>
@@ -260,44 +213,58 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
             </a>
           </div>
         ) : (
-          <PhraseTable phrases={state.phrases} onDelete={handleDeletePhrase} onMove={handleMovePhrase} />
+          <>
+            {/* Desktop table view */}
+            <PhraseTable
+              phrases={state.phrases}
+              notebookId={notebookId}
+              onDelete={handleDeletePhrase}
+              className="hidden md:block"
+            />
+            {/* Mobile card view */}
+            <PhraseList
+              phrases={state.phrases}
+              notebookId={notebookId}
+              onDelete={handleDeletePhrase}
+              className="md:hidden"
+            />
+          </>
         )}
       </div>
     </div>
   );
 }
 
-// Phrase Table Component
+// Phrase Table Component (Desktop)
 interface PhraseTableProps {
   phrases: PhraseDTO[];
+  notebookId: string;
   onDelete: (phraseId: string) => void;
-  onMove: (phraseId: string, direction: "up" | "down") => void;
+  className?: string;
 }
 
-function PhraseTable({ phrases, onDelete, onMove }: PhraseTableProps) {
+function PhraseTable({ phrases, notebookId, onDelete, className }: PhraseTableProps) {
+  const handleRowClick = (phraseId: string, e: React.MouseEvent | React.KeyboardEvent) => {
+    e.preventDefault();
+    const link = document.createElement("a");
+    link.href = `/player/${notebookId}?start_phrase_id=${phraseId}`;
+    link.click();
+  };
+
   return (
-    <div className="overflow-x-auto">
+    <div className={`overflow-x-auto ${className || ""}`}>
       <table className="w-full">
         <thead>
           <tr className="border-b border-border">
-            <th className="text-left p-4 font-medium text-muted-foreground w-16">#</th>
+            <th className="text-left p-4 font-medium text-muted-foreground w-14">#</th>
             <th className="text-left p-4 font-medium text-muted-foreground">English</th>
             <th className="text-left p-4 font-medium text-muted-foreground">Polish</th>
-            <th className="text-left p-4 font-medium text-muted-foreground w-24">Audio</th>
-            <th className="text-left p-4 font-medium text-muted-foreground w-32">Actions</th>
+            <th className="text-left p-4 font-medium text-muted-foreground w-16">Actions</th>
           </tr>
         </thead>
         <tbody>
           {phrases.map((phrase, index) => (
-            <PhraseRow
-              key={phrase.id}
-              phrase={phrase}
-              index={index}
-              isFirst={index === 0}
-              isLast={index === phrases.length - 1}
-              onDelete={onDelete}
-              onMove={onMove}
-            />
+            <PhraseRow key={phrase.id} phrase={phrase} index={index} onDelete={onDelete} onRowClick={handleRowClick} />
           ))}
         </tbody>
       </table>
@@ -305,90 +272,153 @@ function PhraseTable({ phrases, onDelete, onMove }: PhraseTableProps) {
   );
 }
 
-// Phrase Row Component
+// Phrase Row Component (Desktop)
 interface PhraseRowProps {
   phrase: PhraseDTO;
   index: number;
-  isFirst: boolean;
-  isLast: boolean;
   onDelete: (phraseId: string) => void;
-  onMove: (phraseId: string, direction: "up" | "down") => void;
+  onRowClick: PhraseRowClickHandler;
 }
 
-function PhraseRow({ phrase, onDelete, onMove }: PhraseRowProps) {
+function PhraseRow({ phrase, index, onDelete, onRowClick }: PhraseRowProps) {
+  const handleClick = (e: React.MouseEvent) => {
+    // Don't trigger row click if clicking on buttons
+    if ((e.target as HTMLElement).closest("button, a")) {
+      return;
+    }
+    onRowClick(phrase.id, e);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete(phrase.id);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onRowClick(phrase.id, e);
+    }
+  };
+
   return (
-    <tr className="border-b border-border hover:bg-muted/50 transition-colors">
-      <td className="p-4 text-sm text-muted-foreground">{phrase.position}</td>
+    <tr
+      className="group cursor-pointer hover:bg-muted/50 transition-colors"
+      onClick={handleClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      aria-label={`Phrase ${index + 1}: ${phrase.en_text}`}
+    >
+      <td className="p-4 w-14">
+        <span className="text-xs font-medium text-muted-foreground">{index + 1}</span>
+      </td>
       <td className="p-4">
         <div className="text-sm text-foreground">{phrase.en_text}</div>
       </td>
       <td className="p-4">
-        <div className="text-sm text-foreground">{phrase.pl_text}</div>
+        <div className="text-sm text-muted-foreground">{phrase.pl_text}</div>
       </td>
-      <td className="p-4">
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" disabled className="p-1 h-auto opacity-50">
-            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h1m4 0h1m6-10V4a2 2 0 00-2-2H5a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2V4z"
-              />
-            </svg>
-          </Button>
-        </div>
-      </td>
-      <td className="p-4">
-        <div className="flex items-center gap-1">
-          {/* Move up */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onMove(phrase.id, "up")}
-            disabled={true}
-            className="p-1 h-auto opacity-50"
-            title="Temporarily disabled"
-          >
-            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7" />
-            </svg>
-          </Button>
-
-          {/* Move down */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onMove(phrase.id, "down")}
-            disabled={true}
-            className="p-1 h-auto opacity-50"
-            title="Temporarily disabled"
-          >
-            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </Button>
-
-          {/* Delete */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onDelete(phrase.id)}
-            className="p-1 h-auto text-destructive hover:text-destructive"
-            title="Delete phrase"
-          >
-            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
-          </Button>
-        </div>
+      <td className="p-4 w-16 text-right">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="p-1 h-auto text-destructive hover:text-destructive"
+          onClick={handleDeleteClick}
+          aria-label="Usuń frazę"
+        >
+          <Trash2 className="size-4" />
+        </Button>
       </td>
     </tr>
+  );
+}
+
+// Phrase List Component (Mobile)
+interface PhraseListProps {
+  phrases: PhraseDTO[];
+  notebookId: string;
+  onDelete: (phraseId: string) => void;
+  className?: string;
+}
+
+type PhraseRowClickHandler = (phraseId: string, e: React.MouseEvent | React.KeyboardEvent) => void;
+
+function PhraseList({ phrases, notebookId, onDelete, className }: PhraseListProps) {
+  const handleRowClick = (phraseId: string, e: React.MouseEvent | React.KeyboardEvent) => {
+    e.preventDefault();
+    const link = document.createElement("a");
+    link.href = `/player/${notebookId}?start_phrase_id=${phraseId}`;
+    link.click();
+  };
+
+  return (
+    <div className={className || ""}>
+      {phrases.map((phrase, index) => (
+        <PhraseCard key={phrase.id} phrase={phrase} index={index} onDelete={onDelete} onRowClick={handleRowClick} />
+      ))}
+    </div>
+  );
+}
+
+// Phrase Card Component (Mobile)
+interface PhraseCardProps {
+  phrase: PhraseDTO;
+  index: number;
+  onDelete: (phraseId: string) => void;
+  onRowClick: PhraseRowClickHandler;
+}
+
+function PhraseCard({ phrase, index, onDelete, onRowClick }: PhraseCardProps) {
+  const handleClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("button, a")) {
+      return;
+    }
+    onRowClick(phrase.id, e);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete(phrase.id);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onRowClick(phrase.id, e);
+    }
+  };
+
+  return (
+    <div
+      className="flex items-center justify-between px-4 py-3 border-b border-border cursor-pointer hover:bg-muted/50 transition-colors"
+      onClick={handleClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      aria-label={`Phrase ${index + 1}: ${phrase.en_text}`}
+    >
+      <div className="flex items-start gap-3 min-w-0 flex-1">
+        <span className="size-6 rounded-full bg-muted text-[11px] flex items-center justify-center font-medium text-muted-foreground">
+          {index + 1}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[15px] text-foreground truncate font-medium">{phrase.en_text}</div>
+          <div className="text-xs text-muted-foreground truncate">{phrase.pl_text}</div>
+        </div>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="p-1 h-auto text-destructive hover:text-destructive"
+          onClick={handleDeleteClick}
+          aria-label="Usuń"
+        >
+          <Trash2 className="size-4" />
+        </Button>
+      </div>
+    </div>
   );
 }
 
