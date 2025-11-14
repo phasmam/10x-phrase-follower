@@ -38,7 +38,7 @@ function isJsonBuffer(value: unknown): value is { type: "Buffer"; data: number[]
   );
 }
 
-type EnvSource = "astro-runtime" | "import-meta" | "process" | "globalThis" | "none";
+type EnvSource = "astro-env" | "astro-runtime" | "import-meta" | "process" | "globalThis" | "none";
 interface EnvTrace {
   source: EnvSource;
   value: MaybeValue;
@@ -46,6 +46,32 @@ interface EnvTrace {
 }
 
 async function readEnvWithTrace(key: string): Promise<EnvTrace> {
+  const lengths: EnvTrace["lengths"] = {
+    "astro-env": null,
+    "astro-runtime": null,
+    "import-meta": null,
+    process: null,
+    globalThis: null,
+  };
+
+  // 0) Astro server env via astro:env (recommended for secrets on all adapters, including Cloudflare)
+  try {
+    const dynImport: (m: string) => Promise<unknown> = new Function("m", "return import(m);") as never;
+    const mod = (await dynImport("astro:env")) as { env?: Record<string, MaybeValue> };
+    const astroEnvAny = mod?.env ?? {};
+    const astroEnvVal = astroEnvAny[key];
+    lengths["astro-env"] = typeof astroEnvVal === "string" ? astroEnvVal.length : null;
+    if (astroEnvVal) {
+      return {
+        source: "astro-env",
+        value: astroEnvVal,
+        lengths,
+      };
+    }
+  } catch {
+    // ignore - astro:env not available in this runtime
+  }
+
   // Optional override provided by request handlers (e.g., Cloudflare runtime bind)
   if (runtimeEnvOverride && runtimeEnvOverride[key]) {
     const value = runtimeEnvOverride[key];
@@ -53,6 +79,7 @@ async function readEnvWithTrace(key: string): Promise<EnvTrace> {
       source: "astro-runtime",
       value,
       lengths: {
+        "astro-env": null,
         "astro-runtime": typeof value === "string" ? value.length : null,
         "import-meta": null,
         process: null,
@@ -60,13 +87,6 @@ async function readEnvWithTrace(key: string): Promise<EnvTrace> {
       },
     };
   }
-
-  const lengths: EnvTrace["lengths"] = {
-    "astro-runtime": null,
-    "import-meta": null,
-    process: null,
-    globalThis: null,
-  };
 
   // 1) Cloudflare bindings via Astro runtime (preferred on CF Pages)
   const runtimeEnv = await getAstroRuntimeEnv();

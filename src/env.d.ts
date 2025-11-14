@@ -24,6 +24,8 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
+// Note: server-side secrets are read primarily via the astro:env helper at runtime.
+
 // Minimal type for Astro runtime helper so ESLint/TS can resolve it
 declare module "astro/runtime/server" {
   export function getRuntime():
