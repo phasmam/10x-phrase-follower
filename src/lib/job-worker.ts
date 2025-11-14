@@ -1,6 +1,46 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../db/database.types";
 
+// Minimal Buffer compatibility layer for environments without Node Buffer (e.g., Cloudflare Workers)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const BufferCompat: any =
+  typeof Buffer !== "undefined"
+    ? Buffer
+    : {
+        from(input: string | ArrayBuffer | Uint8Array | ArrayLike<number>, encoding?: string) {
+          if (typeof input === "string") {
+            if (encoding === "base64") {
+              const binary = atob(input);
+              const bytes = new Uint8Array(binary.length);
+              for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+              }
+              return bytes;
+            }
+            if (encoding === "hex") {
+              const len = input.length / 2;
+              const bytes = new Uint8Array(len);
+              for (let i = 0; i < len; i++) {
+                bytes[i] = parseInt(input.substr(i * 2, 2), 16);
+              }
+              return bytes;
+            }
+            const encoder = new TextEncoder();
+            return encoder.encode(input);
+          }
+
+          if (input instanceof ArrayBuffer) {
+            return new Uint8Array(input);
+          }
+
+          if (input instanceof Uint8Array) {
+            return input;
+          }
+
+          return new Uint8Array(input as ArrayLike<number>);
+        },
+      };
+
 // TTS service for Google Cloud Text-to-Speech
 class TtsService {
   private apiKey: string;
@@ -9,7 +49,7 @@ class TtsService {
     this.apiKey = apiKey;
   }
 
-  async synthesize(text: string, voiceId: string, language: string): Promise<Buffer> {
+  async synthesize(text: string, voiceId: string, language: string): Promise<Uint8Array> {
     const requestBody = {
       input: { text },
       voice: {
@@ -46,7 +86,7 @@ class TtsService {
     }
 
     const data = await response.json();
-    const audioData = Buffer.from(data.audioContent, "base64");
+    const audioData = BufferCompat.from(data.audioContent, "base64");
     return audioData;
   }
 }
@@ -131,7 +171,20 @@ export class JobWorker {
       const ttsService = new TtsService(apiKey);
 
       // Process each phrase with each voice slot
-      const audioSegments = [];
+      const audioSegments: {
+        id: string;
+        phrase_id: string;
+        build_id: string;
+        voice_slot: "EN1" | "EN2" | "EN3" | "PL";
+        status: "complete" | "failed" | "missing";
+        error_code: string | null;
+        path: string;
+        size_bytes: number | null;
+        duration_ms: number | null;
+        sample_rate_hz: number;
+        bitrate_kbps: number;
+        is_active: boolean;
+      }[] = [];
       for (const phrase of phrases) {
         for (const voice of voices) {
           try {
@@ -281,12 +334,17 @@ export class JobWorker {
 
   private async updateJobState(
     jobId: string,
-    state: string,
+    state: "queued" | "running" | "succeeded" | "failed" | "canceled" | "timeout",
     startedAt?: string,
     endedAt?: string,
     error?: string
   ): Promise<void> {
-    const updateData: Partial<{ state: string; started_at: string; ended_at: string; error: string }> = { state };
+    const updateData: {
+      state: "queued" | "running" | "succeeded" | "failed" | "canceled" | "timeout";
+      started_at?: string;
+      ended_at?: string;
+      error?: string;
+    } = { state };
     if (startedAt) updateData.started_at = startedAt;
     if (endedAt) updateData.ended_at = endedAt;
     if (error) updateData.error = error;
