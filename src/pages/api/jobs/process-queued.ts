@@ -1,6 +1,7 @@
 import type { APIContext } from "astro";
 import { getSupabaseEnvVars } from "../../../lib/utils";
 import { JobWorker } from "../../../lib/job-worker";
+import { setRuntimeEnv } from "../../../lib/tts-encryption";
 
 export const prerender = false;
 
@@ -13,6 +14,14 @@ export const prerender = false;
  */
 export async function POST(context: APIContext) {
   try {
+    // Pass Cloudflare runtime env to crypto utils if available (adapter puts it on locals.runtime.env)
+    const localsAny = context.locals as unknown as {
+      runtime?: { env?: Record<string, string | undefined> };
+    };
+    if (localsAny.runtime?.env) {
+      setRuntimeEnv(localsAny.runtime.env);
+    }
+
     // Read Supabase env vars from multiple sources (including Cloudflare runtime)
     const { supabaseUrl, supabaseServiceKey } = getSupabaseEnvVars(context);
 

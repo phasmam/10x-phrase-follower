@@ -320,7 +320,7 @@ export class JobWorker {
       console.log(`Job ${jobId} completed successfully with ${audioSegments.length} audio segments`);
 
       // Update job as succeeded
-      await this.updateJobState(jobId, "succeeded", new Date().toISOString());
+      await this.updateJobState(jobId, "succeeded", undefined, new Date().toISOString());
     } catch (error) {
       console.error(`Job ${jobId} failed:`, error);
 
@@ -328,6 +328,7 @@ export class JobWorker {
       await this.updateJobState(
         jobId,
         "failed",
+        undefined,
         new Date().toISOString(),
         error instanceof Error ? error.message : "Unknown error"
       );

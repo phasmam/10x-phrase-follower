@@ -4,7 +4,9 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../../../../../db/database.types";
 import { ApiError, ApiErrors } from "../../../../../lib/errors";
 import type { JobDTO } from "../../../../../types";
-import { ensureUserExists, getSupabaseClient } from "../../../../../lib/utils";
+import { ensureUserExists, getSupabaseClient, getSupabaseEnvVars } from "../../../../../lib/utils";
+import { JobWorker } from "../../../../../lib/job-worker";
+import { setRuntimeEnv } from "../../../../../lib/tts-encryption";
 
 type SupabaseClient = ReturnType<typeof createClient<Database>>;
 
@@ -123,10 +125,32 @@ export async function POST(context: APIContext) {
       throw ApiErrors.internal("Failed to create job");
     }
 
-    // Note: Job processing is handled by a separate endpoint or cron job
-    // In Cloudflare Workers, we can't reliably use waitUntil() for long-running tasks
-    // The job will be processed by calling /api/jobs/process-queued endpoint
-    // or by setting up a Cloudflare Cron Trigger
+    // Try to process the job immediately (non-blocking)
+    // This will work if the request stays alive long enough, otherwise
+    // the job will be processed by /api/jobs/process-queued endpoint or cron
+    try {
+      // Pass Cloudflare runtime env to crypto utils if available
+      const localsAny = context.locals as unknown as {
+        runtime?: { env?: Record<string, string | undefined> };
+      };
+      if (localsAny.runtime?.env) {
+        setRuntimeEnv(localsAny.runtime.env);
+      }
+
+      const { supabaseUrl, supabaseServiceKey } = getSupabaseEnvVars(context);
+      if (supabaseUrl && supabaseServiceKey) {
+        const worker = new JobWorker(supabaseUrl, supabaseServiceKey);
+        // Process job in background (non-blocking)
+        // In Cloudflare Workers, this may be interrupted, but it's worth trying
+        worker.processJob(jobId).catch((error: Error) => {
+          console.error(`Failed to process job ${jobId}:`, error);
+          // Job will remain in queued state and can be processed later
+        });
+      }
+    } catch (error) {
+      // Ignore errors - job will be processed by /api/jobs/process-queued or cron
+      console.error("Failed to start job processing:", error);
+    }
 
     const response: JobDTO = job;
 
