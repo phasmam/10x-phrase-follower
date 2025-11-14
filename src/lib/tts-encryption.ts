@@ -78,11 +78,11 @@ async function readEnvWithTrace(key: string): Promise<EnvTrace> {
 
   // 2) Astro's import.meta.env (works in both build and runtime)
   // Note: Vite only inlines variables that are accessed statically like import.meta.env.MY_VAR.
-  // Dynamic indexing won't be replaced. Handle TTS_ENCRYPTION_KEY explicitly.
+  // Dynamic indexing won't be replaced. Handle PHRASE_TTS_ENCRYPTION_KEY explicitly.
   const envFromImportMeta = (import.meta as unknown as { env?: Record<string, MaybeValue> }).env;
   const importMetaStatic =
-    key === "TTS_ENCRYPTION_KEY"
-      ? (import.meta as unknown as { env: { TTS_ENCRYPTION_KEY?: string } }).env.TTS_ENCRYPTION_KEY
+    key === "PHRASE_TTS_ENCRYPTION_KEY"
+      ? (import.meta as unknown as { env: { PHRASE_TTS_ENCRYPTION_KEY?: string } }).env.PHRASE_TTS_ENCRYPTION_KEY
       : undefined;
   const importMetaVal = importMetaStatic ?? envFromImportMeta?.[key];
   lengths["import-meta"] = typeof importMetaVal === "string" ? importMetaVal.length : null;
@@ -115,20 +115,20 @@ async function readEnvWithTrace(key: string): Promise<EnvTrace> {
 
 // Get encryption key from environment or generate a default for development
 async function getEncryptionKey(): Promise<Uint8Array<ArrayBuffer>> {
-  const { value: key, source, lengths } = await readEnvWithTrace("TTS_ENCRYPTION_KEY");
+  const { value: key, source, lengths } = await readEnvWithTrace("PHRASE_TTS_ENCRYPTION_KEY");
   const mode = import.meta.env.MODE || import.meta.env.NODE_ENV || "development";
   const isProduction = mode === "production";
 
   if (!key) {
     if (isProduction) {
       // eslint-disable-next-line no-console
-      console.error("TTS_ENCRYPTION_KEY lookup diagnostics:", {
+      console.error("PHRASE_TTS_ENCRYPTION_KEY lookup diagnostics:", {
         mode,
         nodeEnv: import.meta.env.NODE_ENV,
         foundIn: source,
         lengths,
         // Extra hints to debug Cloudflare / runtime bindings
-        runtimeOverrideHasKey: !!runtimeEnvOverride?.["TTS_ENCRYPTION_KEY"],
+        runtimeOverrideHasKey: !!runtimeEnvOverride?.["PHRASE_TTS_ENCRYPTION_KEY"],
         runtimeOverrideKeysSample: runtimeEnvOverride
           ? Object.keys(runtimeEnvOverride).filter((name) =>
               ["TTS", "SUPABASE", "APP"].some((prefix) => name.includes(prefix))
@@ -136,7 +136,7 @@ async function getEncryptionKey(): Promise<Uint8Array<ArrayBuffer>> {
           : [],
       });
       throw new Error(
-        "TTS_ENCRYPTION_KEY environment variable is required in production (see server logs for source diagnostics)"
+        "PHRASE_TTS_ENCRYPTION_KEY environment variable is required in production (see server logs for source diagnostics)"
       );
     }
     // Use a default key for development (DO NOT USE IN PRODUCTION)
@@ -148,10 +148,12 @@ async function getEncryptionKey(): Promise<Uint8Array<ArrayBuffer>> {
   if (key.length !== KEY_LENGTH * 2) {
     // eslint-disable-next-line no-console
     console.error(
-      `TTS_ENCRYPTION_KEY has invalid length: ${key.length} (expected ${KEY_LENGTH * 2} for hex string). Source: ${source}. Lengths by source:`,
+      `PHRASE_TTS_ENCRYPTION_KEY has invalid length: ${key.length} (expected ${KEY_LENGTH * 2} for hex string). Source: ${source}. Lengths by source:`,
       lengths
     );
-    throw new Error(`TTS_ENCRYPTION_KEY must be a 64-character hex string (got ${key.length}). Source: ${source}`);
+    throw new Error(
+      `PHRASE_TTS_ENCRYPTION_KEY must be a 64-character hex string (got ${key.length}). Source: ${source}`
+    );
   }
 
   // Convert hex string to Uint8Array
@@ -160,7 +162,7 @@ async function getEncryptionKey(): Promise<Uint8Array<ArrayBuffer>> {
     const hexByte = key.substr(i, 2);
     const byteValue = parseInt(hexByte, 16);
     if (isNaN(byteValue)) {
-      throw new Error(`TTS_ENCRYPTION_KEY contains invalid hex character at position ${i}: "${hexByte}"`);
+      throw new Error(`PHRASE_TTS_ENCRYPTION_KEY contains invalid hex character at position ${i}: "${hexByte}"`);
     }
     bytes[i / 2] = byteValue;
   }

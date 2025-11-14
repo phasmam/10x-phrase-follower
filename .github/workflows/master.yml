@@ -110,13 +110,13 @@ jobs:
       # Service role key for job processing and storage operations (bypasses RLS) - also needs to be set in Cloudflare Pages dashboard for runtime
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       # TTS encryption key (64-character hex string) - also needs to be set in Cloudflare Pages dashboard for runtime
-      TTS_ENCRYPTION_KEY: ${{ secrets.TTS_ENCRYPTION_KEY }}
+      PHRASE_TTS_ENCRYPTION_KEY: ${{ secrets.TTS_ENCRYPTION_KEY }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Debug TTS_ENCRYPTION_KEY length
-        run: node -e "console.log('TTS len:', (process.env.TTS_ENCRYPTION_KEY || '').length)"
+      - name: Debug PHRASE_TTS_ENCRYPTION_KEY length
+        run: node -e "console.log('TTS len:', (process.env.PHRASE_TTS_ENCRYPTION_KEY || '').length)"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

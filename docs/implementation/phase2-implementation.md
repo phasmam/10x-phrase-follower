@@ -105,7 +105,7 @@ Required environment variables:
 
 - `SUPABASE_URL` - Supabase project URL
 - `SUPABASE_SERVICE_ROLE_KEY` - Service role key for job worker
-- `TTS_ENCRYPTION_KEY` - Key for encrypting TTS credentials (optional in dev)
+- `PHRASE_TTS_ENCRYPTION_KEY` - Key for encrypting TTS credentials (optional in dev)
 
 ## Usage
 

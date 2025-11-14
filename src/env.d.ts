@@ -16,7 +16,7 @@ interface ImportMetaEnv {
   readonly SUPABASE_URL: string;
   readonly SUPABASE_KEY: string;
   readonly OPENROUTER_API_KEY: string;
-  readonly TTS_ENCRYPTION_KEY?: string;
+  readonly PHRASE_TTS_ENCRYPTION_KEY?: string;
   // more env variables...
 }
 

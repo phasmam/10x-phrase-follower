@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * Helper script to generate a secure TTS_ENCRYPTION_KEY
+ * Helper script to generate a secure PHRASE_TTS_ENCRYPTION_KEY
  *
  * Usage:
  *   node scripts/generate-tts-encryption-key.js
  *   npm run generate:tts-key
  *
  * This generates a 64-character hex string (32 bytes) that can be used
- * as the TTS_ENCRYPTION_KEY environment variable.
+ * as the PHRASE_TTS_ENCRYPTION_KEY environment variable.
  */
 
 import { randomBytes } from "crypto";
@@ -70,7 +70,7 @@ function main() {
     console.log("Add this to your .env file:");
     console.log("=".repeat(60));
     console.log();
-    console.log(`TTS_ENCRYPTION_KEY=${key}`);
+    console.log(`PHRASE_TTS_ENCRYPTION_KEY=${key}`);
     console.log();
     console.log("⚠️  IMPORTANT:");
     console.log("  - Keep this key secret and secure");

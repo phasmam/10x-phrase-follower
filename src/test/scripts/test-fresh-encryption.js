@@ -17,10 +17,10 @@ const SALT_LENGTH = 32; // 256 bits
 
 // Get encryption key from environment or generate a default for development
 function getEncryptionKey() {
-  const key = process.env.TTS_ENCRYPTION_KEY;
+  const key = process.env.PHRASE_TTS_ENCRYPTION_KEY;
   if (!key) {
     if (process.env.NODE_ENV === "production") {
-      throw new Error("TTS_ENCRYPTION_KEY environment variable is required in production");
+      throw new Error("PHRASE_TTS_ENCRYPTION_KEY environment variable is required in production");
     }
     // Use a default key for development (DO NOT USE IN PRODUCTION)
     return new TextEncoder().encode("dev-key-32-chars-long-for-tts-encryption");
