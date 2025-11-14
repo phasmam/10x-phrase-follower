@@ -388,7 +388,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 pt-4 pb-32 md:p-6 md:pb-6">
+    <div className="max-w-5xl mx-auto px-4 pb-32 md:p-6 md:pb-6">
       <KeyboardShortcutsHandler {...shortcuts} />
 
       {/* Header with title, pager, and Prev/Next buttons */}
@@ -442,7 +442,7 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
       </div>
 
       {/* Segment sequence bar - right below phrases */}
-      <div className="mb-4">
+      <div className="mb-2 md:mb-4">
         <SegmentSequenceBar
           sequenceForPhrase={currentSegments}
           activeSlot={currentSlot}

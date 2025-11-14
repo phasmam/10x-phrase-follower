@@ -1,0 +1,102 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background gradient (yellow like highlighted phrases) -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#facc15;stop-opacity:0.9" />
+      <stop offset="50%" style="stop-color:#fbbf24;stop-opacity:0.95" />
+      <stop offset="100%" style="stop-color:#eab308;stop-opacity:0.95" />
+    </linearGradient>
+    
+    <!-- Rich text gradient with 3D effect -->
+    <linearGradient id="textGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#334155;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#1e293b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f172a;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Highlight gradient for shine effect -->
+    <linearGradient id="highlightGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.4" />
+      <stop offset="50%" style="stop-color:#ffffff;stop-opacity:0.1" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0" />
+    </linearGradient>
+    
+    <!-- Glow filter for text -->
+    <filter id="textGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/>
+      <feOffset in="blur" dx="0" dy="1" result="offsetBlur"/>
+      <feComponentTransfer in="offsetBlur" result="shadow">
+        <feFuncA type="linear" slope="0.4"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Shadow filter for depth -->
+    <filter id="textShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/>
+      <feOffset dx="1" dy="1.5" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.4"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Decorative pattern -->
+    <pattern id="dotPattern" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="0.5" fill="#0f172a" opacity="0.1"/>
+    </pattern>
+  </defs>
+  
+  <!-- Background circle with subtle shadow effect -->
+  <circle cx="32" cy="32" r="30" fill="url(#bgGradient)" stroke="#facc15" stroke-width="1.5" stroke-opacity="0.6"/>
+  
+  <!-- Subtle dot pattern overlay -->
+  <circle cx="32" cy="32" r="30" fill="url(#dotPattern)" opacity="0.3"/>
+  
+  <!-- Decorative audio waves on the left (more prominent) -->
+  <g transform="translate(6, 18)" opacity="0.2">
+    <path d="M 0 14 Q 3 6, 6 14 T 12 14" stroke="#0f172a" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M 0 18 Q 2.5 12, 5 18 T 10 18" stroke="#0f172a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <path d="M 0 22 Q 2 16, 4 22 T 8 22" stroke="#0f172a" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Main PF text with glow and shadow -->
+  <text x="32" y="42" font-family="Arial, sans-serif" font-size="28" font-weight="900" fill="url(#textGradient)" text-anchor="middle" filter="url(#textGlow)" letter-spacing="2">PF</text>
+  
+  <!-- Highlight overlay for shine effect -->
+  <text x="32" y="42" font-family="Arial, sans-serif" font-size="28" font-weight="900" fill="url(#highlightGradient)" text-anchor="middle" letter-spacing="2" opacity="0.6">PF</text>
+  
+  <!-- Decorative accent lines around text -->
+  <g transform="translate(32, 32)" opacity="0.15">
+    <!-- Left accent -->
+    <line x1="-18" y1="-8" x2="-18" y2="8" stroke="#0f172a" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="-18" cy="-8" r="1.5" fill="#0f172a"/>
+    <circle cx="-18" cy="8" r="1.5" fill="#0f172a"/>
+    <!-- Right accent -->
+    <line x1="18" y1="-8" x2="18" y2="8" stroke="#0f172a" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="18" cy="-8" r="1.5" fill="#0f172a"/>
+    <circle cx="18" cy="8" r="1.5" fill="#0f172a"/>
+  </g>
+  
+  <!-- Decorative text lines on the right (more visible) -->
+  <g transform="translate(48, 20)" opacity="0.18">
+    <line x1="0" y1="0" x2="8" y2="0" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/>
+    <line x1="0" y1="4" x2="10" y2="4" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/>
+    <line x1="0" y1="8" x2="6" y2="8" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/>
+    <line x1="0" y1="12" x2="9" y2="12" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Enhanced highlight accent at top -->
+  <ellipse cx="32" cy="10" rx="10" ry="4" fill="#ffffff" opacity="0.25"/>
+  <ellipse cx="32" cy="10" rx="8" ry="3" fill="#ffffff" opacity="0.15"/>
+  
+  <!-- Bottom accent -->
+  <ellipse cx="32" cy="54" rx="8" ry="2" fill="#0f172a" opacity="0.1"/>
+</svg>
+
