@@ -6,6 +6,21 @@ const KEY_LENGTH = 32; // 256 bits
 const IV_LENGTH = 12; // 96 bits for GCM
 const SALT_LENGTH = 32; // 256 bits
 
+// Attempt to read Cloudflare bindings via Astro runtime at runtime
+async function getAstroRuntimeEnv(): Promise<Record<string, string | undefined> | undefined> {
+  try {
+    // Build the module id without a static string so bundlers don't try to resolve it.
+    const id = ["astro", "runtime", "server"].join("/");
+    // Use eval-based dynamic import to avoid Rollup/Vite resolution at build time.
+    const dynImport: (m: string) => Promise<unknown> = new Function("m", "return import(m);") as never;
+    const mod = (await dynImport(id)) as { getRuntime?: () => { env?: Record<string, string | undefined> } };
+    const runtime = typeof mod?.getRuntime === "function" ? mod.getRuntime() : undefined;
+    return (runtime?.env ?? {}) as Record<string, string | undefined>;
+  } catch {
+    return undefined;
+  }
+}
+
 type MaybeValue = string | undefined;
 
 function isJsonBuffer(value: unknown): value is { type: "Buffer"; data: number[] } {
@@ -17,52 +32,78 @@ function isJsonBuffer(value: unknown): value is { type: "Buffer"; data: number[]
   );
 }
 
-function readEnv(key: string): MaybeValue {
-  // 1) Astro's import.meta.env (works in both build and runtime)
-  // Cloudflare Pages secrets are injected here at runtime
+type EnvSource = "astro-runtime" | "import-meta" | "process" | "globalThis" | "none";
+interface EnvTrace {
+  source: EnvSource;
+  value: MaybeValue;
+  lengths: Record<Exclude<EnvSource, "none">, number | null>;
+}
+
+async function readEnvWithTrace(key: string): Promise<EnvTrace> {
+  const lengths: EnvTrace["lengths"] = {
+    "astro-runtime": null,
+    "import-meta": null,
+    process: null,
+    globalThis: null,
+  };
+
+  // 1) Cloudflare bindings via Astro runtime (preferred on CF Pages)
+  const runtimeEnv = await getAstroRuntimeEnv();
+  const runtimeVal = runtimeEnv?.[key];
+  lengths["astro-runtime"] = typeof runtimeVal === "string" ? runtimeVal.length : null;
+  if (runtimeVal) {
+    return { source: "astro-runtime", value: runtimeVal, lengths };
+  }
+
+  // 2) Astro's import.meta.env (works in both build and runtime)
   const envFromImportMeta = (import.meta as unknown as { env?: Record<string, MaybeValue> }).env;
-  if (envFromImportMeta?.[key]) {
-    return envFromImportMeta[key];
+  const importMetaVal = envFromImportMeta?.[key];
+  lengths["import-meta"] = typeof importMetaVal === "string" ? importMetaVal.length : null;
+  if (importMetaVal) {
+    return { source: "import-meta", value: importMetaVal, lengths };
   }
 
-  // 2) Traditional Node.js runtime environment (fallback for Cloudflare Workers/Pages)
-  // Cloudflare Pages also exposes secrets via process.env at runtime
+  // 3) Traditional Node.js runtime environment (fallback for Cloudflare Workers/Pages)
   const processEnv = typeof process !== "undefined" ? process.env : undefined;
-  if (processEnv?.[key]) {
-    return processEnv[key];
+  const processVal = processEnv?.[key];
+  lengths.process = typeof processVal === "string" ? processVal.length : null;
+  if (processVal) {
+    return { source: "process", value: processVal, lengths };
   }
 
-  // 3) Try accessing Cloudflare runtime env directly (if available)
-  // This is a runtime-only check that won't break builds
+  // 4) Try accessing Cloudflare runtime env directly (if available)
   try {
     // @ts-expect-error - Cloudflare runtime may expose env via globalThis.env at runtime
-    if (typeof globalThis !== "undefined" && globalThis.env?.[key]) {
-      // @ts-expect-error - Accessing Cloudflare runtime env which may not be typed
-      return globalThis.env[key];
+    const globalThisVal = typeof globalThis !== "undefined" ? globalThis?.env?.[key] : undefined;
+    lengths.globalThis = typeof globalThisVal === "string" ? globalThisVal.length : null;
+    if (globalThisVal) {
+      return { source: "globalThis", value: globalThisVal, lengths };
     }
   } catch {
     // Ignore - not in Cloudflare runtime
   }
 
-  return undefined;
+  return { source: "none", value: undefined, lengths };
 }
 
 // Get encryption key from environment or generate a default for development
-function getEncryptionKey(): Uint8Array<ArrayBuffer> {
-  const key = readEnv("TTS_ENCRYPTION_KEY");
+async function getEncryptionKey(): Promise<Uint8Array<ArrayBuffer>> {
+  const { value: key, source, lengths } = await readEnvWithTrace("TTS_ENCRYPTION_KEY");
   const mode = import.meta.env.MODE || import.meta.env.NODE_ENV || "development";
   const isProduction = mode === "production";
 
   if (!key) {
     if (isProduction) {
       // eslint-disable-next-line no-console
-      console.error(
-        "TTS_ENCRYPTION_KEY is missing in production mode. Mode:",
+      console.error("TTS_ENCRYPTION_KEY lookup diagnostics:", {
         mode,
-        "NODE_ENV:",
-        import.meta.env.NODE_ENV
+        nodeEnv: import.meta.env.NODE_ENV,
+        foundIn: source,
+        lengths,
+      });
+      throw new Error(
+        "TTS_ENCRYPTION_KEY environment variable is required in production (see server logs for source diagnostics)"
       );
-      throw new Error("TTS_ENCRYPTION_KEY environment variable is required in production");
     }
     // Use a default key for development (DO NOT USE IN PRODUCTION)
     // eslint-disable-next-line no-console
@@ -72,8 +113,11 @@ function getEncryptionKey(): Uint8Array<ArrayBuffer> {
 
   if (key.length !== KEY_LENGTH * 2) {
     // eslint-disable-next-line no-console
-    console.error(`TTS_ENCRYPTION_KEY has invalid length: ${key.length} (expected ${KEY_LENGTH * 2} for hex string)`);
-    throw new Error(`TTS_ENCRYPTION_KEY must be a 64-character hex string (got ${key.length} characters)`);
+    console.error(
+      `TTS_ENCRYPTION_KEY has invalid length: ${key.length} (expected ${KEY_LENGTH * 2} for hex string). Source: ${source}. Lengths by source:`,
+      lengths
+    );
+    throw new Error(`TTS_ENCRYPTION_KEY must be a 64-character hex string (got ${key.length}). Source: ${source}`);
   }
 
   // Convert hex string to Uint8Array
@@ -114,7 +158,7 @@ async function deriveKey(masterKey: Uint8Array<ArrayBuffer>, salt: Uint8Array<Ar
  */
 export async function encrypt(plaintext: string): Promise<Buffer> {
   try {
-    const masterKey = getEncryptionKey();
+    const masterKey = await getEncryptionKey();
     const salt = Uint8Array.from(crypto.getRandomValues(new Uint8Array(SALT_LENGTH)));
     const iv = Uint8Array.from(crypto.getRandomValues(new Uint8Array(IV_LENGTH)));
 
@@ -150,7 +194,7 @@ export async function encrypt(plaintext: string): Promise<Buffer> {
  */
 export async function decrypt(encryptedData: Buffer | Uint8Array | string | unknown): Promise<string> {
   try {
-    const masterKey = getEncryptionKey();
+    const masterKey = await getEncryptionKey();
 
     // Convert to Buffer if needed
     let buffer: Buffer;

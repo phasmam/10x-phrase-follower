@@ -12,6 +12,14 @@ export default defineConfig({
   output: "server",
   integrations: [react(), sitemap()],
   server: { port: 3000 },
-  vite: { plugins: [tailwindcss()] },
+  vite: {
+    plugins: [tailwindcss()],
+  },
+  // Ensure Rollup treats the optional runtime helper as external during build
+  build: {
+    rollupOptions: {
+      external: ["astro/runtime/server"],
+    },
+  },
   adapter: onPages ? cloudflare() : node({ mode: "standalone" }),
 });
