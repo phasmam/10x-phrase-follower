@@ -127,6 +127,13 @@ async function getEncryptionKey(): Promise<Uint8Array<ArrayBuffer>> {
         nodeEnv: import.meta.env.NODE_ENV,
         foundIn: source,
         lengths,
+        // Extra hints to debug Cloudflare / runtime bindings
+        runtimeOverrideHasKey: !!runtimeEnvOverride?.["TTS_ENCRYPTION_KEY"],
+        runtimeOverrideKeysSample: runtimeEnvOverride
+          ? Object.keys(runtimeEnvOverride).filter((name) =>
+              ["TTS", "SUPABASE", "APP"].some((prefix) => name.includes(prefix))
+            )
+          : [],
       });
       throw new Error(
         "TTS_ENCRYPTION_KEY environment variable is required in production (see server logs for source diagnostics)"
