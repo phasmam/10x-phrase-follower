@@ -25,18 +25,6 @@ export function useSignedUrlGuard({ expiresAt }: UseSignedUrlGuardProps) {
 
     const timeUntilExpiry = expiryTime - now;
 
-    // Debug logging (only in development or when there's an issue)
-    if (timeUntilExpiry < 0 || timeUntilExpiry < 10 * 60000) {
-      console.log("[useSignedUrlGuard] Expiry check:", {
-        expiresAt,
-        expiryTime: new Date(expiryTime).toISOString(),
-        now: new Date(now).toISOString(),
-        timeUntilExpiryMs: timeUntilExpiry,
-        timeUntilExpiryMinutes: Math.round(timeUntilExpiry / 60000),
-        needsRefresh: timeUntilExpiry <= 5 * 60000,
-      });
-    }
-
     // If already expired or expires within 5 minutes, mark as needing refresh
     if (timeUntilExpiry <= 5 * 60000) {
       setNeedsRefresh(true);

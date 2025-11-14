@@ -206,7 +206,12 @@ export async function GET(context: APIContext) {
       };
       return new Response(JSON.stringify(response), {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
       });
     }
 
@@ -237,7 +242,12 @@ export async function GET(context: APIContext) {
       };
       return new Response(JSON.stringify(response), {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
       });
     }
 
@@ -368,12 +378,17 @@ export async function GET(context: APIContext) {
       notebook_id: notebookId,
       build_id: currentBuildId,
       sequence,
-      expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(), // 5 minutes from now
+      expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour from now
     };
 
     return new Response(JSON.stringify(response), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
