@@ -23,13 +23,18 @@
 
 | Endpoint                                           | Operacja                                                                                                                                                  | Status                                                                                       | Walidacje kluczowe                                                              | Kody błędów                                                     |
 | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `GET /api/notebooks/:notebookId/playback-manifest` | Wygenerowanie manifestu z kolejnością EN1→EN2→EN3→PL, **omitującego** failed/missing; dołącza `word_timings` (jeśli dostępne); opcje `speed`, `highlight` | **Modyfikowany** (rozszerzenie o semantykę click-to-seek/`word_timings` & hinty `highlight`) | `notebookId` = UUID; user owner; TTL signed URL; opcjonalny subset `phrase_ids` | 404 `not_found` (RLS), 400 `validation_error`, 500 `internal`   |
+| `GET /api/notebooks/:notebookId/playback-manifest` | Wygenerowanie manifestu z kolejnością EN1→EN2→EN3→PL, **omitującego** failed/missing; dołącza `word_timings` (jeśli dostępne); opcje `speed`, `highlight` | **Istnieje (zgodne)** — endpoint wdrożony; ewentualnie drobne rozszerzenia hintów UI         | `notebookId` = UUID; user owner; TTL signed URL; opcjonalny subset `phrase_ids` | 404 `not_found` (RLS), 400 `validation_error`, 500 `internal`   |
 | `GET /api/notebooks/:notebookId/audio-status`      | Zwraca agregaty `complete/failed/missing` dla **aktywnego** buildu                                                                                        | **Nowy (wdrożeniowo w tym etapie)**                                                          | `notebookId` = UUID; owner; spójność z `current_build_id`                       | 404 `not_found`, 500 `internal`                                 |
-| `PATCH /api/phrases/:phraseId`                     | Aktualizacja `tokens` (EN/PL) do click-to-seek; aktualizacja tekstu/pozycji                                                                               | **Modyfikowany** (w tym etapie egzekwujemy schemat `tokens`)                                 | JSON schema `tokens`; `position` unikalny w notatniku                           | 400 `validation_error`, 409 `unique_violation`, 404 `not_found` |
+| `PATCH /api/phrases/:phraseId`                     | Aktualizacja `tokens` (EN/PL) do click-to-seek; aktualizacja tekstu/pozycji                                                                               | **Modyfikowany** — dodać walidację schematu `tokens`                                         | JSON schema `tokens`; `position` unikalny w notatniku                           | 400 `validation_error`, 409 `unique_violation`, 404 `not_found` |
 | `GET /api/notebooks/:notebookId/phrases`           | Pobranie fraz (z `tokens` jeżeli ustawione)                                                                                                               | Bez zmian (używane)                                                                          | Paginacja; sort po `position`                                                   | 404 `not_found`                                                 |
 | `GET /api/notebooks/:notebookId/audio-segments`    | Lista **aktywnych** segmentów; filtr `status`, `phrase_id`, `voice_slot`                                                                                  | Bez zmian (używane diagnostycznie)                                                           | Filtry opcjonalne; status ∈ {complete,failed,missing}                           | 404 `not_found`                                                 |
 
 **Konwencje (bez zmian):** Idempotency-Key (dla POST), paginacja kursorowa, katalog błędów/format JSON.
+
+**Stan bieżący (repo):**
+- Manifest wdrożony i zwraca signed URLs, tylko `complete`, kolejność EN1→EN2→EN3→PL.
+- Brak `audio-status` — do wdrożenia.
+- `PATCH phrases` przyjmuje `tokens` bez walidacji schematu — do uzupełnienia.
 
 ## 3) Model danych i RLS
 
@@ -66,7 +71,7 @@
 - **`PATCH /api/phrases/:id` — tokens**:
   `tokens.en|pl = Array<{ text: string; start: number; end: number }>`; `start/end` to indeksy znaków w tekście (nie czas!). Walidacja spójności z `en_text`/`pl_text` (zakresy, brak nachodzenia).
 - **Limit tekstów**: EN/PL 1..2000 znaków; egzekwowane CHECK + warstwa aplikacyjna.
-- **Manifest**: `highlight=on|off`, `speed ∈ {0.75,0.9,1,1.25}` — walidacja wartości. Segmenty `failed/missing` **omijane** w odpowiedzi.
+- **Manifest**: `highlight=on|off`, `speed ∈ {0.75,0.9,1,1.25}` — walidacja wartości (hinty). Segmenty `failed/missing` **omijane** w odpowiedzi.
 - **Statusy**: enum `complete|failed|missing` zdefiniowany w DB.
 
 ## 6) Przepływy (E2E) w ramach etapu
@@ -132,6 +137,8 @@ UI Notebook Table ──GET /audio-status──> API ──(MV or live agg)─�
 8. **Phrase update position uniqueness:** konflikt pozycji → `409 unique_violation`. (Phrases)
 9. **Notebook without build:** manifest ze `sequence: []`. (API manifest)
 10. **Status endpoint ownership & shape:** 200 i wartości liczbowe, lub 404 gdy notebook niedostępny. (Audio-status)
+11. **Click-to-seek heuristic mapping:** poprawne wyliczenie pozycji na podstawie długości tokenów vs `duration_ms`. (UI hook)
+12. **Highlight active token:** aktywny token wyliczany z `word_timings` lub heurystyki dla `clockMs`. (UI hook)
 
 ## 11) Kroki wdrożenia (kolejność)
 
@@ -140,17 +147,17 @@ UI Notebook Table ──GET /audio-status──> API ──(MV or live agg)─�
    - Utwórz/odśwież logikę **MV `notebook_audio_statuses`** oraz procedurę odświeżania po zakończeniu joba (hook w workerze).
 
 2. **API:**
-   - Rozszerz `GET /playback-manifest` o wstrzykiwanie `word_timings` (jeśli istnieją), param `highlight` (hint, bez wpływu na wynik) i zachowanie „omit failed/missing”.
+   - `GET /playback-manifest` — stan OK (signed URLs, omit non-complete, kolejność). Utrzymaj kontrakt.
    - Zaimplementuj `GET /notebooks/:id/audio-status` (MV → fallback).
-   - W `PATCH /phrases/:id` dołóż walidację schematu `tokens`.
+   - W `PATCH /phrases/:id` dołóż walidację schematu `tokens` (Zod; zakresy, brak kolizji, spójność długości).
 
 3. **Security:**
    - Egzekwuj RLS/ownership na wszystkich selektach; w DEV obsłuż `DEV_JWT` zgodnie z middleware (tylko lokalnie). (Źródło: `<auth>`, DB RLS).
 
 4. **Frontend (Astro/React/Tailwind):**
-   - Player: obsługa click-to-seek z `word_timings`; fallback heurystyczny (po znakach/tokenach) gdy timings brak.
-   - Przełącznik **Highlight on/off** (UI-state; hint przekazywany do manifestu).
-   - Tabela fraz: kolumny `status` (complete/failed/missing) z `GET /audio-status`; pomijanie braków w sekwencji odtwarzania.
+   - Player: obsługa click-to-seek z `word_timings`; fallback heurystyczny (po znakach/tokenach) gdy timings brak; klik startuje odtwarzanie gdy stop.
+   - Highlight per token: `useHighlight` (karaoke) na podstawie `clockMs` + timings/heurystyki; przekazanie `activeTokenIdx` do `PhraseViewer`.
+   - Tabela fraz: wskaźniki agregatów `complete/failed/missing` z `GET /audio-status`; pomijanie braków w sekwencji odtwarzania pozostaje w manifeście.
 
 5. **Observability & błędy:**
    - Loguj metryki: czas generowania manifestu, udział fraz bez `word_timings`, spójność statusów.

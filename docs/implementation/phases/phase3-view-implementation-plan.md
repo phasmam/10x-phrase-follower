@@ -15,8 +15,8 @@ Widok **Player** odpowiada za odtwarzanie fraz w sekwencji **EN1 → EN2 → EN3
 ## 3. Struktura komponentów
 ```
 
-PlayerPage
-└─ PlayerLayout
+PlayerPage (.astro)
+└─ PlayerShell (React)
 ├─ PlayerControls
 ├─ SegmentSequenceBar
 ├─ PhraseViewer
@@ -26,13 +26,14 @@ PlayerPage
 
 ```
 - Widok korzysta z wysp **Astro + React** i stylowania **Tailwind 4** oraz komponentów **shadcn/ui**. :contentReference[oaicite:4]{index=4}
+- Wykorzystywane hooki: `usePlaybackEngine` (pauzy 800 ms, auto-advance), `useClickToSeek` (klik-to-seek), `useSignedUrlGuard` (wygasanie signed URLs).
 
 ## 4. Szczegóły komponentów
 
 ### PlayerPage
-- **Opis:** Kontener widoku. Pobiera i utrzymuje manifest odtwarzania, inicjuje start frazy (opcja `start_phrase_id`), koordynuje maszynę stanu odtwarzacza.
-- **Główne elementy:** `PlayerLayout`, provider’y kontekstu (`PlaybackProvider`, `HighlightProvider`), HOC ochrony trasy (sprawdzenie sesji).
-- **Obsługiwane interakcje:** inicjalne pobranie manifestu; restart sesji od `start_phrase_id`; przełączanie highlight.
+- **Opis:** Kontener routingu. Czyta `:notebookId` i opcjonalny `start_phrase_id`, montuje `PlayerShell` za osłoną `AuthGuard`.
+- **Główne elementy:** `<Layout>`, `AuthGuard`, `PlayerShell`.
+- **Obsługiwane interakcje:** walidacja UUID i redirect; przekazanie parametrów do `PlayerShell`.
 - **Walidacja:** `notebookId` i `start_phrase_id` muszą być UUID; brak start_phrase_id ⇒ zaczynamy od pierwszej frazy z manifestu.
 - **Typy:** `PlaybackManifestDto`, `PhraseEntry`, `SegmentEntry`, `WordTiming`; `PlaybackState`, `HighlightState` (patrz sekcja 5).
 - **Propsy:** brak (routingowe `params` wewnątrz).
@@ -54,12 +55,12 @@ PlayerPage
 - **Propsy:** `{ segments: SegmentEntry[], activeSlot?: VoiceSlot, onJumpToSlot?: (slot: VoiceSlot) => void }`.
 
 ### PhraseViewer
-- **Opis:** Renderuje tekst EN/PL z tokenizacją, highlight on/off i **klik-to-seek** per token.
+- **Opis:** Renderuje EN/PL z tokenizacją, highlight on/off i **klik-to-seek** per token; wspiera aktywny token (karaoke).
 - **Elementy:** kontenery EN i PL; lista `Token` (spany z a11y), aria-live dla ogłaszania zmian.
-- **Interakcje:** klik w token → seek do `start_ms` słowa w **aktualnie grającym segmencie**; klik pierwszego słowa uruchamia frazę; **po PL** klik w EN ⇒ start od EN1. :contentReference[oaicite:5]{index=5}
-- **Walidacja:** token = słowo + przyległa interpunkcja; jeżeli brak `word_timings`, stosujemy heurystykę (fallback mapowania znaków do czasu; desync docelowo ≤ ~80 ms). :contentReference[oaicite:6]{index=6}
+- **Interakcje:** klik w token → seek do `start_ms` słowa w **aktualnie grającym segmencie**; jeśli odtwarzanie zatrzymane, klik uruchamia; **po PL** klik w EN ⇒ restart od EN1. :contentReference[oaicite:5]{index=5}
+- **Walidacja:** token = słowo + przyległa interpunkcja; jeżeli brak `word_timings`, stosujemy heurystykę (fallback: proporcje znaków/tokenów do `duration_ms`; desync ≤ ~80 ms). :contentReference[oaicite:6]{index=6}
 - **Typy:** `Token`, `TokenWithTiming`, `SeekTarget` (ms).
-- **Propsy:** `{ phrase: PhraseEntry, activeSlot: VoiceSlot|null, highlight: boolean, onTokenClick: (tokenIdx: number) => void }`.
+- **Propsy:** `{ phrase: PhraseEntry, activeLang: 'en'|'pl'|null, highlight: boolean, activeTokenIdx?: number, onSeekToToken: (tokenIdx: number) => void }`.
 
 ### Token
 - **Opis:** Pojedynczy token wyrazu z możliwością highlight.
@@ -74,7 +75,7 @@ PlayerPage
 - **Elementy:** niewizualny komponent z `useEffect`.
 - **Interakcje:** nasłuch keydown; wyłączony w polach input.
 - **Walidacja:** eventy tylko gdy fokus nie w input/textarea.
-- **Typy/Propsy:** `{ onPlayPause, onStop, onRestart, onSeek, onPrev, onNext }`. :contentReference[oaicite:7]{index=7}
+- **Typy/Propsy:** `{ onPlayPause, onStop, onRestart, onSeekSmall, onSeekLarge, onPrev, onNext }`. :contentReference[oaicite:7]{index=7}
 
 ### RefreshManifestButton
 - **Opis:** Odświeżenie manifestu po wygaśnięciu URL (HTTP 403/410) lub ręcznie.
@@ -142,8 +143,9 @@ PlayerPage
   - `load(notebookId, { phraseIds?, speed?, highlight? })` → GET `/playback-manifest`.
   - Obsługa wygaśnięcia URL (HTTP 403/410) → sygnał do UI z przyciskiem `Refresh`. :contentReference[oaicite:15]{index=15}
 - **Highlight i tokenizacja** (`useHighlight`):
-  - Mapowanie tokenów → `WordTiming` (kiedy dostępne) lub heurystyka znakowa (fallback).
-  - Utrzymuje `activeTokenIdx` na podstawie `positionMs` i `word_timings`.
+  - Mapowanie tokenów → `WordTiming` (kiedy dostępne) lub heurystyka znakowa (fallback: rozkład czasu po długości tokenów).
+  - Utrzymuje `activeTokenIdx` na podstawie `positionMs`, aktywnego `slot` i `word_timings`.
+  - Eksportuje `activeLang` i `activeTokenIdx` dla `PhraseViewer`.
 - **Statusy audio**:
   - W Playerze statusy pochodzą z **manifestu** (tylko `complete` są obecne); do podglądu brakujących/failed w kontekście frazy korzystamy z paska `SegmentSequenceBar` (slot disabled/omitted). UC-09. :contentReference[oaicite:16]{index=16}
 
@@ -151,7 +153,7 @@ PlayerPage
 - **GET** `/api/notebooks/:notebookId/playback-manifest`
   - **Query:** `phrase_ids?`, `speed=0.75|0.9|1|1.25`, `highlight=on|off` (hint; nie wpływa na odpowiedź poza ewentualnymi metadanymi).
   - **Response:** `PlaybackManifestDto` (tylko segmenty `status=complete`; brakujące/failed pominięte). URL-e **podpisane** z krótkim TTL (`expires_at`). :contentReference[oaicite:17]{index=17}
-- **GET** `/api/notebooks/:notebookId/audio-status` (opcjonalne w Player, pomocne do odznaczeń UI) — agregaty complete/failed/missing. :contentReference[oaicite:18]{index=18}
+- **GET** `/api/notebooks/:notebookId/audio-status` (do wdrożenia w tym etapie; pomocne do odznaczeń UI) — agregaty complete/failed/missing. :contentReference[oaicite:18]{index=18}
 - **Błędy:** `401 unauthorized`, `404 not_found` (RLS), `410 gone`/`403` (wygasłe URL-e), `500 internal`. W razie `410/403` pokazujemy CTA „Odśwież manifest”. :contentReference[oaicite:19]{index=19}
 
 > **Implementacje endpointów do wglądu:** `@api-plan.md` (kontrakt), kod serwerowy: **@index.ts**, **@import.ts** (ścieżki API/worker orchestration, wg repo); typy wspólne: **@types.ts**.
@@ -162,8 +164,8 @@ PlayerPage
 - **Restart frazy**: zatrzymuje, ustawia `currentSlot` na EN1 i uruchamia odtwarzanie od początku.
 - **Zmiana prędkości**: natychmiast stosuje `playbackRate` do aktywnego/nowych segmentów; dopuszczalne wartości tylko z predefiniowanego zbioru. :contentReference[oaicite:20]{index=20}
 - **Klik-to-seek (PhraseViewer)**:
-  - Klik tokenu → seek do `start_ms` w **aktualnym segmencie**.
-  - Klik pierwszego tokenu uruchamia frazę (jeśli była zatrzymana).
+  - Klik tokenu → seek do `start_ms` w **aktualnym segmencie**; jeśli zatrzymane, klik uruchamia odtwarzanie.
+  - Fallback przy braku `word_timings`: heurystyka znakowa/tokenowa (≤ ~80 ms desync).
   - Po zakończeniu PL: klik tokenu EN ⇒ start od EN1. :contentReference[oaicite:21]{index=21}
 - **Auto-advance**: po PL i pauzie 800 ms automatycznie przejście do kolejnej frazy. :contentReference[oaicite:22]{index=22}
 - **Skróty klawiaturowe**: Space/K, S, R, ←/→, Shift+←/→, P/N. :contentReference[oaicite:23]{index=23}
@@ -188,28 +190,26 @@ PlayerPage
 ## 11. Kroki implementacji
 
 1. **Routing i ochrona trasy**
-   - Dodaj trasę `/player/:notebookId` (Astro → React island).
-   - Guard sprawdzający sesję Supabase; obsłuż `start_phrase_id`.
+   - Trasa `/player/:notebookId` (Astro → React island) — istnieje.
+   - Guard sesji (AuthGuard) — istnieje; obsługa `start_phrase_id` — istnieje.
 
 2. **Kontrakty typów**
-   - Zdefiniuj DTO wg rozdz. 5 (TypeScript), współdzielone w module `@types.ts`.
-   - Zaimplementuj ViewModel-e (`PlaybackState`, `PhraseWithRuntime`, itd.).
+   - DTO i ViewModel-e w `src/types.ts` — źródło prawdy (używane przez Player).
 
 3. **Hooki stanu**
-   - `usePlaybackManifest(notebookId)`:
-     - Pobiera `/api/notebooks/:id/playback-manifest` (opcjonalnie `phrase_ids`, `speed`, `highlight`).
-     - Utrzymuje `manifest`, `expires_at`, `loading`, `error`, `refresh()`.
-   - `usePlaybackMachine(manifest)`:
-     - Steruje `HTMLAudioElement`, prędkością, kolejnością slotów, pauzami 800 ms, auto-advance.
-     - Zdarzenia: `play/pause/stop/restart/seek/next/prev/segmentEnded/urlExpired`.
-   - `useHighlight(manifest, state)`:
-     - Mapuje `positionMs` → `activeTokenIdx`; fallback heurystyki gdy brak `word_timings`.
+   - `usePlaybackEngine(manifest)` — istnieje:
+     - Steruje `HTMLAudioElement`, prędkością, kolejnością slotów, pauzy 800 ms, auto-advance.
+   - `useClickToSeek(tokens, timings)` — rozbudować:
+     - Dodać heurystykę przy braku `word_timings` (proporcja po długości tokenów względem `duration_ms`).
+     - Klik uruchamia odtwarzanie gdy zatrzymane.
+   - `useHighlight(manifest, clockMs, currentSlot)` — do dodania:
+     - Mapuje `positionMs` → `activeTokenIdx` (timings/heurystyka), eksponuje `activeLang`.
 
 4. **Warstwa prezentacji**
-   - **PlayerControls**: przyciski, selektor prędkości (shadcn/ui), ARIA.
+   - **PlayerControls**: przyciski, selektor prędkości (shadcn/ui), ARIA — istnieje.
    - **SegmentSequenceBar**: 4 sloty, stany, tooltipy.
-   - **PhraseViewer**: render tokenów EN/PL z `Token`; obsługa klik-to-seek; tryb highlight.
-   - **KeyboardShortcutsHandler**: obsługa skrótów globalnie.
+   - **PhraseViewer**: render tokenów EN/PL; klik-to-seek; highlight aktywnego tokenu (karaoke) — rozszerzyć o `activeTokenIdx`.
+   - **KeyboardShortcutsHandler**: obsługa skrótów globalnie (Space/K/S/R/←/→/Shift+←/→/P/N) — istnieje.
 
 5. **Obsługa audio**
    - Tworzenie `Audio` na żądanie; eventy `canplay`, `timeupdate`, `ended`, `error`.
@@ -217,15 +217,15 @@ PlayerPage
    - Obsługa `ended` → 800 ms pauza → następny segment / fraza.
 
 6. **Odświeżanie manifestu**
-   - Błędy 403/410 i upływ `expires_at` → pokaż `RefreshManifestButton` i wywołaj `refresh()`.
+   - Błędy 403/410 i upływ `expires_at` → `RefreshManifestButton` + refetch (guard wygasania: `useSignedUrlGuard`).
 
 7. **A11y i UX**
    - Focus management dla przycisków; `aria-live` dla zmian stanu.
    - `Token` dostępny klawiaturą (`tabindex=0`, `Enter/Space`).
 
 8. **Testy**
-   - Jednostkowe: maszyna stanu, mapowanie tokenów, parsowanie manifestu.
-   - Integracyjne: klik-to-seek, auto-advance, obsługa błędów 403/410.
+   - Jednostkowe: `useHighlight` (activeTokenIdx: timings/heurystyka), `useClickToSeek` (heurystyka).
+   - Integracyjne: klik-to-seek (start odtwarzania na klik), auto-advance, obsługa błędów 403/410.
    - E2E: ścieżka „od pierwszej frazy do auto-advance” i skróty klawiaturowe.
 
 9. **Optymalizacje (po MVP)**
