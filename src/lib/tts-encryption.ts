@@ -1,5 +1,46 @@
 // Using Web Crypto API instead of Node.js crypto
 
+// Minimal Buffer compatibility layer for environments without Node Buffer (e.g., Cloudflare Workers)
+// We only rely on Buffer.from(...) and .toString("base64" | "hex" | "utf8").
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const BufferCompat: any =
+  typeof Buffer !== "undefined"
+    ? Buffer
+    : {
+        from(input: string | ArrayBuffer | Uint8Array | ArrayLike<number>, encoding?: string) {
+          if (typeof input === "string") {
+            if (encoding === "base64") {
+              const binary = atob(input);
+              const bytes = new Uint8Array(binary.length);
+              for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+              }
+              return bytes;
+            }
+            if (encoding === "hex") {
+              const len = input.length / 2;
+              const bytes = new Uint8Array(len);
+              for (let i = 0; i < len; i++) {
+                bytes[i] = parseInt(input.substr(i * 2, 2), 16);
+              }
+              return bytes;
+            }
+            const encoder = new TextEncoder();
+            return encoder.encode(input);
+          }
+
+          if (input instanceof ArrayBuffer) {
+            return new Uint8Array(input);
+          }
+
+          if (input instanceof Uint8Array) {
+            return input;
+          }
+
+          return new Uint8Array(input as ArrayLike<number>);
+        },
+      };
+
 // Encryption configuration
 const ALGORITHM = "AES-GCM";
 const KEY_LENGTH = 32; // 256 bits
@@ -210,7 +251,7 @@ async function deriveKey(masterKey: Uint8Array<ArrayBuffer>, salt: Uint8Array<Ar
 /**
  * Encrypts a TTS API key using AES-GCM
  * @param plaintext The API key to encrypt
- * @returns Encrypted key as Buffer
+ * @returns Encrypted key as Buffer-compatible value (Buffer in Node, Uint8Array subclass in Workers)
  */
 export async function encrypt(plaintext: string): Promise<Buffer> {
   try {
@@ -237,7 +278,7 @@ export async function encrypt(plaintext: string): Promise<Buffer> {
     result.set(iv, salt.length);
     result.set(new Uint8Array(encrypted), salt.length + iv.length);
 
-    return Buffer.from(result);
+    return BufferCompat.from(result) as Buffer;
   } catch (error) {
     throw new Error(`Encryption failed: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
@@ -245,34 +286,35 @@ export async function encrypt(plaintext: string): Promise<Buffer> {
 
 /**
  * Decrypts a TTS API key using AES-GCM
- * @param encryptedData The encrypted key as Buffer
+ * @param encryptedData The encrypted key as Buffer (or compatible Uint8Array)
  * @returns Decrypted API key
  */
 export async function decrypt(encryptedData: Buffer | Uint8Array | string | unknown): Promise<string> {
   try {
     const masterKey = await getEncryptionKey();
 
-    // Convert to Buffer if needed
-    let buffer: Buffer;
+    // Convert to Buffer-compatible value if needed
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let buffer: any;
     if (typeof encryptedData === "string") {
       // Check if it's hex encoded (starts with \x)
       if (encryptedData.startsWith("\\x")) {
         // Remove \x prefix and convert hex to buffer
         const hexString = encryptedData.replace(/\\x/g, "");
-        buffer = Buffer.from(hexString, "hex");
+        buffer = BufferCompat.from(hexString, "hex");
       } else {
         // Try base64 first, then hex
         try {
-          buffer = Buffer.from(encryptedData, "base64");
+          buffer = BufferCompat.from(encryptedData, "base64");
         } catch {
-          buffer = Buffer.from(encryptedData, "hex");
+          buffer = BufferCompat.from(encryptedData, "hex");
         }
       }
     } else if (encryptedData instanceof Uint8Array) {
-      buffer = Buffer.from(encryptedData);
+      buffer = BufferCompat.from(encryptedData);
     } else if (isJsonBuffer(encryptedData)) {
       // Handle JSON Buffer format
-      buffer = Buffer.from(encryptedData.data);
+      buffer = BufferCompat.from(encryptedData.data);
     } else {
       buffer = encryptedData as Buffer;
     }

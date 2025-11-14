@@ -170,8 +170,20 @@ export async function PUT(context: APIContext) {
 
     const keyFingerprint = await generateKeyFingerprint(google_api_key);
 
-    // Convert Buffer to base64 string for storage
-    const encryptedKeyBase64 = encryptedKey.toString("base64");
+    // Convert encrypted bytes to base64 string for storage
+    let encryptedKeyBase64: string;
+    if (typeof Buffer !== "undefined" && encryptedKey instanceof Buffer) {
+      encryptedKeyBase64 = encryptedKey.toString("base64");
+    } else if (encryptedKey instanceof Uint8Array) {
+      let binary = "";
+      for (const byte of encryptedKey) {
+        binary += String.fromCharCode(byte);
+      }
+      encryptedKeyBase64 = btoa(binary);
+    } else {
+      // Fallback – should not normally happen
+      encryptedKeyBase64 = String(encryptedKey);
+    }
 
     // Save or update credentials
     const { error } = await supabase.from("tts_credentials").upsert({
