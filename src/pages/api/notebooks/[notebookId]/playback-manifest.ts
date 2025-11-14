@@ -82,18 +82,18 @@ async function generateSignedUrls(
   storageClient: Supabase,
   segments: AudioSegmentSelection[]
 ): Promise<SignedSegment[]> {
-  const signedSegments: SignedSegment[] = [];
+  // Filter only complete segments and generate URLs in parallel
+  const completeSegments = segments.filter((segment) => segment.status === "complete");
 
-  for (const segment of segments) {
-    if (segment.status === "complete") {
-      const pathParts = segment.path.split("/").filter(Boolean);
-      const fileName = pathParts[pathParts.length - 1];
-      const folderPath = pathParts.slice(0, pathParts.length - 1).join("/");
+  if (completeSegments.length === 0) {
+    return [];
+  }
 
-      console.log(
-        `[playback-manifest] Generating signed URL for segment ${segment.id}: path=${segment.path} (folder=${folderPath || "(root)"}, file=${fileName})`
-      );
+  console.log(`[playback-manifest] Generating ${completeSegments.length} signed URLs in parallel...`);
 
+  // Generate all signed URLs in parallel using Promise.all
+  const signedUrlPromises = completeSegments.map(async (segment): Promise<SignedSegment | null> => {
+    try {
       const { data: signedUrl, error } = await storageClient.storage.from("audio").createSignedUrl(segment.path, 3600); // 1 hour
 
       if (error) {
@@ -101,37 +101,36 @@ async function generateSignedUrls(
           `[playback-manifest] Failed to generate signed URL for segment ${segment.id} (path: ${segment.path}):`,
           error
         );
-        const { data: debugList, error: debugListError } = await storageClient.storage.from("audio").list(folderPath, {
-          limit: 100,
-          offset: 0,
-        });
-        if (debugListError) {
-          console.error(
-            `[playback-manifest] Additional storage debug failed for folder ${folderPath || "(root)"}:`,
-            debugListError
-          );
-        } else {
-          console.error(
-            `[playback-manifest] Folder listing for ${folderPath || "(root)"}:`,
-            debugList?.map((f) => `${f.name} (${f.metadata?.size || "unknown"} bytes)`) || "none"
-          );
-        }
-        continue; // Skip this segment
+        return null; // Skip this segment
       }
 
       if (!signedUrl || !signedUrl.signedUrl) {
         console.error(
           `[playback-manifest] Signed URL data is missing for segment ${segment.id} (path: ${segment.path})`
         );
-        continue; // Skip this segment
+        return null; // Skip this segment
       }
 
-      signedSegments.push({
+      return {
         ...segment,
         url: signedUrl.signedUrl,
-      });
+      };
+    } catch (error) {
+      console.error(
+        `[playback-manifest] Exception while generating signed URL for segment ${segment.id} (path: ${segment.path}):`,
+        error
+      );
+      return null; // Skip this segment
     }
-  }
+  });
+
+  // Wait for all promises to resolve and filter out nulls (failed segments)
+  const results = await Promise.all(signedUrlPromises);
+  const signedSegments = results.filter((segment): segment is SignedSegment => segment !== null);
+
+  console.log(
+    `[playback-manifest] Successfully generated ${signedSegments.length} signed URLs from ${completeSegments.length} segments`
+  );
 
   return signedSegments;
 }

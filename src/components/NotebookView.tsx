@@ -41,7 +41,7 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
         // Load notebook and phrases in parallel
         const [notebookData, phrasesData] = await Promise.all([
           apiCall<NotebookDTO>(`/api/notebooks/${notebookId}`, { method: "GET" }),
-          apiCall<PhraseListResponse>(`/api/notebooks/${notebookId}/phrases?sort=position&order=asc`, {
+          apiCall<PhraseListResponse>(`/api/notebooks/${notebookId}/phrases?sort=position&order=asc&limit=100`, {
             method: "GET",
           }),
         ]);
