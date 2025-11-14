@@ -6,14 +6,47 @@ const KEY_LENGTH = 32; // 256 bits
 const IV_LENGTH = 12; // 96 bits for GCM
 const SALT_LENGTH = 32; // 256 bits
 
+// Read runtime environment (works on Cloudflare via Astro runtime)
+// getRuntime() is safe to call on non-Cloudflare adapters; it just returns basic info
+// We'll attempt to access Astro's runtime module dynamically at runtime (Cloudflare).
+// This avoids test/build-time resolution errors when the module isn't present.
+async function getAstroRuntimeEnv(): Promise<Record<string, string | undefined> | undefined> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore - vite will ignore since we ask explicitly
+    const mod = await import(/* @vite-ignore */ "astro/runtime/server");
+    const runtime = typeof mod?.getRuntime === "function" ? mod.getRuntime() : undefined;
+    return (runtime?.env ?? {}) as Record<string, string | undefined>;
+  } catch {
+    return undefined;
+  }
+}
+
 type MaybeValue = string | undefined;
 
-function readEnv(key: string): MaybeValue {
+function isJsonBuffer(value: unknown): value is { type: "Buffer"; data: number[] } {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    (value as { type?: unknown }).type === "Buffer" &&
+    Array.isArray((value as { data?: unknown }).data)
+  );
+}
+
+async function readEnv(key: string): Promise<MaybeValue> {
+  // 1) Cloudflare runtime bindings via Astro adapter
+  const runtimeEnv = await getAstroRuntimeEnv();
+  if (runtimeEnv?.[key]) {
+    return runtimeEnv[key];
+  }
+
+  // 2) Build-time replacements (PUBLIC_* or explicitly injected)
   const envFromImportMeta = (import.meta as unknown as { env?: Record<string, MaybeValue> }).env;
   if (envFromImportMeta?.[key]) {
     return envFromImportMeta[key];
   }
 
+  // 3) Traditional Node.js runtime environment
   const processEnv = typeof process !== "undefined" ? process.env : undefined;
   if (processEnv?.[key]) {
     return processEnv[key];
@@ -23,8 +56,8 @@ function readEnv(key: string): MaybeValue {
 }
 
 // Get encryption key from environment or generate a default for development
-function getEncryptionKey(): Uint8Array<ArrayBuffer> {
-  const key = readEnv("TTS_ENCRYPTION_KEY");
+async function getEncryptionKey(): Promise<Uint8Array<ArrayBuffer>> {
+  const key = await readEnv("TTS_ENCRYPTION_KEY");
   const mode = import.meta.env.MODE || import.meta.env.NODE_ENV || "development";
   const isProduction = mode === "production";
 
@@ -89,7 +122,7 @@ async function deriveKey(masterKey: Uint8Array<ArrayBuffer>, salt: Uint8Array<Ar
  */
 export async function encrypt(plaintext: string): Promise<Buffer> {
   try {
-    const masterKey = getEncryptionKey();
+    const masterKey = await getEncryptionKey();
     const salt = Uint8Array.from(crypto.getRandomValues(new Uint8Array(SALT_LENGTH)));
     const iv = Uint8Array.from(crypto.getRandomValues(new Uint8Array(IV_LENGTH)));
 
@@ -125,7 +158,7 @@ export async function encrypt(plaintext: string): Promise<Buffer> {
  */
 export async function decrypt(encryptedData: Buffer | Uint8Array | string | unknown): Promise<string> {
   try {
-    const masterKey = getEncryptionKey();
+    const masterKey = await getEncryptionKey();
 
     // Convert to Buffer if needed
     let buffer: Buffer;
@@ -145,15 +178,11 @@ export async function decrypt(encryptedData: Buffer | Uint8Array | string | unkn
       }
     } else if (encryptedData instanceof Uint8Array) {
       buffer = Buffer.from(encryptedData);
-    } else if (
-      typeof encryptedData === "object" &&
-      encryptedData.type === "Buffer" &&
-      Array.isArray(encryptedData.data)
-    ) {
+    } else if (isJsonBuffer(encryptedData)) {
       // Handle JSON Buffer format
       buffer = Buffer.from(encryptedData.data);
     } else {
-      buffer = encryptedData;
+      buffer = encryptedData as Buffer;
     }
 
     // Extract components

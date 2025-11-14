@@ -23,3 +23,12 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// Minimal type for Astro runtime helper so ESLint/TS can resolve it
+declare module "astro/runtime/server" {
+  export function getRuntime():
+    | {
+        env?: Record<string, string | undefined>;
+      }
+    | undefined;
+}
