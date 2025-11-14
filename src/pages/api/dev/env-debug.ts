@@ -64,6 +64,25 @@ export const GET: APIRoute = async (context) => {
     // ignore
   }
 
+  // 6) Astro APIContext inspection (adapter-specific)
+  const contextAny = context as unknown as {
+    locals?: Record<string, unknown>;
+    env?: Record<string, string | undefined>;
+  };
+  const contextKeys = Object.keys(contextAny ?? {});
+  const localsKeys = contextAny.locals ? Object.keys(contextAny.locals) : [];
+  const contextEnvKeysSample = contextAny.env
+    ? Object.keys(contextAny.env).filter((name) =>
+        ["PHRASE", "TTS", "SUPABASE", "APP"].some((prefix) => name.includes(prefix))
+      )
+    : [];
+  const localsRuntimeEnvKeysSample =
+    contextAny.locals && (contextAny.locals as { runtime?: { env?: Record<string, string | undefined> } }).runtime?.env
+      ? Object.keys(
+          (contextAny.locals as { runtime?: { env?: Record<string, string | undefined> } }).runtime?.env ?? {}
+        ).filter((name) => ["PHRASE", "TTS", "SUPABASE", "APP"].some((prefix) => name.includes(prefix)))
+      : [];
+
   const body = {
     mode,
     nodeEnv,
@@ -88,6 +107,12 @@ export const GET: APIRoute = async (context) => {
     },
     globalEnv: {
       keysSample: globalEnvKeysSample,
+    },
+    astroContext: {
+      contextKeys,
+      localsKeys,
+      contextEnvKeysSample,
+      localsRuntimeEnvKeysSample,
     },
   };
 
