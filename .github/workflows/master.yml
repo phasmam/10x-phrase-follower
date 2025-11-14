@@ -115,6 +115,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Debug TTS_ENCRYPTION_KEY length
+        run: node -e "console.log('TTS len:', (process.env.TTS_ENCRYPTION_KEY || '').length)"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
