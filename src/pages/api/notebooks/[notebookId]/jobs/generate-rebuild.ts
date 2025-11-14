@@ -4,8 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../../../../../db/database.types";
 import { ApiError, ApiErrors } from "../../../../../lib/errors";
 import type { JobDTO } from "../../../../../types";
-import { JobWorker } from "../../../../../lib/job-worker";
-import { ensureUserExists, getSupabaseClient, getSupabaseEnvVars } from "../../../../../lib/utils";
+import { ensureUserExists, getSupabaseClient } from "../../../../../lib/utils";
 
 type SupabaseClient = ReturnType<typeof createClient<Database>>;
 
@@ -124,91 +123,10 @@ export async function POST(context: APIContext) {
       throw ApiErrors.internal("Failed to create job");
     }
 
-    // Process the job immediately
-    console.log("Starting job processing...");
-    try {
-      // Read Supabase env vars from multiple sources (including Cloudflare runtime)
-      const { supabaseUrl, supabaseServiceKey } = getSupabaseEnvVars(context);
-
-      console.log("Supabase URL configured:", !!supabaseUrl);
-      console.log("Supabase Service Key configured:", !!supabaseServiceKey);
-
-      if (supabaseUrl && supabaseServiceKey) {
-        console.log("Creating JobWorker instance...");
-        const worker = new JobWorker(supabaseUrl, supabaseServiceKey);
-        console.log("JobWorker instance created, starting job processing...");
-
-        // Process the job in the background
-        // Use waitUntil() if available (Cloudflare Workers) to keep request alive
-        const jobPromise = worker.processJob(jobId).catch(async (error: Error) => {
-          console.error("Failed to process job:", error);
-          // Update job state to failed
-          try {
-            await supabase
-              .from("jobs")
-              .update({
-                state: "failed",
-                error: error.message,
-                ended_at: new Date().toISOString(),
-              })
-              .eq("id", jobId);
-            console.log(`Job ${jobId} marked as failed: ${error.message}`);
-          } catch (updateError: unknown) {
-            console.error("Failed to update job state:", updateError);
-          }
-        });
-
-        // Try to use waitUntil() if available (Cloudflare Workers)
-        // Astro Cloudflare adapter may expose waitUntil through different paths
-        // Check multiple possible locations where waitUntil might be available
-        const contextAny = context as unknown as {
-          waitUntil?: (promise: Promise<unknown>) => void;
-          platform?: { waitUntil?: (promise: Promise<unknown>) => void };
-        };
-        const localsAny = context.locals as unknown as {
-          waitUntil?: (promise: Promise<unknown>) => void;
-          runtime?: { waitUntil?: (promise: Promise<unknown>) => void };
-          cf?: { waitUntil?: (promise: Promise<unknown>) => void };
-        };
-
-        let waitUntilUsed = false;
-        if (contextAny.waitUntil) {
-          contextAny.waitUntil(jobPromise);
-          console.log("Job processing started in background (using context.waitUntil)");
-          waitUntilUsed = true;
-        } else if (contextAny.platform?.waitUntil) {
-          contextAny.platform.waitUntil(jobPromise);
-          console.log("Job processing started in background (using platform.waitUntil)");
-          waitUntilUsed = true;
-        } else if (localsAny.waitUntil) {
-          localsAny.waitUntil(jobPromise);
-          console.log("Job processing started in background (using locals.waitUntil)");
-          waitUntilUsed = true;
-        } else if (localsAny.runtime?.waitUntil) {
-          localsAny.runtime.waitUntil(jobPromise);
-          console.log("Job processing started in background (using runtime.waitUntil)");
-          waitUntilUsed = true;
-        } else if (localsAny.cf?.waitUntil) {
-          localsAny.cf.waitUntil(jobPromise);
-          console.log("Job processing started in background (using cf.waitUntil)");
-          waitUntilUsed = true;
-        }
-
-        if (!waitUntilUsed) {
-          // Fallback: just start the promise (may be interrupted in Cloudflare Workers)
-          // In Node.js adapter, this will work fine
-          void jobPromise;
-          console.log("Job processing started in background (no waitUntil available - job may be interrupted)");
-          console.log("Available context keys:", Object.keys(context));
-          console.log("Available locals keys:", Object.keys(context.locals));
-        }
-      } else {
-        console.error("Missing Supabase configuration for job processing");
-      }
-    } catch (error) {
-      console.error("Failed to start job processing:", error);
-      console.error("Error details:", error);
-    }
+    // Note: Job processing is handled by a separate endpoint or cron job
+    // In Cloudflare Workers, we can't reliably use waitUntil() for long-running tasks
+    // The job will be processed by calling /api/jobs/process-queued endpoint
+    // or by setting up a Cloudflare Cron Trigger
 
     const response: JobDTO = job;
 
