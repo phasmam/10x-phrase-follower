@@ -23,8 +23,10 @@ const updatePhrase = async ({
 
   // In development, use service role key to bypass RLS
   if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
-    const supabaseUrl = import.meta.env.SUPABASE_URL;
-    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseUrl = import.meta.env.SUPABASE_URL || (typeof process !== "undefined" && process.env.SUPABASE_URL);
+    const supabaseServiceKey =
+      import.meta.env.SUPABASE_SERVICE_ROLE_KEY ||
+      (typeof process !== "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY);
 
     if (supabaseServiceKey) {
       supabase = createClient(supabaseUrl, supabaseServiceKey, {
@@ -147,8 +149,10 @@ const deletePhrase = async ({
 
   // In development, use service role key to bypass RLS
   if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
-    const supabaseUrl = import.meta.env.SUPABASE_URL;
-    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseUrl = import.meta.env.SUPABASE_URL || (typeof process !== "undefined" && process.env.SUPABASE_URL);
+    const supabaseServiceKey =
+      import.meta.env.SUPABASE_SERVICE_ROLE_KEY ||
+      (typeof process !== "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY);
 
     if (supabaseServiceKey) {
       supabase = createClient(supabaseUrl, supabaseServiceKey, {

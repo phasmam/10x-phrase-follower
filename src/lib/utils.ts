@@ -68,8 +68,10 @@ export function getSupabaseClient(context: APIContext): ReturnType<typeof create
 
   // In development mode with DEFAULT_USER_ID, use service role key to bypass RLS
   if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
-    const supabaseUrl = import.meta.env.SUPABASE_URL;
-    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseUrl = import.meta.env.SUPABASE_URL || (typeof process !== "undefined" && process.env.SUPABASE_URL);
+    const supabaseServiceKey =
+      import.meta.env.SUPABASE_SERVICE_ROLE_KEY ||
+      (typeof process !== "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY);
 
     if (supabaseServiceKey) {
       return createClient(supabaseUrl, supabaseServiceKey, {
@@ -87,8 +89,16 @@ export function getSupabaseClient(context: APIContext): ReturnType<typeof create
     const authHeader = context.request.headers.get("authorization");
     if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.substring(7);
-      const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || import.meta.env.SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_KEY || import.meta.env.SUPABASE_KEY;
+      const supabaseUrl =
+        import.meta.env.PUBLIC_SUPABASE_URL ||
+        import.meta.env.SUPABASE_URL ||
+        (typeof process !== "undefined" && process.env.PUBLIC_SUPABASE_URL) ||
+        (typeof process !== "undefined" && process.env.SUPABASE_URL);
+      const supabaseAnonKey =
+        import.meta.env.PUBLIC_SUPABASE_KEY ||
+        import.meta.env.SUPABASE_KEY ||
+        (typeof process !== "undefined" && process.env.PUBLIC_SUPABASE_KEY) ||
+        (typeof process !== "undefined" && process.env.SUPABASE_KEY);
 
       if (supabaseUrl && supabaseAnonKey) {
         // Create an authenticated client with the user's token

@@ -15,7 +15,8 @@ export class DevJwtGenerator {
       throw new Error("DevJwtGenerator is only available in development mode");
     }
 
-    const secret = import.meta.env.SUPABASE_JWT_SECRET;
+    const secret =
+      import.meta.env.SUPABASE_JWT_SECRET || (typeof process !== "undefined" && process.env.SUPABASE_JWT_SECRET);
     if (!secret) {
       throw new Error("SUPABASE_JWT_SECRET is required for DEV_JWT generation");
     }

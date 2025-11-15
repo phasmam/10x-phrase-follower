@@ -79,21 +79,7 @@ export default function AuthCard() {
         return;
       }
 
-      // Check if Supabase client is using placeholder (not configured)
-      // Try to access the client's URL through its internal properties
-      const clientUrl =
-        (supabaseClient as { supabaseUrl?: string }).supabaseUrl ||
-        import.meta.env.PUBLIC_SUPABASE_URL ||
-        import.meta.env.SUPABASE_URL;
-
-      if (!clientUrl || clientUrl.includes("placeholder")) {
-        setError(
-          "Supabase nie jest skonfigurowany. Ustaw PUBLIC_SUPABASE_URL i PUBLIC_SUPABASE_KEY w zmiennych środowiskowych i zbuduj aplikację ponownie (npm run build)."
-        );
-        setIsLoading(false);
-        return;
-      }
-
+      // Try to authenticate - if Supabase is not configured, this will return an error
       const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
         email: email.trim(),
         password: password,

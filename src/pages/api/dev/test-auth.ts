@@ -14,9 +14,19 @@ export const POST: APIRoute = async (context) => {
   // (it's a dev utility endpoint)
 
   try {
-    const supabaseUrl = import.meta.env.SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-    const supabaseAnonKey = import.meta.env.SUPABASE_KEY || import.meta.env.PUBLIC_SUPABASE_KEY;
+    const supabaseUrl =
+      import.meta.env.SUPABASE_URL ||
+      import.meta.env.PUBLIC_SUPABASE_URL ||
+      (typeof process !== "undefined" && process.env.SUPABASE_URL) ||
+      (typeof process !== "undefined" && process.env.PUBLIC_SUPABASE_URL);
+    const supabaseServiceKey =
+      import.meta.env.SUPABASE_SERVICE_ROLE_KEY ||
+      (typeof process !== "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY);
+    const supabaseAnonKey =
+      import.meta.env.SUPABASE_KEY ||
+      import.meta.env.PUBLIC_SUPABASE_KEY ||
+      (typeof process !== "undefined" && process.env.SUPABASE_KEY) ||
+      (typeof process !== "undefined" && process.env.PUBLIC_SUPABASE_KEY);
 
     if (!supabaseUrl) {
       return new Response(

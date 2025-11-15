@@ -10,8 +10,10 @@ export async function createDevUser() {
     throw new Error("createDevUser is only available in development mode");
   }
 
-  const supabaseUrl = import.meta.env.SUPABASE_URL;
-  const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = import.meta.env.SUPABASE_URL || (typeof process !== "undefined" && process.env.SUPABASE_URL);
+  const supabaseServiceKey =
+    import.meta.env.SUPABASE_SERVICE_ROLE_KEY ||
+    (typeof process !== "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY);
 
   if (!supabaseServiceKey) {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for user creation");
@@ -75,8 +77,8 @@ export async function generateSupabaseToken() {
     throw new Error("generateSupabaseToken is only available in development mode");
   }
 
-  const supabaseUrl = import.meta.env.SUPABASE_URL;
-  const supabaseAnonKey = import.meta.env.SUPABASE_KEY;
+  const supabaseUrl = import.meta.env.SUPABASE_URL || (typeof process !== "undefined" && process.env.SUPABASE_URL);
+  const supabaseAnonKey = import.meta.env.SUPABASE_KEY || (typeof process !== "undefined" && process.env.SUPABASE_KEY);
 
   // Create client with anon key
   const supabase = createClient(supabaseUrl, supabaseAnonKey);

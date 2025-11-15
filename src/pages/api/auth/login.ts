@@ -52,8 +52,8 @@ const loginHandler = async (context: { request: Request }): Promise<Response> =>
   }
 
   // Get Supabase client with anon key
-  const supabaseUrl = import.meta.env.SUPABASE_URL;
-  const supabaseAnonKey = import.meta.env.SUPABASE_KEY;
+  const supabaseUrl = import.meta.env.SUPABASE_URL || (typeof process !== "undefined" && process.env.SUPABASE_URL);
+  const supabaseAnonKey = import.meta.env.SUPABASE_KEY || (typeof process !== "undefined" && process.env.SUPABASE_KEY);
 
   if (!supabaseUrl || !supabaseAnonKey) {
     throw ApiErrors.internal("Supabase configuration is missing");

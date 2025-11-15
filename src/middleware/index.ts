@@ -31,7 +31,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
     try {
       // In development, check for DEV_JWT
       if (import.meta.env.NODE_ENV === "development" && token.startsWith("dev_")) {
-        const devJwtSecret = import.meta.env.SUPABASE_JWT_SECRET;
+        const devJwtSecret =
+          import.meta.env.SUPABASE_JWT_SECRET || (typeof process !== "undefined" && process.env.SUPABASE_JWT_SECRET);
         if (devJwtSecret) {
           const actualJwt = token.substring(4); // Remove "dev_" prefix
           const { payload } = await jwtVerify(actualJwt, new TextEncoder().encode(devJwtSecret));
