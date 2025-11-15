@@ -18,12 +18,14 @@ docker compose ps
 ```
 
 **Oczekiwany wynik:**
+
 ```
 NAME                IMAGE                                          STATUS
 phrase-follower     ghcr.io/phasmam/10x-phrase-follower:latest    Up X seconds/minutes
 ```
 
 **Jeśli kontener nie działa:**
+
 - Sprawdź logi: `docker compose logs`
 - Sprawdź ostatnie logi: `docker compose logs --tail=50`
 
@@ -35,12 +37,14 @@ docker compose logs -f
 ```
 
 **Co szukać:**
+
 - Błędy startowe
 - Błędy połączenia z Supabase
 - Błędy związane z brakującymi zmiennymi środowiskowymi
 - Port już zajęty
 
 **Typowe błędy:**
+
 - `Error: Missing SUPABASE_URL` → brakuje zmiennych w `.env`
 - `EADDRINUSE: address already in use :::3000` → port 3000 zajęty
 - `Error connecting to database` → problem z Supabase credentials
@@ -68,6 +72,7 @@ ufw reload
 ```
 
 **Sprawdź DigitalOcean Firewall (jeśli używasz):**
+
 - DigitalOcean Dashboard → Networking → Firewalls
 - Upewnij się, że port 3000 (lub 80/443) jest otwarty
 
@@ -79,6 +84,7 @@ ls -la
 ```
 
 **Powinieneś zobaczyć:**
+
 - `docker-compose.yml`
 - `.env` (z uprawnieniami 600)
 
@@ -119,6 +125,7 @@ curl http://IP_DROPLETA:3000
 ```
 
 **Jeśli `curl localhost:3000` działa, ale z zewnątrz nie:**
+
 - Problem z firewallem lub port forwarding
 - Użyj nginx jako reverse proxy (patrz Krok 7)
 
@@ -173,6 +180,7 @@ docker compose ps
 ```
 
 **Jeśli status to "Restarting" lub "Exited":**
+
 - Kontener się crashuje
 - Sprawdź logi: `docker compose logs --tail=100`
 - Sprawdź `.env` - może brakuje zmiennych
@@ -228,17 +236,21 @@ docker images | grep phrase-follower
 ## Najczęstsze problemy i rozwiązania
 
 ### Problem: Kontener się nie uruchamia
+
 **Rozwiązanie:** Sprawdź logi, sprawdź `.env`, sprawdź czy wszystkie zmienne są ustawione
 
 ### Problem: Port 3000 nie odpowiada
+
 **Rozwiązanie:** Sprawdź firewall, użyj nginx jako reverse proxy
 
 ### Problem: Błąd "Missing environment variable"
+
 **Rozwiązanie:** Sprawdź `.env` - wszystkie zmienne muszą być ustawione
 
 ### Problem: Błąd połączenia z Supabase
+
 **Rozwiązanie:** Sprawdź `SUPABASE_URL` i `SUPABASE_SERVICE_ROLE_KEY` w `.env`
 
 ### Problem: Obraz nie został pobrany
-**Rozwiązanie:** `docker compose pull` - upewnij się że obraz jest publiczny w GHCR
 
+**Rozwiązanie:** `docker compose pull` - upewnij się że obraz jest publiczny w GHCR
