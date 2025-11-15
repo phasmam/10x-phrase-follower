@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  app:
+    # Image name should be set via environment variable or replace with your actual GHCR path
+    # Example: ghcr.io/your-username/10x-phrase-follower:latest
+    image: ${DOCKER_IMAGE:-ghcr.io/phasmam/10x-phrase-follower:latest}
+    container_name: phrase-follower
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Supabase configuration
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_KEY: ${SUPABASE_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      PUBLIC_SUPABASE_URL: ${PUBLIC_SUPABASE_URL}
+      PUBLIC_SUPABASE_KEY: ${PUBLIC_SUPABASE_KEY}
+      # TTS encryption key
+      PHRASE_TTS_ENCRYPTION_KEY: ${PHRASE_TTS_ENCRYPTION_KEY}
+      # Node environment
+      NODE_ENV: production
+    # Health check
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
