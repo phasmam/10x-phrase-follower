@@ -48,7 +48,6 @@ jobs:
 
   test:
     name: Run Tests
-    needs: [format, lint]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -68,7 +67,7 @@ jobs:
 
   build:
     name: Build
-    needs: [test]
+    needs: [format, lint, test]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -148,13 +147,13 @@ jobs:
             docker compose ps
 
   # Cloudflare Pages deployment - disabled by default
-  # Uncomment and set ENABLE_CLOUDFLARE_DEPLOY=true in repository secrets to enable
+  # Set ENABLE_CLOUDFLARE_DEPLOY=true in repository secrets to enable
   deploy_cloudflare_pages:
     name: Deploy to Cloudflare Pages
     needs: [build]
     runs-on: ubuntu-latest
     environment: production
-    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request' && secrets.ENABLE_CLOUDFLARE_DEPLOY == 'true'
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
     env:
       # or keep your ASTRO_ADAPTER=cloudflare
       CF_PAGES: "1"
@@ -168,23 +167,38 @@ jobs:
       # TTS encryption key (64-character hex string) - also needs to be set in Cloudflare Pages dashboard for runtime
       PHRASE_TTS_ENCRYPTION_KEY: ${{ secrets.TTS_ENCRYPTION_KEY }}
     steps:
+      - name: Check if Cloudflare deploy is enabled
+        id: check_enabled
+        run: |
+          if [ "${{ secrets.ENABLE_CLOUDFLARE_DEPLOY }}" != "true" ]; then
+            echo "Cloudflare deploy is disabled (ENABLE_CLOUDFLARE_DEPLOY != true)"
+            exit 0
+          fi
+          echo "enabled=true" >> $GITHUB_OUTPUT
+
       - name: Checkout code
+        if: steps.check_enabled.outputs.enabled == 'true'
         uses: actions/checkout@v4
+
       - name: Setup Node.js
+        if: steps.check_enabled.outputs.enabled == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "22.14.0"
           cache: "npm"
 
       - name: Install dependencies
+        if: steps.check_enabled.outputs.enabled == 'true'
         run: npm ci
 
       - name: Build (Cloudflare adapter)
+        if: steps.check_enabled.outputs.enabled == 'true'
         run: npm run build
         # CF_PAGES=1 already set at job level
         # or: ASTRO_ADAPTER=cloudflare npm run build
 
       - name: Deploy to Cloudflare Pages
+        if: steps.check_enabled.outputs.enabled == 'true'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
