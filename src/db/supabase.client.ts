@@ -22,20 +22,25 @@ let supabaseClientInstance: ReturnType<typeof createClient<Database>> | null = n
 
 if (supabaseUrl && supabaseAnonKey) {
   supabaseClientInstance = createClient<Database>(supabaseUrl, supabaseAnonKey);
-} else if (import.meta.env.NODE_ENV === "production") {
-  // Only throw in production - in dev we can use DEV_JWT
-  throw new Error(
-    "Supabase configuration is missing. Please set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_KEY (or SUPABASE_URL and SUPABASE_KEY for server-side)."
-  );
 } else {
-  // In development, create a dummy client to avoid null issues
-  // It won't work for actual auth, but prevents import errors
-  // eslint-disable-next-line no-console
-  console.warn(
-    "Supabase client not configured. Using DEV_JWT for authentication. Set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_KEY for Supabase features."
-  );
-  // Create a dummy client with placeholder values (won't work for real operations)
-  supabaseClientInstance = createClient<Database>("https://placeholder.supabase.co", "placeholder-key");
+  // Check NODE_ENV from both import.meta.env and process.env
+  const nodeEnv = import.meta.env.NODE_ENV || (typeof process !== "undefined" && process.env.NODE_ENV) || "development";
+
+  if (nodeEnv === "production") {
+    // Only throw in production - in dev we can use DEV_JWT
+    throw new Error(
+      "Supabase configuration is missing. Please set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_KEY (or SUPABASE_URL and SUPABASE_KEY for server-side)."
+    );
+  } else {
+    // In development, create a dummy client to avoid null issues
+    // It won't work for actual auth, but prevents import errors
+    // eslint-disable-next-line no-console
+    console.warn(
+      "Supabase client not configured. Using DEV_JWT for authentication. Set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_KEY for Supabase features."
+    );
+    // Create a dummy client with placeholder values (won't work for real operations)
+    supabaseClientInstance = createClient<Database>("https://placeholder.supabase.co", "placeholder-key");
+  }
 }
 
 export const supabaseClient = supabaseClientInstance;
