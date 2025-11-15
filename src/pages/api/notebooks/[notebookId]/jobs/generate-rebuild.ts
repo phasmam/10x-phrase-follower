@@ -1,6 +1,7 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
 import type { Database } from "../../../../../db/database.types";
 import { ApiError, ApiErrors } from "../../../../../lib/errors";
 import type { JobDTO } from "../../../../../types";
@@ -107,7 +108,7 @@ export async function POST(context: APIContext) {
     await checkActiveJobs(supabase, notebookId);
 
     // Create job
-    const jobId = crypto.randomUUID();
+    const jobId = randomUUID();
     const { data: job, error } = await supabase
       .from("jobs")
       .insert({

@@ -1,6 +1,7 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
 import type { Database } from "../../../db/database.types";
 import { ApiError, ApiErrors } from "../../../lib/errors";
 import type { UserVoiceDTO } from "../../../types";
@@ -99,7 +100,7 @@ export async function PUT(context: APIContext) {
       .from("user_voices")
       .upsert(
         {
-          id: crypto.randomUUID(),
+          id: randomUUID(),
           user_id: userId,
           slot: validatedSlot,
           language,

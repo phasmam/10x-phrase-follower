@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "./ui/button";
 import { useApi } from "../lib/hooks/useApi";
 import { useToast } from "./ui/toast";
+import { generateUUID } from "../lib/utils";
 import type { TtsCredentialsStateDTO, UserVoicesListResponse, JobDTO } from "../types";
 
 interface GenerateAudioButtonProps {
@@ -166,7 +167,7 @@ export default function GenerateAudioButton({
 
     try {
       // Generate idempotency key
-      const idempotencyKey = crypto.randomUUID();
+      const idempotencyKey = generateUUID();
 
       const job = await apiCall<JobDTO>(`/api/notebooks/${notebookId}/jobs/generate-rebuild`, {
         method: "POST",

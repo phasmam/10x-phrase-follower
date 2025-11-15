@@ -1,4 +1,5 @@
 import type { APIRoute, APIContext } from "astro";
+import { randomUUID } from "node:crypto";
 import type { PhraseListResponse, CreatePhraseCommand } from "../../../../../types";
 import type { LocalsWithAuth } from "../../../../../lib/types";
 import { withErrorHandling, requireAuth, ApiErrors } from "../../../../../lib/errors";
@@ -135,7 +136,7 @@ const createPhrase = async (context: APIContext): Promise<Response> => {
   const { data, error } = await supabase
     .from("phrases")
     .insert({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       notebook_id: notebookId,
       position: validatedPosition,
       en_text: sanitizedEnText,

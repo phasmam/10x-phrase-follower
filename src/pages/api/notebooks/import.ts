@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { randomUUID } from "node:crypto";
 import type { ImportNotebookCommand, ImportNotebookResultDTO } from "../../../types";
 import { withErrorHandling, ApiErrors } from "../../../lib/errors";
 import {
@@ -77,7 +78,7 @@ export const POST: APIRoute = withErrorHandling(async ({ locals, request }) => {
   }
 
   // Create notebook
-  const notebookId = crypto.randomUUID();
+  const notebookId = randomUUID();
   const { data: notebook, error: notebookError } = await supabase
     .from("notebooks")
     .insert({
@@ -98,7 +99,7 @@ export const POST: APIRoute = withErrorHandling(async ({ locals, request }) => {
   // Create phrases with positions
   const positions = generatePositions(accepted.length);
   const phrases = accepted.map((line, index) => ({
-    id: crypto.randomUUID(),
+    id: randomUUID(),
     notebook_id: notebookId,
     position: positions[index],
     en_text: line.en,
@@ -115,7 +116,7 @@ export const POST: APIRoute = withErrorHandling(async ({ locals, request }) => {
   // Create import logs for rejected lines
   if (rejected.length > 0) {
     const importLogs = rejected.map((reject) => ({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       user_id: userId,
       notebook_id: notebookId,
       line_no: reject.lineNo,
@@ -138,7 +139,7 @@ export const POST: APIRoute = withErrorHandling(async ({ locals, request }) => {
       accepted: accepted.length,
       rejected: rejected.length,
       logs: rejected.map((reject) => ({
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         line_no: reject.lineNo,
         raw_text: reject.rawText,
         reason: reject.reason,

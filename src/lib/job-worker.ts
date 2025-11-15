@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
 import type { Database } from "../db/database.types";
 
 // Minimal Buffer compatibility layer for environments without Node Buffer (e.g., Cloudflare Workers)
@@ -224,7 +225,7 @@ export class JobWorker {
               );
               // Create failed segment with a placeholder path
               audioSegments.push({
-                id: crypto.randomUUID(),
+                id: randomUUID(),
                 phrase_id: phrase.id,
                 build_id: buildId,
                 voice_slot: voice.slot,
@@ -362,7 +363,7 @@ export class JobWorker {
 
   private async createBuild(notebookId: string, jobId: string): Promise<string> {
     // Generate a proper UUID for the build ID
-    const buildId = crypto.randomUUID();
+    const buildId = randomUUID();
 
     const { error } = await this.supabase.from("builds").insert({
       id: buildId,

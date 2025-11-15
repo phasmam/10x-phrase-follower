@@ -1,4 +1,5 @@
 import type { APIRoute, APIContext } from "astro";
+import { randomUUID } from "node:crypto";
 import type { NotebookListResponse, CreateNotebookCommand } from "../../../types";
 import type { LocalsWithAuth } from "../../../lib/types";
 import { withErrorHandling, requireAuth, ApiErrors } from "../../../lib/errors";
@@ -107,7 +108,7 @@ const createNotebook = async (context: APIContext): Promise<Response> => {
   const { data, error } = await supabase
     .from("notebooks")
     .insert({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       user_id: userId,
       name: sanitizedName,
     })

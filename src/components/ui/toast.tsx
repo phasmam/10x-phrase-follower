@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { Button } from "./button";
+import { generateUUID } from "../../lib/utils";
 
 // Toast types
 export type ToastType = "success" | "error" | "warning" | "info";
@@ -28,7 +29,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const addToast = useCallback((toast: Omit<Toast, "id">) => {
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     const newToast: Toast = {
       ...toast,
       id,

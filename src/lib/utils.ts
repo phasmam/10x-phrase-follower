@@ -11,6 +11,26 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Generates a UUID using the appropriate crypto API for the environment.
+ * Works in both browser (Web Crypto API) and Node.js (node:crypto).
+ * For Node.js, use randomUUID from node:crypto directly instead.
+ */
+export function generateUUID(): string {
+  // In browser, use Web Crypto API
+  if (typeof window !== "undefined" && window.crypto && window.crypto.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  // In Node.js, this should not be used - use randomUUID from node:crypto directly
+  // This is a fallback for SSR or edge cases
+  // Fallback: generate a simple UUID v4
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+/**
  * Reads Supabase environment variables from multiple sources (Cloudflare runtime, import.meta.env, etc.)
  * Similar to readEnvWithTrace in tts-encryption.ts, but specifically for Supabase config
  * @param context - Astro API context (optional, for Cloudflare runtime env access)

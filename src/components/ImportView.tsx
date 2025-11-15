@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Button } from "./ui/button";
 import { useApi } from "../lib/hooks/useApi";
 import { ToastProvider, useToast } from "./ui/toast";
+import { generateUUID } from "../lib/utils";
 import type { ImportNotebookCommand, ImportNotebookResultDTO } from "../types";
 
 interface ImportState {
@@ -93,7 +94,7 @@ function ImportViewContent() {
       };
 
       // Generate idempotency key
-      const idempotencyKey = crypto.randomUUID();
+      const idempotencyKey = generateUUID();
 
       // Call import API
       const result = await apiCall<ImportNotebookResultDTO>("/api/notebooks/import", {
