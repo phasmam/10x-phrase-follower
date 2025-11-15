@@ -1,12 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { JobWorker } from "../lib/job-worker";
 
-// Mock crypto.randomUUID
-Object.defineProperty(global, "crypto", {
-  value: {
-    randomUUID: vi.fn(() => "test-uuid-123"),
-  },
-});
+// Mock randomUUID from node:crypto
+vi.mock("node:crypto", () => ({
+  randomUUID: vi.fn(() => "test-uuid-123"),
+}));
 
 describe("JobWorker", () => {
   let worker: JobWorker;
