@@ -4,8 +4,17 @@ import type { Database } from "./database.types";
 
 // Use PUBLIC_ prefix for client-side access in Astro
 // Fallback to non-prefixed for server-side compatibility
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || import.meta.env.SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_KEY || import.meta.env.SUPABASE_KEY;
+// In Node.js runtime, also check process.env as fallback
+const supabaseUrl =
+  import.meta.env.PUBLIC_SUPABASE_URL ||
+  import.meta.env.SUPABASE_URL ||
+  (typeof process !== "undefined" && process.env.PUBLIC_SUPABASE_URL) ||
+  (typeof process !== "undefined" && process.env.SUPABASE_URL);
+const supabaseAnonKey =
+  import.meta.env.PUBLIC_SUPABASE_KEY ||
+  import.meta.env.SUPABASE_KEY ||
+  (typeof process !== "undefined" && process.env.PUBLIC_SUPABASE_KEY) ||
+  (typeof process !== "undefined" && process.env.SUPABASE_KEY);
 
 // In development mode, Supabase client is optional (we use DEV_JWT instead)
 // Only throw error in production or if explicitly needed
