@@ -131,7 +131,7 @@ Planned next steps:
 - ZIP export of concatenated EN(1..3)→PL with pauses (size < 30 MB, auto-clean)
 - Prefetching strategy for current/next phrase with bounded concurrency
 
-## 7. Project status 
+## 7. Project status
 
 - Version: 0.0.1 (pre-release)
 - Status: MVP in progress; not production-ready
