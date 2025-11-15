@@ -11,7 +11,10 @@ const onPages = !!process.env.CF_PAGES || !!process.env.ASTRO_ADAPTER;
 export default defineConfig({
   output: "server",
   integrations: [react(), sitemap()],
-  server: { port: 3000 },
+  server: {
+    port: 3000,
+    host: true, // Listen on 0.0.0.0 (all interfaces) for Docker
+  },
   vite: {
     plugins: [tailwindcss()],
   },
