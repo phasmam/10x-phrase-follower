@@ -29,15 +29,7 @@ export function usePlaybackEngine({
   const playSegmentRef = useRef<((slot: VoiceSlot, url: string) => Promise<void>) | null>(null);
   const handleSegmentEndRef = useRef<(() => void) | null>(null);
   const handlePhraseEndRef = useRef<(() => void) | null>(null);
-
-  // Keep refs in sync with latest values to avoid stale closures
-  useEffect(() => {
-    manifestRef.current = manifest;
-  }, [manifest]);
-
-  useEffect(() => {
-    phraseIndexRef.current = phraseIndex;
-  }, [phraseIndex]);
+  const phraseIndexWhenTimeoutScheduledRef = useRef<number | null>(null);
 
   // Clean up timeouts
   const clearTimeouts = useCallback(() => {
@@ -45,7 +37,32 @@ export function usePlaybackEngine({
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
+    phraseIndexWhenTimeoutScheduledRef.current = null;
   }, []);
+
+  // Keep refs in sync with latest values to avoid stale closures
+  useEffect(() => {
+    manifestRef.current = manifest;
+  }, [manifest]);
+
+  useEffect(() => {
+    const prevPhraseIndex = phraseIndexRef.current;
+    phraseIndexRef.current = phraseIndex;
+
+    // If phraseIndex changed unexpectedly (not via onAdvanceNext/Prev),
+    // clear any pending timeouts to prevent segments from the old phrase from playing
+    if (prevPhraseIndex !== phraseIndex) {
+      clearTimeouts();
+      phraseIndexWhenTimeoutScheduledRef.current = null;
+      // Also stop any currently playing audio if we're switching phrases
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      currentSegmentRef.current = null;
+      setCurrentSlot(null);
+      setClockMs(0);
+    }
+  }, [phraseIndex, clearTimeouts, setCurrentSlot, setClockMs]);
 
   const pausePlayback = useCallback(() => {
     clearTimeouts();
@@ -94,12 +111,23 @@ export function usePlaybackEngine({
 
     const nextSegment = currentPhrase.segments.find((s) => s.slot === nextSlot);
 
+    // Store the phraseIndex when scheduling the timeout
+    phraseIndexWhenTimeoutScheduledRef.current = idx;
+
     if (nextSegment && playSegmentRef.current) {
       timeoutRef.current = setTimeout(() => {
+        // Check if phraseIndex changed while waiting - if so, don't play the segment
+        if (phraseIndexWhenTimeoutScheduledRef.current !== phraseIndexRef.current) {
+          return;
+        }
         playSegmentRef.current?.(nextSlot, nextSegment.url);
       }, PAUSE_DURATION_MS);
     } else if (handlePhraseEndRef.current) {
       timeoutRef.current = setTimeout(() => {
+        // Check if phraseIndex changed while waiting - if so, don't handle phrase end
+        if (phraseIndexWhenTimeoutScheduledRef.current !== phraseIndexRef.current) {
+          return;
+        }
         handlePhraseEndRef.current?.();
       }, PAUSE_DURATION_MS);
     }
@@ -118,6 +146,10 @@ export function usePlaybackEngine({
 
     // Loop back to first phrase if we're at the last one
     const nextPhraseIndex = idx >= currentManifest.sequence.length - 1 ? 0 : idx + 1;
+
+    // Store the phraseIndex when scheduling the timeout
+    phraseIndexWhenTimeoutScheduledRef.current = nextPhraseIndex;
+
     setPhraseIndex(nextPhraseIndex);
 
     const nextPhrase = currentManifest.sequence[nextPhraseIndex];
@@ -125,6 +157,10 @@ export function usePlaybackEngine({
 
     if (en1Segment && playSegmentRef.current) {
       timeoutRef.current = setTimeout(() => {
+        // Check if phraseIndex changed while waiting - if so, don't play the segment
+        if (phraseIndexWhenTimeoutScheduledRef.current !== phraseIndexRef.current) {
+          return;
+        }
         playSegmentRef.current?.("EN1", en1Segment.url);
       }, PAUSE_DURATION_MS);
     }
