@@ -418,7 +418,6 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
               className="h-9 w-9"
               aria-label="Next phrase"
               title="Next phrase (N)"
-              disabled={phraseIndex >= manifest.sequence.length - 1}
             >
               <SkipForward className="h-4 w-4" />
             </Button>

@@ -195,12 +195,14 @@ export function usePlaybackEngine({
   const onAdvanceNext = useCallback(() => {
     const currentManifest = manifestRef.current;
     const idx = phraseIndexRef.current;
-    if (!currentManifest || idx >= currentManifest.sequence.length - 1) return;
+    if (!currentManifest) return;
 
     clearTimeouts();
     setCurrentSlot(null);
     setClockMs(0);
-    setPhraseIndex(idx + 1);
+    // Loop back to first phrase if we're at the last one
+    const nextPhraseIndex = idx >= currentManifest.sequence.length - 1 ? 0 : idx + 1;
+    setPhraseIndex(nextPhraseIndex);
   }, [setPhraseIndex, setCurrentSlot, setClockMs, clearTimeouts]);
 
   // Advance to previous phrase
