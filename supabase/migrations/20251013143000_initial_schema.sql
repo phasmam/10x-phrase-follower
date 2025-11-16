@@ -1,5 +1,5 @@
 -- =====================================================================
--- Migration: Initial Schema for 10x Phrase Follower
+-- Migration: Initial Schema for Phrase Follower
 -- =====================================================================
 -- Purpose: Creates the complete database schema including:
 --   - Extensions (citext for case-insensitive text)

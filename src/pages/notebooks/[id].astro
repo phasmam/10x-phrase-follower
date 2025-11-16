@@ -10,7 +10,7 @@ if (!id) {
 }
 ---
 
-<AppLayout title="Notebook - 10x Phrase Follower" currentPath={`/notebooks/${id}`}>
+<AppLayout title="Notebook - Phrase Follower" currentPath={`/notebooks/${id}`}>
   <AuthGuard client:load>
     <NotebookView notebookId={id} client:load />
   </AuthGuard>
