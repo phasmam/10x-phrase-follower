@@ -205,3 +205,57 @@ export async function ensureUserExists(
     throw ApiErrors.internal(`Failed to create user record: ${insertError.message}`);
   }
 }
+
+/**
+ * Parses markdown formatting (**bold**, __italic__) and converts to HTML.
+ * Supports:
+ * - **text** for bold
+ * - __text__ for italic
+ * - Can be nested: **bold __italic__ text**
+ *
+ * @param text - Text with markdown formatting
+ * @returns HTML string with <strong> and <em> tags
+ */
+export function parseMarkdownToHtml(text: string): string {
+  if (!text) return "";
+
+  // Escape HTML to prevent XSS
+  let html = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  // Process bold (**text**) - must be on word boundaries or whitespace
+  // Match ** followed by non-whitespace, then **
+  html = html.replace(/\*\*([^*]+?)\*\*/g, "<strong>$1</strong>");
+
+  // Process italic (__text__) - must be on word boundaries or whitespace
+  // Match __ followed by non-underscore, then __
+  html = html.replace(/__([^_]+?)__/g, "<em>$1</em>");
+
+  return html;
+}
+
+/**
+ * Cleans markdown formatting from text before sending to TTS.
+ * Removes ** and __ but preserves other punctuation like:
+ * - Hyphens and dashes (-, –, —)
+ * - Apostrophes (')
+ * - Dots (.)
+ * - Commas (,)
+ * - Other punctuation marks
+ *
+ * @param text - Text with markdown formatting
+ * @returns Cleaned text without markdown markers
+ */
+export function cleanMarkdownForTts(text: string): string {
+  if (!text) return "";
+
+  // Remove bold markers (**)
+  let cleaned = text.replace(/\*\*/g, "");
+
+  // Remove italic markers (__)
+  cleaned = cleaned.replace(/__/g, "");
+
+  // Trim any extra whitespace that might have been created
+  cleaned = cleaned.replace(/\s+/g, " ").trim();
+
+  return cleaned;
+}

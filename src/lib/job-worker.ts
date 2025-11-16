@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 import type { Database } from "../db/database.types";
+import { cleanMarkdownForTts } from "./utils";
 
 // Minimal Buffer compatibility layer for environments without Node Buffer (e.g., Cloudflare Workers)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -188,10 +189,14 @@ export class JobWorker {
         for (const voice of voices) {
           try {
             // Determine text based on language
-            const text = voice.language === "en" ? phrase.en_text : phrase.pl_text;
-            if (!text || text.trim() === "") {
+            const rawText = voice.language === "en" ? phrase.en_text : phrase.pl_text;
+            if (!rawText || rawText.trim() === "") {
               continue;
             }
+
+            // Clean markdown formatting before sending to TTS
+            // TTS reads asterisks and underscores, so we need to remove them
+            const text = cleanMarkdownForTts(rawText);
 
             // Generate audio using TTS
             const audioBuffer = await ttsService.synthesize(text, voice.voice_id, voice.language);

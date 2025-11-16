@@ -1,51 +1,27 @@
-import type { APIRoute } from "astro";
+import type { APIRoute, APIContext } from "astro";
 import type { UpdatePhraseCommand } from "../../../types";
 import type { LocalsWithAuth } from "../../../lib/types";
 import { withErrorHandling, requireAuth, ApiErrors } from "../../../lib/errors";
-import { createClient } from "@supabase/supabase-js";
-import { DEFAULT_USER_ID } from "../../../db/supabase.client";
+import { ensureUserExists, getSupabaseClient } from "../../../lib/utils";
 
 export const prerender = false;
 
 // PATCH /api/phrases/:phraseId - Update phrase
-const updatePhrase = async ({
-  locals,
-  params,
-  request,
-}: {
-  locals: LocalsWithAuth;
-  params: { phraseId: string };
-  request: Request;
-}): Promise<Response> => {
-  const userId = locals.userId;
-  let supabase = supabase;
-  requireAuth(userId);
+const updatePhrase = async (context: APIContext): Promise<Response> => {
+  const locals = context.locals as LocalsWithAuth;
+  requireAuth(locals.userId);
 
-  // In development, use service role key to bypass RLS
-  if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
-    const supabaseUrl = import.meta.env.SUPABASE_URL || (typeof process !== "undefined" && process.env.SUPABASE_URL);
-    const supabaseServiceKey =
-      import.meta.env.SUPABASE_SERVICE_ROLE_KEY ||
-      (typeof process !== "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const supabase = getSupabaseClient(context);
+  await ensureUserExists(supabase, locals.userId);
 
-    if (supabaseServiceKey) {
-      supabase = createClient(supabaseUrl, supabaseServiceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      });
-    }
-  }
-
-  const { phraseId } = params;
+  const { phraseId } = context.params as { phraseId: string };
 
   // Validate UUID format
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(phraseId)) {
     throw ApiErrors.validationError("Invalid phrase ID format");
   }
 
-  const body = await request.json();
+  const body = await context.request.json();
   const { position, en_text, pl_text, tokens }: UpdatePhraseCommand = body;
 
   // Validate input
@@ -136,63 +112,96 @@ const updatePhrase = async ({
 };
 
 // DELETE /api/phrases/:phraseId - Delete phrase
-const deletePhrase = async ({
-  locals,
-  params,
-}: {
-  locals: LocalsWithAuth;
-  params: { phraseId: string };
-}): Promise<Response> => {
-  const userId = locals.userId;
-  let supabase = locals.supabase;
-  requireAuth(userId);
+const deletePhrase = async (context: APIContext): Promise<Response> => {
+  const locals = context.locals as LocalsWithAuth;
+  requireAuth(locals.userId);
 
-  // In development, use service role key to bypass RLS
-  if (import.meta.env.NODE_ENV === "development" && userId === DEFAULT_USER_ID) {
-    const supabaseUrl = import.meta.env.SUPABASE_URL || (typeof process !== "undefined" && process.env.SUPABASE_URL);
-    const supabaseServiceKey =
-      import.meta.env.SUPABASE_SERVICE_ROLE_KEY ||
-      (typeof process !== "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY);
-
-    if (supabaseServiceKey) {
-      supabase = createClient(supabaseUrl, supabaseServiceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      });
-    }
-  }
-
-  const { phraseId } = params;
+  const { phraseId } = context.params as { phraseId: string };
 
   // Validate UUID format
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(phraseId)) {
     throw ApiErrors.validationError("Invalid phrase ID format");
   }
 
-  // First verify the phrase exists and belongs to the user
+  const supabase = getSupabaseClient(context);
+  await ensureUserExists(supabase, locals.userId);
+
+  // First, get the phrase with notebook_id to verify ownership and get notebook_id for audio deletion
   const { data: phrase, error: phraseError } = await supabase
     .from("phrases")
-    .select(
-      `
-      id,
-      notebook:notebooks!inner(id, user_id)
-    `
-    )
+    .select("id, notebook_id")
     .eq("id", phraseId)
     .single();
 
   if (phraseError || !phrase) {
-    throw ApiErrors.notFound("Phrase not found");
+    if (phraseError?.code === "PGRST116") {
+      throw ApiErrors.notFound("Phrase not found");
+    }
+    // eslint-disable-next-line no-console
+    console.error("Database error:", phraseError);
+    throw ApiErrors.internal("Failed to verify phrase");
   }
 
-  // Verify ownership
-  if (phrase.notebook.user_id !== locals.userId) {
-    throw ApiErrors.notFound("Phrase not found");
+  // Verify ownership through notebook
+  const { data: notebook, error: notebookError } = await supabase
+    .from("notebooks")
+    .select("id, user_id")
+    .eq("id", phrase.notebook_id)
+    .eq("user_id", locals.userId)
+    .single();
+
+  if (notebookError || !notebook) {
+    if (notebookError?.code === "PGRST116") {
+      throw ApiErrors.notFound("Phrase not found");
+    }
+    // eslint-disable-next-line no-console
+    console.error("Database error:", notebookError);
+    throw ApiErrors.internal("Failed to verify notebook ownership");
   }
 
-  // Delete the phrase
+  // Delete audio files associated with this phrase from storage
+  // Structure: audio/{userId}/{notebookId}/{phraseId}/{voice}.mp3
+  const audioPath = `${locals.userId}/${phrase.notebook_id}/${phraseId}`;
+  const filesToDelete: string[] = [];
+
+  try {
+    // List all files in the phrase folder
+    const { data: items, error: listErr } = await supabase.storage.from("audio").list(audioPath, {
+      limit: 1000,
+      offset: 0,
+      sortBy: { column: "name", order: "asc" },
+    });
+
+    if (!listErr && items) {
+      for (const item of items) {
+        // In Supabase Storage, items with id are files
+        if (item.id) {
+          const fullPath = `${audioPath}/${item.name}`;
+          filesToDelete.push(fullPath);
+        }
+      }
+    }
+
+    // Delete all collected files
+    if (filesToDelete.length > 0) {
+      const { error: deleteError } = await supabase.storage.from("audio").remove(filesToDelete);
+
+      if (deleteError) {
+        // eslint-disable-next-line no-console
+        console.error("Error deleting audio files:", deleteError);
+        // Continue with database deletion even if storage cleanup fails
+      } else {
+        // eslint-disable-next-line no-console
+        console.log(`Deleted ${filesToDelete.length} audio files for phrase ${phraseId}`);
+      }
+    }
+  } catch (storageError) {
+    // eslint-disable-next-line no-console
+    console.error("Unexpected error during storage cleanup:", storageError);
+    // Continue with database deletion even if storage cleanup fails
+  }
+
+  // Delete the phrase from database (cascade will handle related records like audio_segments)
   const { error } = await supabase.from("phrases").delete().eq("id", phraseId);
 
   if (error) {

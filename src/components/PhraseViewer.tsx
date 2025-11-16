@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from "react";
+import React, { useRef, useCallback, useMemo } from "react";
 import type { PhraseVM } from "../types";
 import { useTouchGestures } from "../lib/hooks/useTouchGestures";
 
@@ -47,6 +47,36 @@ export default function PhraseViewer({
     [touchHandlers.ref]
   );
 
+  // Helper function to find formatting ranges in text
+  const findFormattingRanges = useMemo(() => {
+    return (text: string): { start: number; end: number; type: "bold" | "italic" }[] => {
+      const ranges: { start: number; end: number; type: "bold" | "italic" }[] = [];
+
+      // Find bold ranges (**text**)
+      const boldRegex = /\*\*([^*]+?)\*\*/g;
+      let match;
+      while ((match = boldRegex.exec(text)) !== null) {
+        ranges.push({
+          start: match.index,
+          end: match.index + match[0].length,
+          type: "bold",
+        });
+      }
+
+      // Find italic ranges (__text__)
+      const italicRegex = /__([^_]+?)__/g;
+      while ((match = italicRegex.exec(text)) !== null) {
+        ranges.push({
+          start: match.index,
+          end: match.index + match[0].length,
+          type: "italic",
+        });
+      }
+
+      return ranges.sort((a, b) => a.start - b.start);
+    };
+  }, []);
+
   if (!phrase) {
     return (
       <div className="h-[clamp(240px,32vh,360px)] rounded-lg border bg-card px-4 py-3 flex items-center justify-center">
@@ -63,10 +93,56 @@ export default function PhraseViewer({
     const isActive = activeLang === language;
     const isHighlighted = highlight && isActive;
 
+    // Get the original text for this language
+    const originalText = language === "en" ? phrase.en_text : phrase.pl_text;
+    const formattingRanges = findFormattingRanges(originalText);
+
     return (
       <div className="flex flex-wrap items-center gap-1 md:gap-1.5">
         {tokens.map((token, index) => {
           const isTokenActive = isHighlighted && isActive;
+
+          // Check if token overlaps with any formatting range
+          // Token positions are character indices in the original text
+          const tokenStart = token.charStart;
+          const tokenEnd = token.charEnd;
+
+          // Find which formatting applies to this token
+          // We need to account for the fact that formatting markers (**, __) are in the text
+          // but tokens might not include them. So we check if the token's text content
+          // falls within a formatting range.
+          let isBold = false;
+          let isItalic = false;
+
+          for (const range of formattingRanges) {
+            // Check if token overlaps with formatting range
+            // We need to account for the markers themselves (2 chars for **, 2 for __)
+            if (range.type === "bold") {
+              // Bold range: **text**, so actual content starts at range.start + 2, ends at range.end - 2
+              const contentStart = range.start + 2;
+              const contentEnd = range.end - 2;
+              if (tokenStart >= contentStart && tokenEnd <= contentEnd) {
+                isBold = true;
+              } else if (tokenStart < contentEnd && tokenEnd > contentStart) {
+                // Partial overlap
+                isBold = true;
+              }
+            } else if (range.type === "italic") {
+              // Italic range: __text__, so actual content starts at range.start + 2, ends at range.end - 2
+              const contentStart = range.start + 2;
+              const contentEnd = range.end - 2;
+              if (tokenStart >= contentStart && tokenEnd <= contentEnd) {
+                isItalic = true;
+              } else if (tokenStart < contentEnd && tokenEnd > contentStart) {
+                // Partial overlap
+                isItalic = true;
+              }
+            }
+          }
+
+          // Clean token text (remove formatting markers if present)
+          let tokenText = token.text;
+          tokenText = tokenText.replace(/\*\*/g, "").replace(/__/g, "");
 
           return (
             <button
@@ -84,9 +160,19 @@ export default function PhraseViewer({
                 }
               `}
               disabled={!isActive}
-              aria-label={`Seek to word: ${token.text}`}
+              aria-label={`Seek to word: ${tokenText}`}
             >
-              {token.text}
+              {isBold && isItalic ? (
+                <strong>
+                  <em>{tokenText}</em>
+                </strong>
+              ) : isBold ? (
+                <strong>{tokenText}</strong>
+              ) : isItalic ? (
+                <em>{tokenText}</em>
+              ) : (
+                tokenText
+              )}
             </button>
           );
         })}

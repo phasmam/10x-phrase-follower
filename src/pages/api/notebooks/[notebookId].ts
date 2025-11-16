@@ -172,7 +172,7 @@ const deleteNotebook = async (context: APIContext): Promise<Response> => {
 
       for (const item of items) {
         const fullPath = path ? `${path}/${item.name}` : item.name;
-        
+
         // In Supabase Storage, items with id are files, items without id are folders
         if (item.id) {
           // It's a file - add to deletion list

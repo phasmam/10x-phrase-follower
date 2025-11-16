@@ -5,6 +5,7 @@ import { ToastProvider, useToast } from "./ui/toast";
 import GenerateAudioButton from "./GenerateAudioButton";
 import { Trash2 } from "lucide-react";
 import type { PhraseDTO, PhraseListResponse, NotebookDTO, JobDTO } from "../types";
+import { parseMarkdownToHtml } from "../lib/utils";
 
 interface NotebookViewProps {
   notebookId: string;
@@ -367,10 +368,16 @@ function PhraseRow({ phrase, index, onDelete, onRowClick }: PhraseRowProps) {
         <span className="text-xs font-medium text-muted-foreground">{index + 1}</span>
       </td>
       <td className="p-4">
-        <div className="text-sm text-foreground">{phrase.en_text}</div>
+        <div
+          className="text-sm text-foreground"
+          dangerouslySetInnerHTML={{ __html: parseMarkdownToHtml(phrase.en_text) }}
+        />
       </td>
       <td className="p-4">
-        <div className="text-sm text-muted-foreground">{phrase.pl_text}</div>
+        <div
+          className="text-sm text-muted-foreground"
+          dangerouslySetInnerHTML={{ __html: parseMarkdownToHtml(phrase.pl_text) }}
+        />
       </td>
       <td className="p-4 w-16 text-right">
         <Button
@@ -456,8 +463,14 @@ function PhraseCard({ phrase, index, onDelete, onRowClick }: PhraseCardProps) {
           {index + 1}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="text-[15px] text-foreground truncate font-medium">{phrase.en_text}</div>
-          <div className="text-xs text-muted-foreground truncate">{phrase.pl_text}</div>
+          <div
+            className="text-[15px] text-foreground truncate font-medium"
+            dangerouslySetInnerHTML={{ __html: parseMarkdownToHtml(phrase.en_text) }}
+          />
+          <div
+            className="text-xs text-muted-foreground truncate"
+            dangerouslySetInnerHTML={{ __html: parseMarkdownToHtml(phrase.pl_text) }}
+          />
         </div>
       </div>
       <div className="flex items-center gap-1 shrink-0">
