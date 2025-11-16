@@ -128,35 +128,45 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
     }));
   };
 
+  // Handle job update during polling
+  const handleJobUpdated = (job: JobDTO) => {
+    setState((prev) => ({
+      ...prev,
+      activeJob: job,
+    }));
+  };
+
   // Handle job completion
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleJobCompleted = (_job: JobDTO) => {
+  const handleJobCompleted = (job: JobDTO | null) => {
     setState((prev) => ({
       ...prev,
       activeJob: null,
     }));
 
-    // Reload notebook data to reflect new audio status
-    const loadData = async () => {
-      try {
-        const [notebookData, phrasesData] = await Promise.all([
-          apiCall<NotebookDTO>(`/api/notebooks/${notebookId}`, { method: "GET" }),
-          apiCall<PhraseListResponse>(`/api/notebooks/${notebookId}/phrases?sort=position&order=asc&limit=100`, {
-            method: "GET",
-          }),
-        ]);
+    // Only reload data if job completed successfully (not null)
+    if (job) {
+      // Reload notebook data to reflect new audio status
+      const loadData = async () => {
+        try {
+          const [notebookData, phrasesData] = await Promise.all([
+            apiCall<NotebookDTO>(`/api/notebooks/${notebookId}`, { method: "GET" }),
+            apiCall<PhraseListResponse>(`/api/notebooks/${notebookId}/phrases?sort=position&order=asc&limit=100`, {
+              method: "GET",
+            }),
+          ]);
 
-        setState((prev) => ({
-          ...prev,
-          notebook: notebookData,
-          phrases: phrasesData.items,
-        }));
-      } catch {
-        // Silently fail - user can refresh manually if needed
-      }
-    };
+          setState((prev) => ({
+            ...prev,
+            notebook: notebookData,
+            phrases: phrasesData.items,
+          }));
+        } catch {
+          // Silently fail - user can refresh manually if needed
+        }
+      };
 
-    loadData();
+      loadData();
+    }
   };
 
   if (!isAuthenticated) {
@@ -229,7 +239,8 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
             <p className="text-sm text-blue-700 dark:text-blue-300">
-              Audio generation in progress... This may take a few minutes.
+              Audio generation {state.activeJob.state === "queued" ? "queued" : "in progress"}... This may take a few
+              minutes.
             </p>
           </div>
         </div>
@@ -250,6 +261,7 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
                 notebookId={notebookId}
                 onJobCreated={handleJobCreated}
                 onJobCompleted={handleJobCompleted}
+                onJobUpdated={handleJobUpdated}
                 activeJobId={state.activeJob?.id || null}
               />
             </div>

@@ -8,7 +8,8 @@ import type { TtsCredentialsStateDTO, UserVoicesListResponse, JobDTO } from "../
 interface GenerateAudioButtonProps {
   notebookId: string;
   onJobCreated?: (job: JobDTO) => void;
-  onJobCompleted?: (job: JobDTO) => void;
+  onJobCompleted?: (job: JobDTO | null) => void;
+  onJobUpdated?: (job: JobDTO) => void;
   activeJobId?: string | null;
 }
 
@@ -24,6 +25,7 @@ export default function GenerateAudioButton({
   notebookId,
   onJobCreated,
   onJobCompleted,
+  onJobUpdated,
   activeJobId,
 }: GenerateAudioButtonProps) {
   const { apiCall } = useApi();
@@ -136,6 +138,10 @@ export default function GenerateAudioButton({
         } else {
           // Job is still running, keep button disabled
           setState((prev) => ({ ...prev, isGenerating: true }));
+          // Update active job in parent component to reflect current state
+          if (onJobUpdated) {
+            onJobUpdated(job);
+          }
         }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err);
@@ -148,13 +154,16 @@ export default function GenerateAudioButton({
           errorMessage.toLowerCase().includes("not found");
 
         if (isNotFound) {
-          console.warn(`Job ${activeJobId} not found, stopping polling`);
+          // Stop polling
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current);
             pollingIntervalRef.current = null;
           }
           setState((prev) => ({ ...prev, isGenerating: false }));
-          // Don't call onJobCompleted for missing jobs - let the user refresh if needed
+          // Clear active job in parent component since job doesn't exist
+          if (onJobCompleted) {
+            onJobCompleted(null);
+          }
         }
         // For other errors, continue polling (network issues, etc.)
       }
@@ -171,7 +180,7 @@ export default function GenerateAudioButton({
         pollingIntervalRef.current = null;
       }
     };
-  }, [activeJobId, apiCall, onJobCompleted, addToast]);
+  }, [activeJobId, apiCall, onJobCompleted, onJobUpdated, addToast]);
 
   const handleGenerateAudio = async () => {
     if (!state.canGenerate || state.isGenerating) return;

@@ -129,8 +129,6 @@ export function usePlaybackEngine({
   // Play audio segment
   const playSegment = useCallback(
     async (slot: VoiceSlot, url: string) => {
-      console.log("[usePlaybackEngine] playSegment called:", { slot, url });
-
       if (!url || url.trim() === "") {
         console.error("[usePlaybackEngine] Invalid URL provided:", url);
         handleSegmentEnd();
@@ -162,14 +160,8 @@ export function usePlaybackEngine({
       audio.src = url;
       audio.playbackRate = speed;
 
-      console.log("[usePlaybackEngine] Audio element configured:", {
-        src: audio.src,
-        playbackRate: audio.playbackRate,
-      });
-
       try {
         await audio.play();
-        console.log("[usePlaybackEngine] Audio playback started successfully");
         currentSegmentRef.current = slot;
         setCurrentSlot(slot);
       } catch (error) {

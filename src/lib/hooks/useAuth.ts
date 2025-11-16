@@ -66,8 +66,6 @@ export function useAuth(): AuthState {
       try {
         // Check if we're in browser environment
         if (typeof window === "undefined") {
-          // eslint-disable-next-line no-console
-          console.log("Not in browser environment, skipping auth init");
           if (isMountedRef.current) {
             setIsAuthenticated(false);
             setIsLoading(false);
@@ -76,9 +74,6 @@ export function useAuth(): AuthState {
           }
           return;
         }
-
-        // eslint-disable-next-line no-console
-        console.log("useAuth: Starting auth initialization");
 
         // PRIORITIZE DEV MODE: Check for DEV_JWT first (development mode)
         const storedToken = localStorage.getItem("dev_jwt_token");
@@ -92,8 +87,6 @@ export function useAuth(): AuthState {
 
           if (now < expiry) {
             // Token is still valid
-            // eslint-disable-next-line no-console
-            console.log("Using stored DEV_JWT token");
             if (isMountedRef.current) {
               setIsAuthenticated(true);
               setIsLoading(false);
@@ -103,8 +96,6 @@ export function useAuth(): AuthState {
             return;
           } else {
             // Token expired, clear storage
-            // eslint-disable-next-line no-console
-            console.log("Stored DEV_JWT token expired, clearing storage");
             localStorage.removeItem("dev_jwt_token");
             localStorage.removeItem("dev_user_id");
             localStorage.removeItem("dev_jwt_expiry");
@@ -112,23 +103,13 @@ export function useAuth(): AuthState {
         }
 
         // Try to get new DEV_JWT from API (development mode)
-        // eslint-disable-next-line no-console
-        console.log("Fetching DEV_JWT from /api/dev/jwt");
         try {
           const devResponse = await fetch("/api/dev/jwt", {
             headers: { Accept: "application/json" },
           });
 
-          // eslint-disable-next-line no-console
-          console.log("DEV_JWT response status:", devResponse.status);
-
           if (devResponse.ok) {
             const data: DevJwtResponse = await devResponse.json();
-            // eslint-disable-next-line no-console
-            console.log("Generated new DEV_JWT token", {
-              token: data.token.substring(0, 20) + "...",
-              userId: data.user_id,
-            });
 
             // Store token in localStorage with expiry
             const expiry = Date.now() + data.expires_in * 1000;
@@ -143,23 +124,13 @@ export function useAuth(): AuthState {
               setUserId(data.user_id);
             }
             return;
-          } else {
-            // eslint-disable-next-line no-console
-            console.warn("DEV_JWT endpoint returned non-OK status:", devResponse.status);
-            const errorText = await devResponse.text();
-            // eslint-disable-next-line no-console
-            console.warn("DEV_JWT error response:", errorText);
           }
-        } catch (fetchError) {
-          // eslint-disable-next-line no-console
-          console.error("Failed to fetch DEV_JWT:", fetchError);
+        } catch {
           // Continue to check Supabase session as fallback
         }
 
         // DEV_JWT not available - check for Supabase session (production mode)
         // Only check Supabase if DEV_JWT failed (we're in production)
-        // eslint-disable-next-line no-console
-        console.log("DEV_JWT not available, checking Supabase session");
         const sbAccessToken = localStorage.getItem("sb_access_token");
         const sbRefreshToken = localStorage.getItem("sb_refresh_token");
         const sbExpiresAt = localStorage.getItem("sb_expires_at");
@@ -172,8 +143,6 @@ export function useAuth(): AuthState {
           // Check if token is still valid (with 5 minute buffer for refresh)
           if (now < expiresAt - 300000) {
             // Token is still valid
-            // eslint-disable-next-line no-console
-            console.log("Using stored Supabase session");
             if (isMountedRef.current) {
               setIsAuthenticated(true);
               setIsLoading(false);
@@ -183,8 +152,6 @@ export function useAuth(): AuthState {
             return;
           } else if (now < expiresAt) {
             // Token is close to expiry, try to refresh
-            // eslint-disable-next-line no-console
-            console.log("Supabase token close to expiry, attempting refresh");
             try {
               const { data: refreshData, error: refreshError } = await supabaseClient.auth.refreshSession({
                 refresh_token: sbRefreshToken,
@@ -220,8 +187,6 @@ export function useAuth(): AuthState {
             localStorage.removeItem("sb_user_id");
           } else {
             // Token expired, clear Supabase session
-            // eslint-disable-next-line no-console
-            console.log("Supabase token expired, clearing session");
             localStorage.removeItem("sb_access_token");
             localStorage.removeItem("sb_refresh_token");
             localStorage.removeItem("sb_expires_at");
