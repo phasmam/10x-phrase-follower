@@ -5,7 +5,7 @@
 ![Node](https://img.shields.io/badge/node-22.14.0-339933?logo=node.js)
 ![Astro](https://img.shields.io/badge/astro-5.13.7-FF5D01?logo=astro)
 ![React](https://img.shields.io/badge/react-19-61DAFB?logo=react)
-![License](https://img.shields.io/badge/license-Unspecified-lightgrey)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 A minimal MVP to help learners practice English phrases via sequential EN→PL playback with multiple English voices and low-cost Google Text-to-Speech.
 
@@ -43,7 +43,7 @@ Phrase Follower is an Astro-based web app that streamlines learning English phra
 
 ### Why it's effective for learning English
 
-Phrase Follower helps learners master English phrases through structured repetition and exposure to multiple pronunciations. By hearing the same phrase spoken by different English voices (EN1, EN2, EN3) followed by the Polish translation, learners build both listening comprehension and pronunciation skills. The sequential playback pattern reinforces memory through spaced repetition, while the ability to import your own phrases ensures you practice vocabulary relevant to your needs—whether it's business English, everyday conversations, or specialized terminology. The adjustable playback speeds allow learners to start slowly and gradually increase difficulty, making it suitable for all proficiency levels.
+Phrase Follower helps learners master English phrases through structured repetition and exposure to multiple pronunciations. By hearing the same phrase spoken by different English voices (EN1, EN2, EN3) followed by the Polish translation, learners build both listening comprehension and pronunciation skills. The sequential playback pattern reinforces memory through spaced repetition, while the ability to import your own phrases ensures you practice vocabulary relevant to your needs - whether it's business English, everyday conversations, or specialized terminology. The adjustable playback speeds allow learners to start slowly and gradually increase difficulty, making it suitable for all proficiency levels.
 
 **Important:** To use audio generation features, you must configure a TTS encryption key from Google Cloud in your account settings. The key is validated on save and never exposed to the client.
 
@@ -188,11 +188,13 @@ For production-like testing, it's recommended to run the application in Docker. 
 - **Audio Generation:** Generate MP3 audio for phrases using Google TTS (requires API key configuration)
 - **Voice Configuration:** Configure 3 English voices and 1 Polish voice per user
 - **Playback:** Sequential EN1 → EN2 → EN3 → PL playback with adjustable speeds (0.75x - 1.25x)
+- **Keyboard Shortcuts:** Space/K (play/pause), S (stop), R (restart), ←/→ (seek), Shift+←/→ (seek large), P/N (prev/next phrase)
+- **Touch Gestures:** Swipe navigation, double-tap play/pause, double-tap left/right for seeking
 - **Limits:** Up to 500 notebooks per user, 100 phrases per notebook, 2000 characters per phrase
 
 ### Out of scope for MVP
 
-- PWA/offline mode, keyboard shortcuts
+- PWA/offline mode
 - Translation features beyond imports
 - Public API, SSO, telemetry
 - ZIP export, click-to-seek, word highlighting (planned for post-MVP)
@@ -231,4 +233,6 @@ The production deployment uses `docker-compose.yml` with environment variables c
 
 ## 10. License
 
-No license has been specified yet. Consider adding a LICENSE file (e.g., MIT). Until then, all rights are reserved by default.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+The MIT License allows others to use, modify, and distribute this software, but requires that the original copyright notice and license be included in all copies or substantial portions of the software.
