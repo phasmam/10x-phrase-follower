@@ -113,50 +113,156 @@ echo "YOUR_GITHUB_TOKEN" | docker login ghcr.io -u phasmam --password-stdin
 
 ### 6. (Opcjonalnie) Skonfiguruj nginx + HTTPS
 
-Jeśli chcesz mieć HTTPS i własną domenę:
+Jeśli chcesz mieć HTTPS bez domeny (self-signed certificate):
+
+#### Krok 1: Instalacja nginx
 
 ```bash
 # Install nginx
 apt install nginx -y
 
-# Install certbot
-apt install certbot python3-certbot-nginx -y
+# Sprawdź status
+systemctl status nginx
+```
 
-# Configure nginx
+#### Krok 2: Generowanie self-signed certificate
+
+```bash
+# Stwórz katalog na certyfikaty
+mkdir -p /etc/nginx/ssl
+
+# Wygeneruj self-signed certificate (ważny 365 dni)
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout /etc/nginx/ssl/nginx-selfsigned.key \
+  -out /etc/nginx/ssl/nginx-selfsigned.crt \
+  -subj "/C=PL/ST=State/L=City/O=Organization/CN=IP_DROPLETA"
+
+# Ustaw odpowiednie uprawnienia
+chmod 600 /etc/nginx/ssl/nginx-selfsigned.key
+chmod 644 /etc/nginx/ssl/nginx-selfsigned.crt
+```
+
+**Uwaga:** Zamień `IP_DROPLETA` na rzeczywisty IP Twojego dropleta (np. `167.99.123.45`).
+
+#### Krok 3: Konfiguracja nginx
+
+```bash
+# Stwórz konfigurację
 nano /etc/nginx/sites-available/phrase-follower
 ```
 
-Wklej konfigurację nginx:
+Wklej następującą konfigurację (zamień `IP_DROPLETA` na IP Twojego dropleta):
 
 ```nginx
+# HTTP - przekierowanie na HTTPS
 server {
     listen 80;
-    server_name api.twoja-domena.xyz;  # lub IP dropleta
+    server_name IP_DROPLETA;  # np. 167.99.123.45
 
+    # Przekieruj wszystkie żądania HTTP na HTTPS
+    return 301 https://$server_name$request_uri;
+}
+
+# HTTPS
+server {
+    listen 443 ssl http2;
+    server_name IP_DROPLETA;  # np. 167.99.123.45
+
+    # SSL certificates
+    ssl_certificate /etc/nginx/ssl/nginx-selfsigned.crt;
+    ssl_certificate_key /etc/nginx/ssl/nginx-selfsigned.key;
+
+    # SSL settings
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    # Logs
+    access_log /var/log/nginx/phrase-follower-access.log;
+    error_log /var/log/nginx/phrase-follower-error.log;
+
+    # Proxy settings
     location / {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
+
+        # WebSocket support
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
+
+        # Headers
         proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+
+        # Cache bypass
+        proxy_cache_bypass $http_upgrade;
     }
 }
 ```
 
-Aktywuj konfigurację:
+Zapisz: `CTRL+O, Enter, CTRL+X`
+
+#### Krok 4: Aktywacja konfiguracji
 
 ```bash
+# Utwórz link symboliczny
 ln -s /etc/nginx/sites-available/phrase-follower /etc/nginx/sites-enabled/
-nginx -t
-systemctl reload nginx
 
-# Jeśli masz domenę, wygeneruj certyfikat:
-certbot --nginx -d api.twoja-domena.xyz
+# Usuń domyślną konfigurację (opcjonalnie)
+rm -f /etc/nginx/sites-enabled/default
+
+# Sprawdź konfigurację (ważne!)
+nginx -t
 ```
+
+Jeśli widzisz `syntax is ok` i `test is successful`, przeładuj nginx:
+
+```bash
+systemctl reload nginx
+```
+
+#### Krok 5: Konfiguracja firewall (opcjonalnie, ale zalecane)
+
+```bash
+# Sprawdź czy ufw jest zainstalowany
+which ufw || apt install ufw -y
+
+# Zezwól na HTTP i HTTPS
+ufw allow 'Nginx Full'
+# lub osobno:
+ufw allow 80/tcp
+ufw allow 443/tcp
+
+# Zezwól na SSH (ważne!)
+ufw allow 22/tcp
+
+# Włącz firewall
+ufw enable
+
+# Sprawdź status
+ufw status
+```
+
+#### Krok 6: Testowanie
+
+```bash
+# Z dropleta
+curl -k https://localhost
+
+# Z zewnątrz (z Twojego komputera Windows PowerShell)
+Invoke-WebRequest -Uri "https://IP_DROPLETA" -SkipCertificateCheck
+```
+
+**⚠️ Ważne:** Self-signed certificate powoduje, że przeglądarki pokażą ostrzeżenie o niezaufanym certyfikacie. To normalne — możesz kliknąć "Zaawansowane" → "Kontynuuj" aby uzyskać dostęp. Połączenie jest szyfrowane, ale certyfikat nie jest podpisany przez zaufany urząd certyfikacji.
+
+**Alternatywa:** Jeśli chcesz darmowy, zaufany certyfikat, możesz kupić domenę w Digital Ocean (~1 USD/rok dla `.xyz`) i użyć Let's Encrypt (certbot).
 
 ### 7. Przetestuj ręcznie (opcjonalnie)
 

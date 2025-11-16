@@ -15,13 +15,14 @@ A minimal MVP to help learners practice English phrases via sequential EN→PL p
 
 - [1. Project name](#1-project-name)
 - [2. Project description](#2-project-description)
-- [3. Tech stack](#3-tech-stack)
-- [4. Getting started locally](#4-getting-started-locally)
-- [5. Available scripts](#5-available-scripts)
-- [6. Project scope](#6-project-scope)
-- [7. Project status](#7-project-status)
-- [8. Deployment](#8-deployment)
-- [9. License](#9-license)
+- [3. Screenshots](#3-screenshots)
+- [4. Tech stack](#4-tech-stack)
+- [5. Getting started locally](#5-getting-started-locally)
+- [6. Available scripts](#6-available-scripts)
+- [7. Project scope](#7-project-scope)
+- [8. Project status](#8-project-status)
+- [9. Deployment](#9-deployment)
+- [10. License](#10-license)
 
 ---
 
@@ -38,6 +39,8 @@ Phrase Follower is an Astro-based web app that streamlines learning English phra
 - Import phrases via simple `EN sentence ::: PL sentence` files
 - Generate and store MP3 per phrase × voice using Google TTS (cost-conscious settings)
 
+**Note:** Phrase Follower does not generate or translate phrases. You need to prepare your phrase files in a separate tool (e.g., ChatGPT, Claude, or any text editor) using the `EN sentence ::: PL sentence` format, then import them into the application.
+
 ### Why it's effective for learning English
 
 Phrase Follower helps learners master English phrases through structured repetition and exposure to multiple pronunciations. By hearing the same phrase spoken by different English voices (EN1, EN2, EN3) followed by the Polish translation, learners build both listening comprehension and pronunciation skills. The sequential playback pattern reinforces memory through spaced repetition, while the ability to import your own phrases ensures you practice vocabulary relevant to your needs—whether it's business English, everyday conversations, or specialized terminology. The adjustable playback speeds allow learners to start slowly and gradually increase difficulty, making it suitable for all proficiency levels.
@@ -46,7 +49,25 @@ Phrase Follower helps learners master English phrases through structured repetit
 
 See the Product Requirements Document for full details: [docs/prd.md](./docs/prd.md)
 
-## 3. Tech stack
+## 3. Screenshots
+
+### Notebook List
+
+![Notebook List](./docs/screenshots/notebook-list.png)
+
+### Notebook View
+
+![Notebook View](./docs/screenshots/notebook-view.png)
+
+### Audio Player
+
+![Audio Player](./docs/screenshots/audio-player.png)
+
+### Import Interface
+
+![Import Interface](./docs/screenshots/import-interface.png)
+
+## 4. Tech stack
 
 - Astro 5 (Node adapter)
 - TypeScript 5
@@ -56,9 +77,9 @@ See the Product Requirements Document for full details: [docs/prd.md](./docs/prd
 - Node.js 22.14.0
 - Supporting deps: `@astrojs/react`, `@astrojs/sitemap`, `lucide-react`, `clsx`, `class-variance-authority`
 
-## 4. Getting started locally
+## 5. Getting started locally
 
-### 4.1. Development mode (Node.js)
+### 5.1. Development mode (Node.js)
 
 Prerequisites:
 
@@ -93,7 +114,7 @@ npm run lint:fix    # fix issues where possible
 npm run format      # format with Prettier
 ```
 
-### 4.2. Docker (recommended for production-like testing)
+### 5.2. Docker (recommended for production-like testing)
 
 For production-like testing, it's recommended to run the application in Docker. This ensures consistency with the deployment environment.
 
@@ -137,7 +158,7 @@ For production-like testing, it's recommended to run the application in Docker. 
 
 **Note:** For production deployment, the image is pulled from GitHub Container Registry (GHCR). See [Deployment](#9-deployment) section for details.
 
-### 4.3. TTS setup (for audio generation)
+### 5.3. TTS setup (for audio generation)
 
 **Important:** Before you can generate audio, you must configure a TTS encryption key from Google Cloud:
 
@@ -147,7 +168,7 @@ For production-like testing, it's recommended to run the application in Docker. 
 4. Configure three EN voices (ordered) and one PL voice per your preference
 5. Duplicates within a language are disallowed
 
-## 5. Available scripts
+## 6. Available scripts
 
 - `dev`: Run the Astro dev server.
 - `build`: Build the production site.
@@ -157,7 +178,7 @@ For production-like testing, it's recommended to run the application in Docker. 
 - `lint:fix`: Lint with autofix enabled.
 - `format`: Format the repository with Prettier.
 
-## 6. Project scope
+## 7. Project scope
 
 ### Core features
 
@@ -183,13 +204,13 @@ For production-like testing, it's recommended to run the application in Docker. 
 - Rate limiting and improved error handling
 - Partial audio regeneration (per phrase)
 
-## 7. Project status
+## 8. Project status
 
 - Version: 0.0.1
 - Status: MVP complete (Phase 0-2 implemented)
 - Documentation: primary spec in [docs/prd.md](./docs/prd.md)
 
-## 8. Deployment
+## 9. Deployment
 
 The application is deployed on **DigitalOcean Droplet** using Docker.
 
@@ -208,6 +229,6 @@ For detailed migration rationale, see [docs/lessons-learned/digital-ocean-why.md
 
 The production deployment uses `docker-compose.yml` with environment variables configured on the droplet. For deployment setup instructions, see [docs/guides/droplet-setup.md](./docs/guides/droplet-setup.md).
 
-## 9. License
+## 10. License
 
 No license has been specified yet. Consider adding a LICENSE file (e.g., MIT). Until then, all rights are reserved by default.
