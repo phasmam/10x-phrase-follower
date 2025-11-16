@@ -105,7 +105,6 @@ export class JobWorker {
   async processJob(jobId: string): Promise<void> {
     console.log(`[processJob] Starting job processing for job: ${jobId}`);
     try {
-      console.log("[processJob] Job worker initialized successfully");
       // Get job details
       const { data: job, error: jobError } = await this.supabase
         .from("jobs")
@@ -123,9 +122,7 @@ export class JobWorker {
       }
 
       // Update job state to running
-      console.log(`[processJob] Updating job ${jobId} state to running...`);
       await this.updateJobState(jobId, "running", new Date().toISOString());
-      console.log(`[processJob] Job ${jobId} state updated to running`);
 
       // Get TTS credentials for the user
       const { data: credentials, error: credError } = await this.supabase
@@ -164,8 +161,7 @@ export class JobWorker {
         throw new Error("No phrases found in notebook");
       }
 
-      console.log(`Found ${phrases.length} phrases in notebook`);
-      console.log(`Found ${voices.length} voice slots configured`);
+      console.log(`Processing ${phrases.length} phrases with ${voices.length} voice slots`);
 
       // Create build
       const buildId = await this.createBuild(job.notebook_id, jobId);
@@ -191,12 +187,9 @@ export class JobWorker {
       for (const phrase of phrases) {
         for (const voice of voices) {
           try {
-            console.log(`Processing phrase ${phrase.id} with voice ${voice.slot} (${voice.voice_id})`);
-
             // Determine text based on language
             const text = voice.language === "en" ? phrase.en_text : phrase.pl_text;
             if (!text || text.trim() === "") {
-              console.log(`Skipping empty text for phrase ${phrase.id}, voice ${voice.slot}`);
               continue;
             }
 
@@ -206,17 +199,12 @@ export class JobWorker {
             // Upload to storage using structured path: audio/{userId}/{notebookId}/{phraseId}/{voice}.mp3
             const storagePath = `${job.user_id}/${job.notebook_id}/${phrase.id}`;
             const fileName = `${storagePath}/${voice.slot}.mp3`;
-            console.log(
-              `[job-worker] Uploading audio to storage: bucket=audio, path=${fileName}, size=${audioBuffer.length} bytes`
-            );
 
-            const { data: uploadData, error: uploadError } = await this.storage
-              .from("audio")
-              .upload(fileName, audioBuffer, {
-                contentType: "audio/mpeg",
-                cacheControl: "3600",
-                upsert: true, // Overwrite if exists
-              });
+            const { error: uploadError } = await this.storage.from("audio").upload(fileName, audioBuffer, {
+              contentType: "audio/mpeg",
+              cacheControl: "3600",
+              upsert: true, // Overwrite if exists
+            });
 
             if (uploadError) {
               console.error(
@@ -241,11 +229,6 @@ export class JobWorker {
               continue;
             }
 
-            console.log(
-              `[job-worker] Upload successful for phrase ${phrase.id}, voice ${voice.slot}. Upload data:`,
-              uploadData
-            );
-
             // Verify the file exists in storage
             const { data: fileCheck, error: checkError } = await this.storage.from("audio").list(storagePath, {
               limit: 10,
@@ -258,16 +241,12 @@ export class JobWorker {
               const uploadedFile = fileCheck?.find((f) => f.name === `${voice.slot}.mp3`);
               if (!uploadedFile) {
                 console.error(`[job-worker] WARNING: File ${fileName} was uploaded but not found in storage listing!`);
-              } else {
-                console.log(
-                  `[job-worker] Verified file exists in storage: ${fileName}, size: ${uploadedFile.metadata?.size || "unknown"}`
-                );
               }
             }
 
             // Create successful segment
             audioSegments.push({
-              id: crypto.randomUUID(),
+              id: randomUUID(),
               phrase_id: phrase.id,
               build_id: buildId,
               voice_slot: voice.slot,
@@ -280,8 +259,6 @@ export class JobWorker {
               bitrate_kbps: 64,
               is_active: false, // Will be activated after all segments are created
             });
-
-            console.log(`[job-worker] Successfully processed phrase ${phrase.id} with voice ${voice.slot}`);
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "unknown_error";
             const errorDetails = error instanceof Error ? error.stack : String(error);
@@ -289,7 +266,7 @@ export class JobWorker {
             console.error(`Error details:`, errorDetails);
             // Create failed segment with placeholder path (path is NOT NULL in schema)
             audioSegments.push({
-              id: crypto.randomUUID(),
+              id: randomUUID(),
               phrase_id: phrase.id,
               build_id: buildId,
               voice_slot: voice.slot,
@@ -318,7 +295,9 @@ export class JobWorker {
       // Activate new segments and deactivate old ones
       await this.activateNewSegments(job.notebook_id, buildId, jobId);
 
-      console.log(`Job ${jobId} completed successfully with ${audioSegments.length} audio segments`);
+      const successfulSegments = audioSegments.filter((s) => s.status === "complete").length;
+      const failedSegments = audioSegments.filter((s) => s.status === "failed").length;
+      console.log(`Job ${jobId} completed: ${successfulSegments} successful, ${failedSegments} failed`);
 
       // Update job as succeeded
       await this.updateJobState(jobId, "succeeded", undefined, new Date().toISOString());
@@ -391,7 +370,6 @@ export class JobWorker {
       }
 
       if (!phrases || phrases.length === 0) {
-        console.log("No phrases found for notebook, skipping segment activation");
         return;
       }
 
@@ -427,8 +405,6 @@ export class JobWorker {
       if (updateNotebookError) {
         throw new Error(`Failed to update notebook: ${updateNotebookError.message}`);
       }
-
-      console.log(`Activated segments for build ${buildId} and updated notebook ${notebookId}`);
     } catch (error) {
       console.error(`Failed to activate new segments for job ${jobId}:`, error);
       throw error;

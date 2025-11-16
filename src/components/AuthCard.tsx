@@ -70,9 +70,6 @@ export default function AuthCard() {
       }
 
       // DEV_JWT endpoint not available (>= 400) - fallback to Supabase Auth
-      // eslint-disable-next-line no-console
-      console.log("DEV_JWT not available, attempting Supabase authentication");
-
       if (!supabaseClient) {
         setError("Konfiguracja autentykacji nie jest dostępna. Skontaktuj się z administratorem.");
         setIsLoading(false);
@@ -119,9 +116,6 @@ export default function AuthCard() {
       localStorage.setItem("sb_refresh_token", session.refresh_token);
       localStorage.setItem("sb_expires_at", expiresAt.toString());
       localStorage.setItem("sb_user_id", user.id);
-
-      // eslint-disable-next-line no-console
-      console.log("Login successful, redirecting to notebooks");
 
       // Redirect to notebooks
       window.location.href = "/notebooks";

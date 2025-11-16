@@ -1,13 +1,13 @@
 # Phrase Follower
 
 ![Version](https://img.shields.io/badge/version-0.0.1-blue)
-![Status](https://img.shields.io/badge/status-MVP_in_progress-yellow)
+![Status](https://img.shields.io/badge/status-MVP_complete-green)
 ![Node](https://img.shields.io/badge/node-22.14.0-339933?logo=node.js)
 ![Astro](https://img.shields.io/badge/astro-5.13.7-FF5D01?logo=astro)
 ![React](https://img.shields.io/badge/react-19-61DAFB?logo=react)
 ![License](https://img.shields.io/badge/license-Unspecified-lightgrey)
 
-A minimal MVP to help learners practice English phrases via sequential EN→PL playback with multiple English voices, precise click-to-seek per word, optional highlighting, and low-cost Google Text-to-Speech.
+A minimal MVP to help learners practice English phrases via sequential EN→PL playback with multiple English voices and low-cost Google Text-to-Speech.
 
 ---
 
@@ -20,7 +20,8 @@ A minimal MVP to help learners practice English phrases via sequential EN→PL p
 - [5. Available scripts](#5-available-scripts)
 - [6. Project scope](#6-project-scope)
 - [7. Project status](#7-project-status)
-- [8. License](#8-license)
+- [8. Deployment](#8-deployment)
+- [9. License](#9-license)
 
 ---
 
@@ -34,9 +35,14 @@ Phrase Follower is an Astro-based web app that streamlines learning English phra
 
 - EN1 → EN2 → EN3 → PL sequence with 800 ms pauses between segments and phrases
 - Multiple English voices plus one Polish voice per user
-- Click-to-seek per word in the active segment and optional token-based highlighting
 - Import phrases via simple `EN sentence ::: PL sentence` files
 - Generate and store MP3 per phrase × voice using Google TTS (cost-conscious settings)
+
+### Why it's effective for learning English
+
+Phrase Follower helps learners master English phrases through structured repetition and exposure to multiple pronunciations. By hearing the same phrase spoken by different English voices (EN1, EN2, EN3) followed by the Polish translation, learners build both listening comprehension and pronunciation skills. The sequential playback pattern reinforces memory through spaced repetition, while the ability to import your own phrases ensures you practice vocabulary relevant to your needs—whether it's business English, everyday conversations, or specialized terminology. The adjustable playback speeds allow learners to start slowly and gradually increase difficulty, making it suitable for all proficiency levels.
+
+**Important:** To use audio generation features, you must configure a TTS encryption key from Google Cloud in your account settings. The key is validated on save and never exposed to the client.
 
 See the Product Requirements Document for full details: [docs/prd.md](./docs/prd.md)
 
@@ -52,6 +58,8 @@ See the Product Requirements Document for full details: [docs/prd.md](./docs/prd
 
 ## 4. Getting started locally
 
+### 4.1. Development mode (Node.js)
+
 Prerequisites:
 
 - Node.js 22.14.0 (see `.nvmrc`)
@@ -66,7 +74,7 @@ nvm use 22.14.0
 # 2) Install dependencies
 npm install
 
-# 3) Start the dev server (Astro defaults to http://localhost:4321)
+# 3) Start the dev server (runs on http://localhost:3000)
 npm run dev
 ```
 
@@ -85,10 +93,59 @@ npm run lint:fix    # fix issues where possible
 npm run format      # format with Prettier
 ```
 
-TTS setup (for audio generation):
+### 4.2. Docker (recommended for production-like testing)
 
-- Add your Google TTS API key in the app's Settings screen. The key is validated on save and never exposed to the client.
-- Configure three EN voices (ordered) and one PL voice per your preference. Duplicates within a language are disallowed.
+For production-like testing, it's recommended to run the application in Docker. This ensures consistency with the deployment environment.
+
+**Prerequisites:**
+
+- Docker and Docker Compose installed
+- `.env` file with required Supabase variables (see below)
+
+**Steps:**
+
+1. Create a `.env` file in the project root with required variables:
+
+   ```
+   PUBLIC_SUPABASE_URL=your_supabase_url
+   PUBLIC_SUPABASE_KEY=your_public_key
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_KEY=your_anon_key
+   ```
+
+2. Build the Docker image using the provided script:
+
+   ```powershell
+   .\build-docker.ps1
+   ```
+
+   This script validates required environment variables and builds the image as `phrase-follower:local`.
+
+3. Update `docker-compose.yml` to use the local image:
+
+   ```yaml
+   image: phrase-follower:local # instead of ghcr.io/...
+   ```
+
+4. Start the container:
+
+   ```bash
+   docker compose up
+   ```
+
+   The application will be available at `http://localhost:3000`.
+
+**Note:** For production deployment, the image is pulled from GitHub Container Registry (GHCR). See [Deployment](#9-deployment) section for details.
+
+### 4.3. TTS setup (for audio generation)
+
+**Important:** Before you can generate audio, you must configure a TTS encryption key from Google Cloud:
+
+1. Obtain a Google Cloud TTS API key
+2. Add the key in the app's Settings screen
+3. The key is validated on save and never exposed to the client
+4. Configure three EN voices (ordered) and one PL voice per your preference
+5. Duplicates within a language are disallowed
 
 ## 5. Available scripts
 
@@ -102,41 +159,55 @@ TTS setup (for audio generation):
 
 ## 6. Project scope
 
-MVP capabilities (high-level):
+### Core features
 
-- Notebooks: create via import, rename, delete (removes related MP3s); per-user privacy with login required
-- Phrases within notebooks: add, reorder, delete (deletes MP3s); tabular view with audio status `complete/failed/missing`
-- Import: line-by-line `EN ::: PL` with validation; normalization (quotes, zero-width chars, spaces); limits: ≤100 phrases/notebook, ≤2000 chars/phrase; up to 500 notebooks per user; clear rejection report
-- TTS & voices: per-user Google TTS key (server-only); 3×EN ordered + 1×PL; no duplicates within a language
-- Audio generation: `Generate` triggers MP3 per phrase × voice at 22.05 kHz / 64 kbps mono; full rebuild replaces old MP3; failed segments marked; global error message on failure
-- Playback: EN1 → EN2 → EN3 → PL with 800 ms pauses; speeds 0.75/0.9/1.0/1.25; click-to-seek on words; highlight on/off (token = word + adjacent punctuation); heuristically synced
-- Error UX: consistent messages (import rejections listed; generate shows "Nie udało się wygenerować audio. Spróbuj ponownie.")
+- **Authentication & Security:** User login with JWT, per-user data isolation (RLS)
+- **Notebooks:** Create, rename, delete notebooks; organize phrases into collections
+- **Import:** Import phrases from `EN ::: PL` text files with validation and error reporting
+- **Audio Generation:** Generate MP3 audio for phrases using Google TTS (requires API key configuration)
+- **Voice Configuration:** Configure 3 English voices and 1 Polish voice per user
+- **Playback:** Sequential EN1 → EN2 → EN3 → PL playback with adjustable speeds (0.75x - 1.25x)
+- **Limits:** Up to 500 notebooks per user, 100 phrases per notebook, 2000 characters per phrase
 
-Out of scope for MVP:
+### Out of scope for MVP
 
-- PWA/offline, hotkeys, hover-jump
-- EN↔PL translation features beyond imports
+- PWA/offline mode, keyboard shortcuts
+- Translation features beyond imports
 - Public API, SSO, telemetry
-- Manual word-level sync editing
-- ZIP export and prefetching (planned)
+- ZIP export, click-to-seek, word highlighting (planned for post-MVP)
 
-Assumptions and constraints:
+### Planned enhancements (post-MVP)
 
-- Online-only, single-tenant; TTS secrets remain server-side
-- Storage layout (informational): `storage/audio/{notebookId}/{phraseId}/{voice}.mp3`; `storage/meta/...`
-- Deletions are hard deletes; no auto-retries; regeneration is manual
-
-Planned next steps:
-
-- ZIP export of concatenated EN(1..3)→PL with pauses (size < 30 MB, auto-clean)
-- Prefetching strategy for current/next phrase with bounded concurrency
+- Click-to-seek per word, token-based highlighting, audio status indicators
+- ZIP export of audio files
+- Rate limiting and improved error handling
+- Partial audio regeneration (per phrase)
 
 ## 7. Project status
 
-- Version: 0.0.1 (pre-release)
-- Status: MVP in progress; not production-ready
+- Version: 0.0.1
+- Status: MVP complete (Phase 0-2 implemented)
 - Documentation: primary spec in [docs/prd.md](./docs/prd.md)
 
-## 8. License
+## 8. Deployment
+
+The application is deployed on **DigitalOcean Droplet** using Docker.
+
+### Deployment history
+
+Previously, the application was deployed to Cloudflare Pages/Workers, but due to platform limitations (CPU time limits, subrequest limits, response size limits, instability for long-running operations), it was migrated to DigitalOcean Droplet.
+
+For detailed migration rationale, see [docs/lessons-learned/digital-ocean-why.md](./docs/lessons-learned/digital-ocean-why.md).
+
+### Production deployment
+
+- **Platform:** DigitalOcean Droplet
+- **Deployment method:** Automated via GitHub Actions
+- **Container registry:** GitHub Container Registry (GHCR)
+- **Image:** `ghcr.io/phasmam/10x-phrase-follower:latest`
+
+The production deployment uses `docker-compose.yml` with environment variables configured on the droplet. For deployment setup instructions, see [docs/guides/droplet-setup.md](./docs/guides/droplet-setup.md).
+
+## 9. License
 
 No license has been specified yet. Consider adding a LICENSE file (e.g., MIT). Until then, all rights are reserved by default.

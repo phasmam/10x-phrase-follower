@@ -23,9 +23,12 @@ Główny dokument wymagań produktu (PRD) - opis funkcjonalności, wymagań bizn
 
 - [Przegląd wszystkich faz](./implementation/phases/phases-plan.md)
 - [Phase 0 - Auth/RLS](./implementation/phases/phase0-implementation-plan.md)
+- [Phase 0-1 - View Plan](./implementation/phases/phase0-1-view-plan.md)
 - [Phase 1 - Notatnik + Import](./implementation/phases/phase1-implementation-plan.md)
 - [Phase 2 - Audio loop](./implementation/phases/phase2-implementation-plan.md)
+- [Phase 2 - View Implementation Plan](./implementation/phases/phase2-view-implementation-plan.md)
 - [Phase 3 - Klik-to-seek + highlight](./implementation/phases/phase3-implementation-plan.md)
+- [Phase 3 - View Implementation Plan](./implementation/phases/phase3-view-implementation-plan.md)
 
 #### Zaimplementowane funkcje
 
@@ -47,6 +50,17 @@ Główny dokument wymagań produktu (PRD) - opis funkcjonalności, wymagań bizn
 
 - [Migracja do Supabase Cloud](./guides/supabase-cloud-migration.md) - Jak przejść z lokalnego Supabase na cloud
 - [Testowanie produkcji auth](./guides/testing-production-auth.md) - Jak testować autoryzację w produkcji
+- [Setup DigitalOcean Droplet](./guides/droplet-setup.md) - Konfiguracja dropletu przed pierwszym deployem
+- [SSH do DigitalOcean z Windows](./guides/ssh-digital-ocean-windows.md) - Jak połączyć się z dropletem z Windows
+- [Sprawdzanie łączności z dropletem](./guides/droplet-connectivity-check.md) - Weryfikacja połączenia z dropletem
+- [Troubleshooting dropletu](./guides/droplet-troubleshooting.md) - Rozwiązywanie problemów z dropletem
+- [Lokalne testowanie Docker](./guides/local-docker-testing.md) - Testowanie aplikacji w Dockerze lokalnie
+- [Pre-deploy Checklist](./guides/pre-deploy-checklist.md) - Checklist przed wdrożeniem
+
+### Lessons Learned
+
+- [Docker Deployment](./lessons-learned/docker-deployment.md) - Wnioski z wdrożenia Docker z Astro + Node.js
+- [DigitalOcean - Dlaczego](./lessons-learned/digital-ocean-why.md) - Podsumowanie migracji z Cloudflare na DigitalOcean
 
 ### Troubleshooting
 
@@ -65,6 +79,7 @@ docs/
 │   └── phases/         # Plany poszczególnych faz
 ├── details/            # Szczegóły techniczne modułów
 ├── guides/             # Przewodniki operacyjne
+├── lessons-learned/    # Wnioski i doświadczenia z wdrożeń
 └── troubleshooting/    # Rozwiązywanie problemów
 ```
 

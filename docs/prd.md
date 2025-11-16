@@ -2,12 +2,12 @@
 
 ## 1. Przegląd produktu
 
-Cel: ułatwić naukę angielskich fraz przez sekwencyjne odsłuchy EN → PL z klik-to-seek per słowo, podświetlaniem i tanim TTS Google.
+Cel: ułatwić naukę angielskich fraz przez sekwencyjne odsłuchy EN → PL z tanim TTS Google.
 Zakres MVP: prywatne notatniki z frazami EN/PL, import `EN ::: PL`, konfiguracja lektorów EN3 + PL1 per użytkownik, generowanie i przechowywanie audio per fraza × lektor, odtwarzanie w przeglądarce, dark mode.
 
 ## 2. Problem użytkownika
 
-Uczący się B1/B2 potrzebują powtarzalnej sekwencji odsłuchów z wieloma głosami EN, precyzyjnego skoku do słowa oraz prostego przepływu: import → generacja → odsłuch. Ogólne narzędzia nie oferują kombinacji multi-voice EN, klik-to-seek per słowo i płynnego EN→PL w jednym miejscu przy niskim koszcie TTS.
+Uczący się B1/B2 potrzebują powtarzalnej sekwencji odsłuchów z wieloma głosami EN oraz prostego przepływu: import → generacja → odsłuch. Ogólne narzędzia nie oferują kombinacji multi-voice EN i płynnego EN→PL w jednym miejscu przy niskim koszcie TTS.
 
 ## 3. Wymagania funkcjonalne
 
@@ -15,7 +15,7 @@ Uczący się B1/B2 potrzebują powtarzalnej sekwencji odsłuchów z wieloma gło
 
 1. Tworzenie notatnika przez import; zmiana nazwy; usuwanie notatnika (usuwa powiązane MP3).
 2. W notatniku: dodawanie pojedynczych fraz, zmiana kolejności, usuwanie fraz (usuwa także MP3).
-3. Widok tabelaryczny fraz ze statusem audio: complete/failed/missing.
+3. Widok tabelaryczny fraz.
 4. Notatniki prywatne per użytkownik (logowanie wymagane).
 
 3.2 Import 5) Format pliku: linia-po-linii `EN zdanie ::: PL zdanie`. 6) Walidacja: pojedynczy separator, niepustość EN/PL; limity: ≤100 fraz/notatnik, ≤2000 znaków/fraza.
@@ -25,7 +25,7 @@ Uczący się B1/B2 potrzebują powtarzalnej sekwencji odsłuchów z wieloma gło
 
 3.4 Generowanie audio 11) Przycisk Generate audio w notatniku; generuje MP3 per fraza × lektor (EN1, EN2, EN3, PL) z parametrami MP3 22.05 kHz / 64 kbps mono. 12) Pełny rebuild całego notatnika; po sukcesie stare MP3 są usuwane; błędne segmenty oznaczane jako failed; prosty komunikat globalny błędu.
 
-3.5 Odtwarzanie 13) Sekwencja: EN1 → EN2 → EN3 → PL; pauza 800 ms między segmentami i 800 ms między frazami; auto-advance po zakończeniu PL i pauzie. 14) Sterowanie: Play/Pause, przewijanie w obrębie frazy, prędkości 0.75/0.9/1.0/1.25. 15) Klik-to-seek: kliknięcie w słowo ustawia odtwarzanie od początku słowa w aktualnie grającym segmencie; klik pierwszego słowa startuje frazę; po PL klik EN ⇒ start od EN1. 16) Podświetlanie słów: on/off; token = słowo + przyległa interpunkcja; heurystyczna synchronizacja (docelowo ≤ ~80 ms).
+3.5 Odtwarzanie 13) Sekwencja: EN1 → EN2 → EN3 → PL; pauza 800 ms między segmentami i 800 ms między frazami; auto-advance po zakończeniu PL i pauzie. 14) Sterowanie: Play/Pause, przewijanie w obrębie frazy, prędkości 0.75/0.9/1.0/1.25.
 
 3.6 UI i komunikaty 17) Dark mode only. 18) Strony: lista notatników; import; notatnik (tabela fraz, Generate); player; ustawienia TTS. 19) Komunikaty: import – lista odrzuconych; generate – „Nie udało się wygenerować audio. Spróbuj ponownie.”
 
@@ -98,20 +98,7 @@ Kryteria akceptacji:
 - Po zakończeniu PL i 800 ms pauzy automatycznie startuje kolejna fraza.
 - Zmiana prędkości 0.75/0.9/1.0/1.25 działa bez artefaktów.
 
-UC-08 Klik-to-seek i podświetlanie
-Opis: Jako użytkownik chcę kliknąć słowo i zacząć od niego w aktywnym segmencie oraz mieć przełączalne podświetlanie.
-Kryteria akceptacji:
-
-- Klik w słowo w aktywnym segmencie startuje od początku słowa; klik pierwszego słowa uruchamia frazę; po PL klik EN ⇒ start od EN1.
-- Highlight on/off; token = słowo + przyległa interpunkcja; docelowo desync ≤ ~80 ms (best effort).
-
-UC-09 Statusy audio w tabeli
-Opis: Jako użytkownik chcę widzieć status audio per fraza.
-Kryteria akceptacji:
-
-- Dla każdej frazy w tabeli widoczny jest status complete/failed/missing; player przy brakującym segmencie pomija go i gra dalej.
-
-UC-10 Spójne komunikaty błędów
+UC-08 Spójne komunikaty błędów
 Opis: Jako użytkownik chcę jasnych komunikatów w krytycznych miejscach.
 Kryteria akceptacji:
 
@@ -121,6 +108,6 @@ Kryteria akceptacji:
 ## 6. Metryki sukcesu
 
 1. Import: ≥95% poprawnie przetworzonych linii zgodnych ze wzorcem; 100% odrzutów z jasnym powodem.
-2. Odtwarzanie: auto-advance ≤ 150 ms ponad zadaną pauzę 800 ms; brak słyszalnych przerw; highlight desync ≤ ~80 ms dla 95% słów.
-3. Generowanie: 0 duplikatów MP3 po regeneracjach dla notatnika; statusy failed/missing poprawnie prezentowane.
+2. Odtwarzanie: auto-advance ≤ 150 ms ponad zadaną pauzę 800 ms; brak słyszalnych przerw.
+3. Generowanie: 0 duplikatów MP3 po regeneracjach dla notatnika; player pomija braki w manifeście.
 4. Bezpieczeństwo: 0 przypadków dostępu cross-user w testach (403/404 bez wycieku metadanych); klucz TTS niewidoczny w kliencie w 100% żądań.

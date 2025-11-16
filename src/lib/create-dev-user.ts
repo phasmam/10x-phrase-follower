@@ -36,10 +36,8 @@ export async function createDevUser() {
       email_confirm: true,
     });
 
-    if (authError) {
-      console.warn("Auth user creation failed (might already exist):", authError.message);
-    } else {
-      console.log("Auth user created:", authUser.user?.id);
+    if (authError && !authError.message.includes("already")) {
+      console.warn("Auth user creation failed:", authError.message);
     }
 
     // Create user in public.users table
@@ -52,10 +50,8 @@ export async function createDevUser() {
       .select()
       .single();
 
-    if (publicError) {
-      console.warn("Public user creation failed (might already exist):", publicError.message);
-    } else {
-      console.log("Public user created:", publicUser.id);
+    if (publicError && !publicError.message.includes("already")) {
+      console.warn("Public user creation failed:", publicError.message);
     }
 
     return {

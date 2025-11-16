@@ -42,14 +42,12 @@ export default function GenerateAudioButton({
   // Memoize the checkPrerequisites function to prevent infinite loops
   const checkPrerequisites = useCallback(async () => {
     if (hasCheckedPrerequisites.current) {
-      console.log("Prerequisites already checked, skipping...");
       return;
     }
 
     hasCheckedPrerequisites.current = true;
 
     try {
-      console.log("Checking prerequisites...");
       // Check TTS credentials
       const ttsResponse = await apiCall<TtsCredentialsStateDTO>("/api/tts-credentials", {
         method: "GET",
@@ -70,8 +68,6 @@ export default function GenerateAudioButton({
         canGenerate: ttsConfigured && voicesConfigured,
         error: null,
       }));
-
-      console.log("Prerequisites checked:", { ttsConfigured, voicesConfigured });
     } catch (err) {
       console.error("Failed to check prerequisites:", err);
       setState((prev) => ({
