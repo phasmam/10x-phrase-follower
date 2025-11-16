@@ -31,17 +31,20 @@
 ### Problem: NXDOMAIN (domena nie istnieje w DNS)
 
 **Objawy:**
+
 ```bash
 dig example.com +short
 # Zwraca: (puste) lub błąd NXDOMAIN
 ```
 
 **Przyczyny:**
+
 1. Nameservery w rejestratorze nie wskazują na Digital Ocean
 2. Rekordy DNS w Digital Ocean nie są ustawione
 3. DNS jeszcze się nie propagował (za wcześnie)
 
 **Rozwiązanie:**
+
 1. Sprawdź nameservery w rejestratorze (Namecheap/Cloudflare/etc.)
 2. Ustaw na Digital Ocean nameservery
 3. W Digital Ocean: Networking → Domains → dodaj rekordy A:
@@ -52,6 +55,7 @@ dig example.com +short
 ### Problem: DNS wskazuje na złe IP (parking page)
 
 **Objawy:**
+
 ```bash
 dig example.com +short
 # Zwraca: 192.0.2.1 (parking page rejestratora)
@@ -61,6 +65,7 @@ dig example.com +short
 **Przyczyna:** Nameservery w rejestratorze nie są ustawione na Digital Ocean, lub rekordy DNS w Digital Ocean wskazują na złe IP.
 
 **Rozwiązanie:**
+
 1. Sprawdź nameservery w rejestratorze
 2. Zmień na Digital Ocean nameservery
 3. Sprawdź rekordy A w Digital Ocean — powinny wskazywać na IP dropleta
@@ -79,6 +84,7 @@ dig @8.8.8.8 www.example.com +short
 ```
 
 **Online tools:**
+
 - https://www.whatsmydns.net/#A/example.com
 - Sprawdza propagację DNS na całym świecie
 
@@ -89,6 +95,7 @@ dig @8.8.8.8 www.example.com +short
 ### Problem: Certbot nie może zweryfikować domeny
 
 **Błąd:**
+
 ```
 Domain: example.com
 Type:   unauthorized
@@ -96,24 +103,28 @@ Detail: Invalid response from http://example.com/.well-known/acme-challenge/...
 ```
 
 **Przyczyny:**
+
 1. DNS wskazuje na złe IP (nie na Twój droplet)
 2. Nginx przekierowuje HTTP na HTTPS przed uzyskaniem certyfikatu
 3. Port 80 nie jest otwarty w firewall
 4. Nginx nie nasłuchuje na porcie 80
 
 **Rozwiązanie:**
+
 1. **Upewnij się, że DNS wskazuje na poprawne IP:**
+
    ```bash
    dig @8.8.8.8 example.com +short
    # Powinno zwrócić IP dropleta
    ```
 
 2. **Tymczasowo usuń przekierowanie HTTP → HTTPS** z konfiguracji nginx:
+
    ```nginx
    server {
        listen 80;
        server_name example.com www.example.com;
-       
+
        # Tymczasowo - proxy do aplikacji (przed uzyskaniem certyfikatu)
        location / {
            proxy_pass http://localhost:3000;
@@ -123,6 +134,7 @@ Detail: Invalid response from http://example.com/.well-known/acme-challenge/...
    ```
 
 3. **Lub użyj standalone mode:**
+
    ```bash
    sudo systemctl stop nginx
    sudo certbot certonly --standalone -d example.com -d www.example.com
@@ -138,6 +150,7 @@ Detail: Invalid response from http://example.com/.well-known/acme-challenge/...
 ### Problem: Certbot uzyskał certyfikat, ale nie może go zainstalować
 
 **Błąd:**
+
 ```
 Could not automatically find a matching server block for example.com.
 Set the `server_name` directive to use the Nginx installer.
@@ -146,16 +159,19 @@ Set the `server_name` directive to use the Nginx installer.
 **Przyczyna:** Konfiguracja nginx używa IP zamiast domeny w `server_name`.
 
 **Rozwiązanie:**
+
 1. Zmień `server_name` w konfiguracji nginx:
+
    ```nginx
    # ❌ Złe
    server_name 192.168.1.100;
-   
+
    # ✅ Dobre
    server_name example.com www.example.com;
    ```
 
 2. Zaktualizuj ścieżki certyfikatów na Let's Encrypt:
+
    ```nginx
    ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem;
    ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
@@ -208,22 +224,22 @@ server {
     location / {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
-        
+
         # WebSocket support
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
-        
+
         # Headers
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
+
         # Timeouts
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
-        
+
         # Cache bypass
         proxy_cache_bypass $http_upgrade;
     }
@@ -241,6 +257,7 @@ server {
 ## 🛠️ Przydatne komendy
 
 ### Sprawdzanie DNS:
+
 ```bash
 # Zewnętrzny DNS resolver (Google)
 dig @8.8.8.8 example.com +short
@@ -254,6 +271,7 @@ hostname -I
 ```
 
 ### Sprawdzanie nginx:
+
 ```bash
 # Test konfiguracji
 sudo nginx -t
@@ -270,6 +288,7 @@ sudo ss -tlnp | grep -E ':(80|443)'
 ```
 
 ### Certbot:
+
 ```bash
 # Uzyskaj certyfikat
 sudo certbot --nginx -d example.com -d www.example.com
@@ -293,6 +312,7 @@ sudo certbot renew --dry-run
 ```
 
 ### Firewall:
+
 ```bash
 # Sprawdź status
 sudo ufw status
@@ -310,15 +330,18 @@ sudo ufw allow 'Nginx Full'
 ## 📋 Checklist konfiguracji domeny i SSL
 
 ### 1. Rejestracja domeny:
+
 - [ ] Zarejestrowano domenę u zewnętrznego rejestratora (Namecheap/Cloudflare/etc.)
 - [ ] Domena jest aktywna i opłacona
 
 ### 2. Konfiguracja DNS w Digital Ocean:
+
 - [ ] Domena dodana w Digital Ocean (Networking → Domains → "Add Domain")
 - [ ] Rekord A dla `@` wskazuje na IP dropleta
 - [ ] Rekord A dla `www` wskazuje na IP dropleta
 
 ### 3. Nameservery w rejestratorze:
+
 - [ ] Nameservery zmienione na Digital Ocean:
   - `ns1.digitalocean.com`
   - `ns2.digitalocean.com`
@@ -326,18 +349,21 @@ sudo ufw allow 'Nginx Full'
 - [ ] Poczekano na propagację (sprawdź: `dig @8.8.8.8 domena.xyz +short`)
 
 ### 4. Nginx:
+
 - [ ] Nginx zainstalowany (`apt install nginx -y`)
 - [ ] Konfiguracja używa domeny w `server_name` (nie IP)
 - [ ] Port 80 otwarty w firewall
 - [ ] Nginx działa (`systemctl status nginx`)
 
 ### 5. Certbot:
+
 - [ ] Certbot zainstalowany (`apt install certbot python3-certbot-nginx -y`)
 - [ ] Certyfikat uzyskany (`certbot --nginx -d example.com`)
 - [ ] Certyfikat zainstalowany (certbot automatycznie lub ręcznie)
 - [ ] Automatyczne odnawianie działa (`systemctl status certbot.timer`)
 
 ### 6. Testowanie:
+
 - [ ] HTTP przekierowuje na HTTPS
 - [ ] HTTPS działa bez błędów w przeglądarce
 - [ ] Certyfikat jest zaufany (zielona kłódka)
@@ -391,4 +417,3 @@ sudo ufw allow 'Nginx Full'
 
 **Data utworzenia:** 2025-01-15  
 **Kontekst:** Konfiguracja domeny z Let's Encrypt SSL na Digital Ocean Droplet
-
