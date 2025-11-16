@@ -26,6 +26,9 @@ export function usePlaybackEngine({
   const currentSegmentRef = useRef<VoiceSlot | null>(null);
   const manifestRef = useRef<PlaybackManifestVM | null>(manifest);
   const phraseIndexRef = useRef<number>(phraseIndex);
+  const playSegmentRef = useRef<((slot: VoiceSlot, url: string) => Promise<void>) | null>(null);
+  const handleSegmentEndRef = useRef<(() => void) | null>(null);
+  const handlePhraseEndRef = useRef<(() => void) | null>(null);
 
   // Keep refs in sync with latest values to avoid stale closures
   useEffect(() => {
@@ -91,13 +94,13 @@ export function usePlaybackEngine({
 
     const nextSegment = currentPhrase.segments.find((s) => s.slot === nextSlot);
 
-    if (nextSegment) {
+    if (nextSegment && playSegmentRef.current) {
       timeoutRef.current = setTimeout(() => {
-        playSegment(nextSlot, nextSegment.url);
+        playSegmentRef.current?.(nextSlot, nextSegment.url);
       }, PAUSE_DURATION_MS);
-    } else {
+    } else if (handlePhraseEndRef.current) {
       timeoutRef.current = setTimeout(() => {
-        handlePhraseEnd();
+        handlePhraseEndRef.current?.();
       }, PAUSE_DURATION_MS);
     }
   }, []);
@@ -119,9 +122,9 @@ export function usePlaybackEngine({
     const nextPhrase = currentManifest.sequence[nextPhraseIndex];
     const en1Segment = nextPhrase.segments.find((s) => s.slot === "EN1");
 
-    if (en1Segment) {
+    if (en1Segment && playSegmentRef.current) {
       timeoutRef.current = setTimeout(() => {
-        playSegment("EN1", en1Segment.url);
+        playSegmentRef.current?.("EN1", en1Segment.url);
       }, PAUSE_DURATION_MS);
     }
   }, [setPhraseIndex, setCurrentSlot, setClockMs]);
@@ -129,17 +132,28 @@ export function usePlaybackEngine({
   // Play audio segment
   const playSegment = useCallback(
     async (slot: VoiceSlot, url: string) => {
+      // Clear any pending timeouts to prevent scheduled segments from playing
+      // This is critical when user changes segment or phrase during a pause
+      clearTimeouts();
+
       if (!url || url.trim() === "") {
         console.error("[usePlaybackEngine] Invalid URL provided:", url);
-        handleSegmentEnd();
+        handleSegmentEndRef.current?.();
         return;
+      }
+
+      // Stop any currently playing audio before starting new segment
+      if (audioRef.current) {
+        audioRef.current.pause();
       }
 
       if (!audioRef.current) {
         audioRef.current = new Audio();
 
         // Set up event listeners
-        audioRef.current.addEventListener("ended", handleSegmentEnd);
+        audioRef.current.addEventListener("ended", () => {
+          handleSegmentEndRef.current?.();
+        });
         audioRef.current.addEventListener("error", (e) => {
           console.error("[usePlaybackEngine] Audio element error:", e, {
             error: audioRef.current?.error,
@@ -147,7 +161,7 @@ export function usePlaybackEngine({
             readyState: audioRef.current?.readyState,
             src: audioRef.current?.src,
           });
-          handleSegmentEnd();
+          handleSegmentEndRef.current?.();
         });
         audioRef.current.addEventListener("timeupdate", () => {
           if (audioRef.current) {
@@ -170,10 +184,10 @@ export function usePlaybackEngine({
           errorMessage: error instanceof Error ? error.message : String(error),
           src: audio.src,
         });
-        handleSegmentEnd();
+        handleSegmentEndRef.current?.();
       }
     },
-    [speed, setCurrentSlot, setClockMs, handleSegmentEnd]
+    [speed, setCurrentSlot, setClockMs, clearTimeouts]
   );
 
   // Advance to next phrase
@@ -209,6 +223,19 @@ export function usePlaybackEngine({
       }
     };
   }, [clearTimeouts]);
+
+  // Update refs when callbacks change
+  useEffect(() => {
+    playSegmentRef.current = playSegment;
+  }, [playSegment]);
+
+  useEffect(() => {
+    handleSegmentEndRef.current = handleSegmentEnd;
+  }, [handleSegmentEnd]);
+
+  useEffect(() => {
+    handlePhraseEndRef.current = handlePhraseEnd;
+  }, [handlePhraseEnd]);
 
   // Update audio playback rate when speed changes
   useEffect(() => {
