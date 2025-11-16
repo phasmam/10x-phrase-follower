@@ -48,18 +48,35 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
         ]);
 
         // Check if there's an active job
+        // Use jobs list endpoint to find active jobs (more reliable than direct job fetch)
         let activeJob: JobDTO | null = null;
-        if (notebookData.last_generate_job_id) {
-          try {
-            const job = await apiCall<JobDTO>(`/api/jobs/${notebookData.last_generate_job_id}`, {
-              method: "GET",
-            });
-            // Only consider it active if it's queued or running
-            if (job.state === "queued" || job.state === "running") {
-              activeJob = job;
+        try {
+          // Get all recent jobs for this notebook and find the most recent active one
+          const jobsResponse = await apiCall<{ items: JobDTO[] }>(`/api/notebooks/${notebookId}/jobs?limit=25`, {
+            method: "GET",
+          });
+          const jobs = jobsResponse.items || [];
+
+          // Find the most recent active job (queued or running)
+          const activeJobs = jobs.filter((job) => job.state === "queued" || job.state === "running");
+          if (activeJobs.length > 0) {
+            // Sort by created_at descending and take the most recent
+            activeJobs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+            activeJob = activeJobs[0];
+          }
+        } catch {
+          // If jobs list endpoint fails, try fallback to direct job fetch
+          if (notebookData.last_generate_job_id) {
+            try {
+              const job = await apiCall<JobDTO>(`/api/jobs/${notebookData.last_generate_job_id}`, {
+                method: "GET",
+              });
+              if (job.state === "queued" || job.state === "running") {
+                activeJob = job;
+              }
+            } catch {
+              // Job might not exist or be inaccessible, ignore
             }
-          } catch {
-            // Job might not exist or be inaccessible, ignore
           }
         }
 

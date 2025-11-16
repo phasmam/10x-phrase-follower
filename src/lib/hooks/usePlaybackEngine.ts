@@ -110,13 +110,14 @@ export function usePlaybackEngine({
     const currentManifest = manifestRef.current;
     const idx = phraseIndexRef.current;
 
-    if (!currentManifest || idx >= currentManifest.sequence.length - 1) {
+    if (!currentManifest) {
       setCurrentSlot(null);
       setClockMs(0);
       return;
     }
 
-    const nextPhraseIndex = idx + 1;
+    // Loop back to first phrase if we're at the last one
+    const nextPhraseIndex = idx >= currentManifest.sequence.length - 1 ? 0 : idx + 1;
     setPhraseIndex(nextPhraseIndex);
 
     const nextPhrase = currentManifest.sequence[nextPhraseIndex];
