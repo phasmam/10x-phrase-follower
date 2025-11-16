@@ -126,6 +126,18 @@ export async function POST(context: APIContext) {
       throw ApiErrors.internal("Failed to create job");
     }
 
+    // Update notebook with the new job ID
+    const { error: updateNotebookError } = await supabase
+      .from("notebooks")
+      .update({ last_generate_job_id: jobId, updated_at: new Date().toISOString() })
+      .eq("id", notebookId)
+      .eq("user_id", userId);
+
+    if (updateNotebookError) {
+      // Log error but don't fail the request - job was created successfully
+      console.error(`Failed to update notebook last_generate_job_id: ${updateNotebookError.message}`);
+    }
+
     // Try to process the job immediately (non-blocking)
     // This will work if the request stays alive long enough, otherwise
     // the job will be processed by /api/jobs/process-queued endpoint or cron

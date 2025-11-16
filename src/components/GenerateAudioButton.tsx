@@ -138,8 +138,25 @@ export default function GenerateAudioButton({
           setState((prev) => ({ ...prev, isGenerating: true }));
         }
       } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
         console.error("Failed to poll job status:", err);
-        // Don't stop polling on error, just log it
+        
+        // If job not found (404), stop polling - job may have been deleted or doesn't exist
+        const isNotFound =
+          errorMessage.includes("Job not found") ||
+          errorMessage.includes("404") ||
+          errorMessage.toLowerCase().includes("not found");
+        
+        if (isNotFound) {
+          console.warn(`Job ${activeJobId} not found, stopping polling`);
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          setState((prev) => ({ ...prev, isGenerating: false }));
+          // Don't call onJobCompleted for missing jobs - let the user refresh if needed
+        }
+        // For other errors, continue polling (network issues, etc.)
       }
     };
 
