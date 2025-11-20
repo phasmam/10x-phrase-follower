@@ -9,7 +9,7 @@
 
 - Sklejka: EN1 → [800 ms] → EN2 → [800 ms] → EN3 → [800 ms] → PL
 - Bez trzasków i artefaktów (docelowo micro-fade – zob. audio-pipeline).
-- Źródła: MP3 22.05 kHz / 64 kbps mono.
+- Źródła: MP3 z supabase
 
 ## Nazewnictwo
 
@@ -17,9 +17,9 @@
 - `NNN` = zero-padded indeks frazy.
 - Spacje → `_`; znaki problematyczne usuwane/normalizowane.
 
-## Błędy częściowe
+## Przycisk
 
-- Do ZIP trafiają tylko udane frazy; po eksporcie pokaż listę pominiętych (z powodem).
+- z poziomu notatnika przycisk Export
 
 ## Czyszczenie
 

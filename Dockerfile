@@ -41,7 +41,7 @@ COPY package.json package-lock.json ./
 # Install production dependencies only
 RUN npm ci --omit=dev
 
-# Copy built application from builder
+# Copy built application from builder (includes assets copied by build script)
 COPY --from=builder /app/dist ./dist
 
 # Expose port 3000

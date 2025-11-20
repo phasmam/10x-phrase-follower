@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [master, export-zip]
   pull_request:
-    branches: [master]
+    branches: [master, export-zip]
   workflow_dispatch:
 
 jobs:
@@ -99,7 +99,7 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
     environment: production
-    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/export-zip')
     permissions:
       contents: read
       packages: write
@@ -127,6 +127,13 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
+      - name: Get branch name
+        id: branch
+        run: |
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "Branch: $BRANCH_NAME"
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -151,9 +158,21 @@ jobs:
           key: ${{ secrets.DROPLET_SSH_KEY }}
           script: |
             cd /opt/phrase-follower
+            # Update DOCKER_IMAGE in .env to use the branch-specific tag
+            BRANCH_NAME="${{ steps.branch.outputs.branch_name }}"
+            IMAGE_TAG="ghcr.io/${{ github.repository }}:${BRANCH_NAME}"
+            echo "Deploying image: ${IMAGE_TAG}"
+            # Update .env file with the branch-specific image tag
+            if grep -q "^DOCKER_IMAGE=" .env; then
+              sed -i "s|^DOCKER_IMAGE=.*|DOCKER_IMAGE=${IMAGE_TAG}|" .env
+            else
+              echo "DOCKER_IMAGE=${IMAGE_TAG}" >> .env
+            fi
+            # Pull and deploy
             docker compose pull
             docker compose up -d
             docker compose ps
+            echo "Deployment completed for branch: ${BRANCH_NAME}"
 
   # Cloudflare Pages deployment - disabled by default
   # Set ENABLE_CLOUDFLARE_DEPLOY=true in repository secrets to enable

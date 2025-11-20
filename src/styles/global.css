@@ -172,3 +172,17 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes brightness-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.export-pulsing {
+  animation: brightness-pulse 1.5s ease-in-out infinite;
+}

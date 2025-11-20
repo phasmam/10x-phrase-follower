@@ -3,6 +3,7 @@ import { Button } from "./ui/button";
 import { useApi } from "../lib/hooks/useApi";
 import { ToastProvider, useToast } from "./ui/toast";
 import GenerateAudioButton from "./GenerateAudioButton";
+import ExportZipButton from "./ExportZipButton";
 import { Trash2 } from "lucide-react";
 import type { PhraseDTO, PhraseListResponse, NotebookDTO, JobDTO } from "../types";
 import { parseMarkdownToHtml } from "../lib/utils";
@@ -280,6 +281,11 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
                 onJobCompleted={handleJobCompleted}
                 onJobUpdated={handleJobUpdated}
                 activeJobId={state.activeJob?.id || null}
+              />
+              <ExportZipButton
+                notebookId={notebookId}
+                disabled={!state.notebook?.current_build_id}
+                disabledReason={!state.notebook?.current_build_id ? "Generate audio first to enable export" : undefined}
               />
             </div>
           </div>
