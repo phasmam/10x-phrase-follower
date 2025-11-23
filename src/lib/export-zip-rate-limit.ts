@@ -4,8 +4,8 @@
  * In-memory implementation (for MVP); can be replaced with Redis in production
  */
 
-// Cooldown period: 5 minutes
-const EXPORT_COOLDOWN_MS = 5 * 60 * 1000;
+// Cooldown period: 30 seconds
+const EXPORT_COOLDOWN_MS = 30 * 1000;
 
 // In-memory map: key = `${userId}:${notebookId}`, value = timestamp of last export
 const lastExportTimestamps = new Map<string, number>();

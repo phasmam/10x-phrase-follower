@@ -308,9 +308,7 @@ async function handleExport(context: APIContext): Promise<Response> {
 
   // Check rate limit
   if (!canExport(userId, notebookId)) {
-    throw ApiErrors.tooManyRequests(
-      "Eksport dla tego notatnika był niedawno wykonany. Spróbuj ponownie za kilka minut."
-    );
+    throw ApiErrors.tooManyRequests("Eksport dla tego notatnika był niedawno wykonany. Spróbuj ponownie za 30 sekund.");
   }
 
   const supabase = getSupabaseClient(context);

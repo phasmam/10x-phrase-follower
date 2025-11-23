@@ -267,10 +267,10 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
       {/* Phrases table */}
       <div className="bg-card border border-border rounded-lg">
         <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <h2 className="text-lg font-semibold">Phrases</h2>
-            <div className="flex items-center gap-2">
-              <Button asChild size="sm" variant="default">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button asChild size="sm" variant="default" className="shrink-0">
                 <a href={`/player/${notebookId}`} title="Open Player">
                   Open Player
                 </a>

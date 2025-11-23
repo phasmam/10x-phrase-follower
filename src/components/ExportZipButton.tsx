@@ -110,7 +110,7 @@ export default function ExportZipButton({ notebookId, disabled = false, disabled
       variant="default"
       size="sm"
       title={disabledReason || (isExporting ? "Exporting..." : "Export ZIP file")}
-      className={`p-2 ${isExporting ? "export-pulsing" : ""}`}
+      className={`p-2 shrink-0 ${isExporting ? "export-pulsing" : ""}`}
     >
       <Download className="size-4" />
     </Button>

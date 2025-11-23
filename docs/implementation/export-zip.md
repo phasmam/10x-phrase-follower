@@ -102,12 +102,12 @@ Szczegóły:
    - Jeśli `current_build_id` jest `null` → 400 z jasnym komunikatem:
      - np. `Brak gotowego buildu audio dla tego notatnika. Wygeneruj audio przed eksportem.`
 
-3. **Rate limiting (1 eksport / 5 minut per użytkownik+notatnik)**:
+3. **Rate limiting (1 eksport / 30 sekund per użytkownik+notatnik)**:
    - W `src/lib` można dodać prosty serwis w stylu `idempotency.service.ts`, np. `export-zip-rate-limit.service.ts`:
      - In-memory `Map<string, number>` z timestampem ostatniego eksportu, klucz: `${userId}:${notebookId}`.
-     - Okno: 5 minut (300_000 ms).
-     - Jeśli od ostatniego eksportu < 5 minut → 429 + komunikat:
-       - np. `Eksport dla tego notatnika był niedawno wykonany. Spróbuj ponownie za kilka minut.`
+     - Okno: 30 sekund (30_000 ms).
+     - Jeśli od ostatniego eksportu < 30 sekund → 429 + komunikat:
+       - np. `Eksport dla tego notatnika był niedawno wykonany. Spróbuj ponownie za 30 sekund.`
    - To rozwiązanie jest wystarczające dla single-tenant / dev; w przyszłości można zastąpić Redisem.
 
 4. **Pobranie fraz w kolejności**:
@@ -231,7 +231,7 @@ Do dodania:
   - `markExport(userId: string, notebookId: string): void`
 - **Implementacja**:
   - In-memory `Map<string, number>`: `lastExportAtMs`.
-  - Stała `EXPORT_COOLDOWN_MS = 5 * 60 * 1000`.
+  - Stała `EXPORT_COOLDOWN_MS = 30 * 1000`.
   - Jeśli `now - lastExportAtMs < EXPORT_COOLDOWN_MS` → false (zwróć 429 w endpointzie).
 
 ### 5.3. Helpery do nazw i daty
@@ -281,7 +281,7 @@ Do dodania:
   - Nazwy plików: `{dni_od_2025-01-01}_{N}_{Fraza_do_150}.mp3` z EN, bez znaków specjalnych, spacje → `_`, indeks bez zer wiodących.
   - Sklejka audio: EN1 → 800 ms ciszy → EN2 → 800 ms → EN3 → 800 ms → PL; format MP3 22.05 kHz / 64 kbps.
   - ZIP generowany w locie, bez zapisu do storage.
-  - Rate limit: 1 eksport / 5 min per użytkownik+notatnik (in-memory).
+  - Rate limit: 1 eksport / 30 sekund per użytkownik+notatnik (in-memory).
   - Błędy: statusy 4xx/5xx + prosty komunikat (tekst / JSON), **zero HTML**.
 
 - **Strona frontend**:
