@@ -74,7 +74,7 @@ export default function PlayerControls({
             disabled={!hasPlayable}
             variant="default"
             size="icon"
-            className="h-12 w-12 md:h-10 md:w-10"
+            className="h-12 w-12 md:h-10 md:w-10 active:scale-95"
             aria-label={playing ? "Pause" : "Play"}
             title={playing ? "Pause (Space/K)" : "Play (Space/K)"}
           >
@@ -86,7 +86,7 @@ export default function PlayerControls({
             onClick={onStop}
             variant="ghost"
             size="icon"
-            className="h-12 w-12 md:h-10 md:w-10"
+            className="h-12 w-12 md:h-10 md:w-10 active:bg-emerald-500/20 active:text-emerald-300"
             aria-label="Stop"
             title="Stop (S)"
           >
@@ -99,7 +99,7 @@ export default function PlayerControls({
             disabled={!hasPlayable}
             variant="ghost"
             size="icon"
-            className="h-12 w-12 md:h-10 md:w-10"
+            className="h-12 w-12 md:h-10 md:w-10 active:bg-emerald-500/20 active:text-emerald-300"
             aria-label="Restart phrase"
             title="Restart phrase (R)"
           >
@@ -112,7 +112,7 @@ export default function PlayerControls({
               onClick={onPrevPhrase}
               variant="ghost"
               size="icon"
-              className="h-12 w-12 md:h-10 md:w-10"
+              className="h-12 w-12 md:h-10 md:w-10 active:bg-emerald-500/20 active:text-emerald-300"
               aria-label="Previous phrase"
               title="Previous phrase (P)"
             >
@@ -123,7 +123,7 @@ export default function PlayerControls({
               onClick={onNextPhrase}
               variant="ghost"
               size="icon"
-              className="h-12 w-12 md:h-10 md:w-10"
+              className="h-12 w-12 md:h-10 md:w-10 active:bg-emerald-500/20 active:text-emerald-300"
               aria-label="Next phrase"
               title="Next phrase (N)"
             >
