@@ -40,6 +40,14 @@ export default function GenerateAudioButton({
 
   const hasCheckedPrerequisites = useRef(false);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [jobId, setJobId] = useState<string | null>(activeJobId ?? null);
+
+  // Keep local jobId in sync when parent provides an active job
+  useEffect(() => {
+    if (activeJobId) {
+      setJobId(activeJobId);
+    }
+  }, [activeJobId]);
 
   // Memoize the checkPrerequisites function to prevent infinite loops
   const checkPrerequisites = useCallback(async () => {
@@ -87,20 +95,19 @@ export default function GenerateAudioButton({
 
   // Poll job status when there's an active job
   useEffect(() => {
-    if (!activeJobId) {
+    if (!jobId) {
       // Clear polling if no active job
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
       }
-      setState((prev) => ({ ...prev, isGenerating: false }));
       return;
     }
 
     // Start polling for job status
     const pollJobStatus = async () => {
       try {
-        const job = await apiCall<JobDTO>(`/api/jobs/${activeJobId}`, {
+        const job = await apiCall<JobDTO>(`/api/jobs/${jobId}`, {
           method: "GET",
         });
 
@@ -116,6 +123,7 @@ export default function GenerateAudioButton({
           }
 
           setState((prev) => ({ ...prev, isGenerating: false }));
+          setJobId(null);
 
           if (onJobCompleted) {
             onJobCompleted(job);
@@ -160,6 +168,7 @@ export default function GenerateAudioButton({
             pollingIntervalRef.current = null;
           }
           setState((prev) => ({ ...prev, isGenerating: false }));
+          setJobId(null);
           // Clear active job in parent component since job doesn't exist
           if (onJobCompleted) {
             onJobCompleted(null);
@@ -180,7 +189,7 @@ export default function GenerateAudioButton({
         pollingIntervalRef.current = null;
       }
     };
-  }, [activeJobId, apiCall, onJobCompleted, onJobUpdated, addToast]);
+  }, [jobId, apiCall, onJobCompleted, onJobUpdated, addToast]);
 
   const handleGenerateAudio = async () => {
     if (!state.canGenerate || state.isGenerating) return;
@@ -203,6 +212,7 @@ export default function GenerateAudioButton({
 
       // Keep button disabled - polling will handle re-enabling when job completes
       setState((prev) => ({ ...prev, isGenerating: true }));
+      setJobId(job.id);
 
       addToast({
         type: "success",
@@ -221,6 +231,7 @@ export default function GenerateAudioButton({
         isGenerating: false,
         error: errorMessage,
       }));
+      setJobId(null);
 
       addToast({
         type: "error",
@@ -231,15 +242,15 @@ export default function GenerateAudioButton({
   };
 
   const getButtonText = () => {
-    // Treat any active job as "generating" to keep UX consistent
-    if (state.isGenerating || activeJobId) return "Generating...";
+    // Treat any tracked job as "generating" to keep UX consistent
+    if (state.isGenerating || jobId) return "Generating...";
     if (!state.ttsConfigured) return "Configure TTS First";
     if (!state.voicesConfigured) return "Configure Voices First";
     return "Generate Audio";
   };
 
   const getButtonVariant = () => {
-    if (state.isGenerating || activeJobId) return "secondary";
+    if (state.isGenerating || jobId) return "secondary";
     if (!state.canGenerate) return "outline";
     return "default";
   };
@@ -247,13 +258,13 @@ export default function GenerateAudioButton({
   const getButtonDisabled = () => {
     // Button must be disabled while:
     // - a generation job is in progress (local state)
-    // - the parent reports an active job for this notebook
+    // - we are tracking a jobId that hasn't reached a terminal state yet
     // - prerequisites are not met
-    return state.isGenerating || !!activeJobId || !state.canGenerate;
+    return state.isGenerating || !!jobId || !state.canGenerate;
   };
 
   const getTooltipText = () => {
-    if (state.isGenerating || activeJobId) return "Audio generation in progress...";
+    if (state.isGenerating || jobId) return "Audio generation in progress...";
     if (!state.ttsConfigured) return "Please configure TTS credentials in Settings first";
     if (!state.voicesConfigured) return "Please configure voice slots in Settings first";
     return "Generate audio for all phrases in this notebook";
