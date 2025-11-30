@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "./ui/button";
 import { useApi } from "../lib/hooks/useApi";
 import type { NotebookDTO, NotebookListResponse } from "../types";
@@ -15,6 +15,67 @@ export default function NotebookList({ initialItems = [] }: NotebookListProps) {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [activeLetter, setActiveLetter] = useState<string>("ALL");
+
+  const LETTER_FILTER_ALL = "ALL";
+  const LETTER_FILTER_OTHER = "#";
+
+  const getBucketForName = (rawName: string | null | undefined): string => {
+    const name = (rawName ?? "").trim();
+    if (!name) {
+      return LETTER_FILTER_OTHER;
+    }
+
+    const firstChar = name[0].toUpperCase();
+    if (firstChar >= "A" && firstChar <= "Z") {
+      return firstChar;
+    }
+
+    return LETTER_FILTER_OTHER;
+  };
+
+  const availableLetterBuckets = useMemo(() => {
+    const buckets = new Set<string>();
+    for (const notebook of notebooks) {
+      buckets.add(getBucketForName(notebook.name));
+    }
+    return buckets;
+  }, [notebooks]);
+
+  const letterFilters = useMemo(() => {
+    const letters = Array.from(availableLetterBuckets);
+
+    if (letters.length === 0) {
+      return [LETTER_FILTER_ALL];
+    }
+
+    const hasOther = letters.includes(LETTER_FILTER_OTHER);
+    const alphaLetters = letters.filter((letter) => letter !== LETTER_FILTER_OTHER).sort();
+
+    return [LETTER_FILTER_ALL, ...(hasOther ? [LETTER_FILTER_OTHER] : []), ...alphaLetters];
+  }, [availableLetterBuckets]);
+
+  const filteredNotebooks = useMemo(() => {
+    if (activeLetter === LETTER_FILTER_ALL) {
+      return notebooks;
+    }
+
+    return notebooks.filter((notebook) => {
+      const bucket = getBucketForName(notebook.name);
+      return bucket === activeLetter;
+    });
+  }, [activeLetter, notebooks]);
+
+  useEffect(() => {
+    if (activeLetter === LETTER_FILTER_ALL) {
+      return;
+    }
+
+    const selectableLetters = letterFilters.filter((letter) => letter !== LETTER_FILTER_ALL);
+    if (!selectableLetters.includes(activeLetter)) {
+      setActiveLetter(LETTER_FILTER_ALL);
+    }
+  }, [activeLetter, letterFilters]);
 
   // Fetch notebooks from API
   const fetchNotebooks = async (cursor?: string, query?: string) => {
@@ -136,6 +197,27 @@ export default function NotebookList({ initialItems = [] }: NotebookListProps) {
         </div>
       )}
 
+      {/* Letter filter */}
+      {notebooks.length > 0 && (
+        <div className="flex items-center gap-1 overflow-x-auto pb-1 -mx-1 px-1">
+          {letterFilters.map((letter) => (
+            <Button
+              key={letter}
+              type="button"
+              variant={activeLetter === letter ? "default" : "outline"}
+              size="sm"
+              className={`h-7 px-2 text-xs ${
+                activeLetter === letter ? "" : "bg-background text-muted-foreground hover:bg-muted/60"
+              }`}
+              onClick={() => setActiveLetter(letter)}
+              aria-pressed={activeLetter === letter}
+            >
+              {letter === LETTER_FILTER_ALL ? "All" : letter}
+            </Button>
+          ))}
+        </div>
+      )}
+
       {/* Notebooks grid */}
       {notebooks.length === 0 && !isLoading ? (
         <div className="text-center py-12">
@@ -147,9 +229,13 @@ export default function NotebookList({ initialItems = [] }: NotebookListProps) {
             Create your first notebook
           </a>
         </div>
+      ) : filteredNotebooks.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No notebooks for selected letter.</p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {notebooks.map((notebook) => (
+          {filteredNotebooks.map((notebook) => (
             <NotebookTile key={notebook.id} notebook={notebook} onRename={handleRename} onDelete={handleDelete} />
           ))}
         </div>
