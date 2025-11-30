@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [master, export-zip]
+    branches: [master]
   pull_request:
-    branches: [master, export-zip]
+    branches: [master]
   workflow_dispatch:
 
 jobs:
@@ -99,7 +99,7 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
     environment: production
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/export-zip')
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
     permissions:
       contents: read
       packages: write
