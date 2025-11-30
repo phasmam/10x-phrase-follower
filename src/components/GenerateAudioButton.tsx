@@ -19,6 +19,7 @@ interface GenerationState {
   ttsConfigured: boolean;
   voicesConfigured: boolean;
   error: string | null;
+  isChecking: boolean;
 }
 
 export default function GenerateAudioButton({
@@ -36,6 +37,7 @@ export default function GenerateAudioButton({
     ttsConfigured: false,
     voicesConfigured: false,
     error: null,
+    isChecking: true,
   });
 
   const hasCheckedPrerequisites = useRef(false);
@@ -76,6 +78,7 @@ export default function GenerateAudioButton({
         ttsConfigured,
         voicesConfigured,
         canGenerate: ttsConfigured && voicesConfigured,
+        isChecking: false,
         error: null,
       }));
     } catch (err) {
@@ -83,6 +86,7 @@ export default function GenerateAudioButton({
       setState((prev) => ({
         ...prev,
         error: err instanceof Error ? err.message : "Failed to check prerequisites",
+        isChecking: false,
       }));
       hasCheckedPrerequisites.current = false; // Allow retry on error
     }
@@ -192,7 +196,7 @@ export default function GenerateAudioButton({
   }, [jobId, apiCall, onJobCompleted, onJobUpdated, addToast]);
 
   const handleGenerateAudio = async () => {
-    if (!state.canGenerate || state.isGenerating) return;
+    if (!state.canGenerate || state.isGenerating || state.isChecking) return;
 
     setState((prev) => ({ ...prev, isGenerating: true, error: null }));
 
@@ -242,6 +246,7 @@ export default function GenerateAudioButton({
   };
 
   const getButtonText = () => {
+    if (state.isChecking) return "Checking configuration...";
     // Treat any tracked job as "generating" to keep UX consistent
     if (state.isGenerating || jobId) return "Generating...";
     if (!state.ttsConfigured) return "Configure TTS First";
@@ -260,10 +265,12 @@ export default function GenerateAudioButton({
     // - a generation job is in progress (local state)
     // - we are tracking a jobId that hasn't reached a terminal state yet
     // - prerequisites are not met
-    return state.isGenerating || !!jobId || !state.canGenerate;
+    // - we're still checking prerequisites
+    return state.isGenerating || !!jobId || !state.canGenerate || state.isChecking;
   };
 
   const getTooltipText = () => {
+    if (state.isChecking) return "Checking audio generation prerequisites...";
     if (state.isGenerating || jobId) return "Audio generation in progress...";
     if (!state.ttsConfigured) return "Please configure TTS credentials in Settings first";
     if (!state.voicesConfigured) return "Please configure voice slots in Settings first";
@@ -284,7 +291,7 @@ export default function GenerateAudioButton({
 
       {state.error && <p className="text-xs text-destructive">{state.error}</p>}
 
-      {!state.canGenerate && !state.isGenerating && (
+      {!state.canGenerate && !state.isGenerating && !state.isChecking && (
         <div className="text-xs text-muted-foreground">
           {!state.ttsConfigured && <p>• Configure TTS credentials in Settings</p>}
           {!state.voicesConfigured && <p>• Configure voice slots in Settings</p>}
