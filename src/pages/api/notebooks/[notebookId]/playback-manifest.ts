@@ -82,54 +82,52 @@ async function generateSignedUrls(
   storageClient: Supabase,
   segments: AudioSegmentSelection[]
 ): Promise<SignedSegment[]> {
-  // Filter only complete segments and generate URLs in parallel
+  // Filter only complete segments
   const completeSegments = segments.filter((segment) => segment.status === "complete");
 
   if (completeSegments.length === 0) {
     return [];
   }
 
-  console.log(`[playback-manifest] Generating ${completeSegments.length} signed URLs in parallel...`);
+  console.log(`[playback-manifest] Generating signed URLs in bulk for ${completeSegments.length} complete segments...`);
 
-  // Generate all signed URLs in parallel using Promise.all
-  const signedUrlPromises = completeSegments.map(async (segment): Promise<SignedSegment | null> => {
-    try {
-      const { data: signedUrl, error } = await storageClient.storage.from("audio").createSignedUrl(segment.path, 3600); // 1 hour
+  // Use Supabase bulk API to generate all signed URLs in a single network call.
+  // This is significantly faster than issuing one request per segment.
+  const paths = completeSegments.map((segment) => segment.path);
 
-      if (error) {
-        console.error(
-          `[playback-manifest] Failed to generate signed URL for segment ${segment.id} (path: ${segment.path}):`,
-          error
-        );
-        return null; // Skip this segment
-      }
+  const { data, error } = await storageClient.storage.from("audio").createSignedUrls(paths, 3600); // 1 hour
 
-      if (!signedUrl || !signedUrl.signedUrl) {
-        console.error(
-          `[playback-manifest] Signed URL data is missing for segment ${segment.id} (path: ${segment.path})`
-        );
-        return null; // Skip this segment
-      }
+  if (error) {
+    console.error("[playback-manifest] Failed to generate signed URLs in bulk:", error);
+    return [];
+  }
 
-      return {
-        ...segment,
-        url: signedUrl.signedUrl,
-      };
-    } catch (error) {
+  if (!data || data.length !== completeSegments.length) {
+    console.error("[playback-manifest] Unexpected bulk signed URL response size:", {
+      expected: completeSegments.length,
+      actual: data?.length ?? 0,
+    });
+  }
+
+  const signedSegments: SignedSegment[] = [];
+
+  completeSegments.forEach((segment, index) => {
+    const signed = data[index];
+    if (!signed || !signed.signedUrl) {
       console.error(
-        `[playback-manifest] Exception while generating signed URL for segment ${segment.id} (path: ${segment.path}):`,
-        error
+        `[playback-manifest] Missing signed URL for segment ${segment.id} (path: ${segment.path}) in bulk response`
       );
-      return null; // Skip this segment
+      return;
     }
+
+    signedSegments.push({
+      ...segment,
+      url: signed.signedUrl,
+    });
   });
 
-  // Wait for all promises to resolve and filter out nulls (failed segments)
-  const results = await Promise.all(signedUrlPromises);
-  const signedSegments = results.filter((segment): segment is SignedSegment => segment !== null);
-
   console.log(
-    `[playback-manifest] Successfully generated ${signedSegments.length} signed URLs from ${completeSegments.length} segments`
+    `[playback-manifest] Successfully generated ${signedSegments.length} signed URLs from ${completeSegments.length} complete segments`
   );
 
   return signedSegments;
