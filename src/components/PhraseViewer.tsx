@@ -81,9 +81,9 @@ export default function PhraseViewer({
       }
 
       // Find single underscore ranges (_text_) - treat as italic
-      // Only match if underscore is at word boundary and content is actual words (starts/ends with letter)
-      // Pattern: (start of string or non-word char) then _text_ (word content) then (end of string or non-word char)
-      const singleItalicRegex = /(?:^|[^\w_])_([a-zA-Z][\w\s]*?[a-zA-Z])_(?=[^\w_]|$)/g;
+      // Only match if underscore is at word boundary (not part of a word)
+      // Pattern: (start of string or non-word char) then _text_ then (end of string or non-word char)
+      const singleItalicRegex = /(?:^|[^\w_])_([^_]+?)_(?=[^\w_]|$)/g;
       while ((match = singleItalicRegex.exec(text)) !== null) {
         // Check if this single underscore is part of a double underscore range
         const matchIndex = match.index;

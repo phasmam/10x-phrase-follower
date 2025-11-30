@@ -216,17 +216,14 @@ function normalizeUnderscores(text: string): string {
   const placeholder = "___DOUBLE_UNDERSCORE_PLACEHOLDER___";
   let normalized = text.replace(/__/g, placeholder);
 
-  // Now replace single underscores that are at word boundaries with actual word content
-  // Pattern: (start of string or non-word char) then _text_ (word content) then (end of string or non-word char)
+  // Now replace single underscores that are at word boundaries
+  // Pattern: (start of string or non-word char) then _text_ then (end of string or non-word char)
   // We need to be careful to preserve the prefix/suffix
-  normalized = normalized.replace(
-    /(?:^|[^\w_])_([a-zA-Z][\w\s]*?[a-zA-Z])_(?=[^\w_]|$)/g,
-    (match, content, offset, string) => {
-      // Get the prefix (non-word char before _)
-      const prefix = offset > 0 && /[\w]/.test(string[offset - 1]) ? "" : match[0] === "_" ? "" : match[0];
-      return prefix + "__" + content + "__";
-    }
-  );
+  normalized = normalized.replace(/(?:^|[^\w_])_([^_]+?)_(?=[^\w_]|$)/g, (match, content, offset, string) => {
+    // Get the prefix (non-word char before _)
+    const prefix = offset > 0 && /[\w]/.test(string[offset - 1]) ? "" : match[0] === "_" ? "" : match[0];
+    return prefix + "__" + content + "__";
+  });
 
   // Restore double underscores
   normalized = normalized.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), "__");
@@ -295,15 +292,12 @@ export function cleanMarkdownForTts(text: string): string {
   cleaned = cleaned.replace(/__/g, "");
 
   // Remove single italic markers (_) but be careful not to remove underscores that are part of words
-  // Only remove if at word boundaries with actual word content
-  cleaned = cleaned.replace(
-    /(?:^|[^\w_])_([a-zA-Z][\w\s]*?[a-zA-Z])_(?=[^\w_]|$)/g,
-    (match, content, offset, string) => {
-      // Get the prefix (non-word char before _)
-      const prefix = offset > 0 && /[\w]/.test(string[offset - 1]) ? "" : match[0] === "_" ? "" : match[0];
-      return prefix + content;
-    }
-  );
+  // Only remove if at word boundaries
+  cleaned = cleaned.replace(/(?:^|[^\w_])_([^_]+?)_(?=[^\w_]|$)/g, (match, content, offset, string) => {
+    // Get the prefix (non-word char before _)
+    const prefix = offset > 0 && /[\w]/.test(string[offset - 1]) ? "" : match[0] === "_" ? "" : match[0];
+    return prefix + content;
+  });
 
   // Trim any extra whitespace that might have been created
   cleaned = cleaned.replace(/\s+/g, " ").trim();
