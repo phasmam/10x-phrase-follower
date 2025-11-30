@@ -13,8 +13,6 @@ import SegmentSequenceBar from "./SegmentSequenceBar";
 import PhraseViewer from "./PhraseViewer";
 import KeyboardShortcutsHandler from "./KeyboardShortcutsHandler";
 import RefreshManifestButton from "./RefreshManifestButton";
-import { Button } from "./ui/button";
-import { SkipBack, SkipForward } from "lucide-react";
 import { usePlaybackEngine } from "../lib/hooks/usePlaybackEngine";
 import { useSignedUrlGuard } from "../lib/hooks/useSignedUrlGuard";
 import { useClickToSeek } from "../lib/hooks/useClickToSeek";
@@ -391,38 +389,21 @@ export default function PlayerShell({ notebookId, startPhraseId }: PlayerShellPr
     <div className="max-w-5xl mx-auto px-4 pb-32 md:p-6 md:pb-6">
       <KeyboardShortcutsHandler {...shortcuts} />
 
-      {/* Header with title, pager, and Prev/Next buttons */}
-      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-foreground">Audio Player</h1>
-        <div className="flex items-center gap-3">
-          <div className="text-sm text-muted-foreground" aria-live="polite" aria-atomic="true">
+      {/* Header with title, phrase counter and Back to Notebook link (no extra row) */}
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Audio Player</h1>
+          <p className="text-sm text-muted-foreground mt-1" aria-live="polite" aria-atomic="true">
             Phrase <span className="font-medium text-foreground">{phraseIndex + 1}</span> of{" "}
             <span className="font-medium text-foreground">{manifest.sequence.length}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              onClick={onAdvancePrev}
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-              aria-label="Previous phrase"
-              title="Previous phrase (P)"
-              disabled={phraseIndex === 0}
-            >
-              <SkipBack className="h-4 w-4" />
-            </Button>
-            <Button
-              onClick={onAdvanceNext}
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-              aria-label="Next phrase"
-              title="Next phrase (N)"
-            >
-              <SkipForward className="h-4 w-4" />
-            </Button>
-          </div>
+          </p>
         </div>
+        <a
+          href={`/notebooks/${notebookId}`}
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          ← Back to Notebook
+        </a>
       </div>
 
       {/* Phrase viewer - vertical layout: EN on top, PL below */}
