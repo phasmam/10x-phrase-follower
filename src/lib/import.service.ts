@@ -22,21 +22,45 @@ export interface ImportResult {
 }
 
 /**
+ * Normalizes single underscores to double underscores for formatting.
+ * Converts _text_ to __text__ but preserves existing __text__
+ */
+function normalizeUnderscores(text: string): string {
+  // First, protect existing double underscores by temporarily replacing them
+  const placeholder = "___DOUBLE_UNDERSCORE_PLACEHOLDER___";
+  let normalized = text.replace(/__/g, placeholder);
+
+  // Now replace single underscores
+  normalized = normalized.replace(/_([^_\s]+?)_/g, "__$1__");
+
+  // Restore double underscores
+  normalized = normalized.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), "__");
+
+  return normalized;
+}
+
+/**
  * Normalizes text according to PRD requirements:
  * - Remove zero-width and control characters
  * - Convert typographic quotes to simple quotes
+ * - Normalize single underscores to double underscores (_text_ -> __text__)
  * - Reduce multiple spaces to single spaces
  * - Trim whitespace
  * - Preserve hyphens and em-dashes
  */
 export function normalizeText(text: string): string {
+  let normalized = text
+    // Remove zero-width and control characters
+    .replace(/[\u200B-\u200D\uFEFF\u00AD]/g, " ")
+    // Convert typographic quotes to simple quotes
+    .replace(/[""]/g, '"')
+    .replace(/['']/g, "'");
+
+  // Normalize single underscores to double underscores for formatting
+  normalized = normalizeUnderscores(normalized);
+
   return (
-    text
-      // Remove zero-width and control characters
-      .replace(/[\u200B-\u200D\uFEFF\u00AD]/g, " ")
-      // Convert typographic quotes to simple quotes
-      .replace(/[""]/g, '"')
-      .replace(/['']/g, "'")
+    normalized
       // Reduce multiple spaces to single spaces
       .replace(/\s+/g, " ")
       // Trim whitespace

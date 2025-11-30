@@ -188,6 +188,7 @@ For production-like testing, it's recommended to run the application in Docker. 
 - **Audio Generation:** Generate MP3 audio for phrases using Google TTS (requires API key configuration)
 - **Voice Configuration:** Configure 3 English voices and 1 Polish voice per user
 - **Playback:** Sequential EN1 → EN2 → EN3 → PL playback with adjustable speeds (0.75x - 1.25x)
+- **Export ZIP:** Export notebook audio as ZIP file with combined MP3 files (EN1 + 800ms silence + EN2 + 800ms silence + EN3 + 800ms silence + PL per phrase).
 - **Keyboard Shortcuts:** Space/K (play/pause), S (stop), R (restart), ←/→ (seek), Shift+←/→ (seek large), P/N (prev/next phrase)
 - **Touch Gestures:** Swipe navigation, double-tap play/pause, double-tap left/right for seeking
 - **Limits:** Up to 500 notebooks per user, 100 phrases per notebook, 2000 characters per phrase
@@ -197,12 +198,11 @@ For production-like testing, it's recommended to run the application in Docker. 
 - PWA/offline mode
 - Translation features beyond imports
 - Public API, SSO, telemetry
-- ZIP export, click-to-seek, word highlighting (planned for post-MVP)
+- Click-to-seek, word highlighting (planned for post-MVP)
 
 ### Planned enhancements (post-MVP)
 
 - Click-to-seek per word, token-based highlighting, audio status indicators
-- ZIP export of audio files
 - Rate limiting and improved error handling
 - Partial audio regeneration (per phrase)
 
@@ -229,7 +229,7 @@ For detailed migration rationale, see [docs/lessons-learned/digital-ocean-why.md
 - **Container registry:** GitHub Container Registry (GHCR)
 - **Image:** `ghcr.io/phasmam/10x-phrase-follower:latest`
 
-The production deployment uses `docker-compose.yml` with environment variables configured on the droplet. For deployment setup instructions, see [docs/guides/droplet-setup.md](./docs/guides/droplet-setup.md).
+For deployment setup instructions, see [docs/guides/droplet-setup.md](./docs/guides/droplet-setup.md).
 
 ## 10. License
 

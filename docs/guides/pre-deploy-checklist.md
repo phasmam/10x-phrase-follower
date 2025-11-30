@@ -15,6 +15,8 @@
 - [x] Secrets używane: PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_KEY, SUPABASE_URL, SUPABASE_KEY
 - [x] Permissions: packages: write
 - [x] Deploy przez SSH do dropleta
+- [x] Obsługa deployu z branchy: `master`, `export-zip` (i innych po dodaniu do workflow)
+- [x] Automatyczne tagowanie obrazów Docker według brancha (np. `ghcr.io/...:export-zip`)
 
 ### 3. docker-compose.yml
 
@@ -51,8 +53,11 @@
 
 ## 🚀 Gotowe do deployu!
 
-Po commit i push:
+Po commit i push na branch `master` lub `export-zip`:
 
 1. GitHub Actions zbuduje obraz z build args
-2. Wypchnie do GHCR
-3. Zdeployuje na droplet przez SSH
+2. Wypchnie do GHCR z tagiem odpowiadającym branchowi (np. `ghcr.io/phasmam/10x-phrase-follower:export-zip`)
+3. Zaktualizuje `.env` na droplecie z odpowiednim tagiem obrazu
+4. Zdeployuje na droplet przez SSH (`docker compose pull && docker compose up -d`)
+
+**Uwaga:** Workflow automatycznie aktualizuje `DOCKER_IMAGE` w pliku `.env` na droplecie, aby używał obrazu z odpowiednim tagiem brancha. Dla brancha `master` używa tagu `latest`, dla innych branchy używa nazwy brancha jako tagu.

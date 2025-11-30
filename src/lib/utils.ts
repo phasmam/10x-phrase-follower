@@ -207,14 +207,32 @@ export async function ensureUserExists(
 }
 
 /**
- * Parses markdown formatting (**bold**, __italic__) and converts to HTML.
+ * Normalizes single underscores to double underscores for formatting.
+ * Converts _text_ to __text__ but preserves existing __text__
+ */
+function normalizeUnderscores(text: string): string {
+  // First, protect existing double underscores by temporarily replacing them
+  const placeholder = "___DOUBLE_UNDERSCORE_PLACEHOLDER___";
+  let normalized = text.replace(/__/g, placeholder);
+
+  // Now replace single underscores
+  normalized = normalized.replace(/_([^_\s]+?)_/g, "__$1__");
+
+  // Restore double underscores
+  normalized = normalized.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), "__");
+
+  return normalized;
+}
+
+/**
+ * Parses markdown formatting (**bold**, __underline__) and converts to HTML.
  * Supports:
  * - **text** for bold
- * - __text__ for italic
- * - Can be nested: **bold __italic__ text**
+ * - __text__ or _text_ for underline (single _ is treated as __)
+ * - Can be nested: **bold __underline__ text**
  *
  * @param text - Text with markdown formatting
- * @returns HTML string with <strong> and <em> tags
+ * @returns HTML string with <strong> and <u> tags
  */
 export function parseMarkdownToHtml(text: string): string {
   if (!text) return "";
@@ -222,20 +240,21 @@ export function parseMarkdownToHtml(text: string): string {
   // Escape HTML to prevent XSS
   let html = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  // Process bold (**text**) - must be on word boundaries or whitespace
-  // Match ** followed by non-whitespace, then **
+  // Normalize single underscores to double underscores
+  html = normalizeUnderscores(html);
+
+  // Process bold (**text**)
   html = html.replace(/\*\*([^*]+?)\*\*/g, "<strong>$1</strong>");
 
-  // Process italic (__text__) - must be on word boundaries or whitespace
-  // Match __ followed by non-underscore, then __
-  html = html.replace(/__([^_]+?)__/g, "<em>$1</em>");
+  // Process underline (__text__) - render as <u> tag
+  html = html.replace(/__([^_]+?)__/g, "<u>$1</u>");
 
   return html;
 }
 
 /**
  * Cleans markdown formatting from text before sending to TTS.
- * Removes ** and __ but preserves other punctuation like:
+ * Removes **, __, and _ but preserves other punctuation like:
  * - Hyphens and dashes (-, –, —)
  * - Apostrophes (')
  * - Dots (.)
@@ -251,8 +270,13 @@ export function cleanMarkdownForTts(text: string): string {
   // Remove bold markers (**)
   let cleaned = text.replace(/\*\*/g, "");
 
-  // Remove italic markers (__)
+  // Remove double underline markers (__)
   cleaned = cleaned.replace(/__/g, "");
+
+  // Remove single underline markers (_) but be careful not to remove underscores that are part of words
+  // We'll remove standalone _ characters that are formatting markers
+  // Pattern: _ followed by non-whitespace and non-underscore, then _
+  cleaned = cleaned.replace(/_([^_\s]+?)_/g, "$1");
 
   // Trim any extra whitespace that might have been created
   cleaned = cleaned.replace(/\s+/g, " ").trim();

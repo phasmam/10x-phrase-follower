@@ -1,0 +1,118 @@
+import React, { useState } from "react";
+import { Button } from "./ui/button";
+import { useToast } from "./ui/toast";
+import { useApi } from "../lib/hooks/useApi";
+import { Download } from "lucide-react";
+
+interface ExportZipButtonProps {
+  notebookId: string;
+  disabled?: boolean;
+  disabledReason?: string;
+}
+
+export default function ExportZipButton({ notebookId, disabled = false, disabledReason }: ExportZipButtonProps) {
+  const { addToast } = useToast();
+  const { token, isAuthenticated } = useApi();
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (disabled || isExporting || !isAuthenticated) return;
+
+    setIsExporting(true);
+
+    try {
+      if (!token) {
+        throw new Error("Authentication required");
+      }
+
+      const response = await fetch(`/api/notebooks/${notebookId}/export-zip`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/zip",
+        },
+      });
+
+      if (!response.ok) {
+        // Try to parse error message
+        let errorMessage = "Failed to export ZIP";
+        try {
+          const contentType = response.headers.get("content-type");
+          if (contentType?.includes("application/json")) {
+            const errorData = await response.json();
+            errorMessage = errorData.error?.message || errorMessage;
+          } else {
+            const text = await response.text();
+            if (text) {
+              errorMessage = text;
+            }
+          }
+        } catch {
+          // Use default error message
+        }
+
+        addToast({
+          type: "error",
+          title: "Export failed",
+          description: errorMessage,
+        });
+        return;
+      }
+
+      // Get the blob and trigger download
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+
+      // Get filename from Content-Disposition header
+      const contentDisposition = response.headers.get("content-disposition");
+      let filename = "notebook.zip";
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+?)"?$/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Create temporary link and trigger download
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up
+      URL.revokeObjectURL(url);
+
+      addToast({
+        type: "success",
+        title: "Export completed",
+        description: "ZIP file has been downloaded successfully.",
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to export ZIP";
+      console.error("[ExportZipButton] Export error:", err);
+
+      addToast({
+        type: "error",
+        title: "Export failed",
+        description: errorMessage,
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return (
+    <Button
+      onClick={handleExport}
+      disabled={disabled || isExporting || !isAuthenticated}
+      variant="default"
+      size="sm"
+      title={disabledReason || (isExporting ? "Exporting..." : "Export ZIP file")}
+      className={`p-2 shrink-0 ${isExporting ? "export-pulsing" : ""}`}
+    >
+      <Download className="size-4" />
+    </Button>
+  );
+}

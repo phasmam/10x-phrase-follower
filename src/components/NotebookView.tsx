@@ -3,6 +3,7 @@ import { Button } from "./ui/button";
 import { useApi } from "../lib/hooks/useApi";
 import { ToastProvider, useToast } from "./ui/toast";
 import GenerateAudioButton from "./GenerateAudioButton";
+import ExportZipButton from "./ExportZipButton";
 import { Trash2 } from "lucide-react";
 import type { PhraseDTO, PhraseListResponse, NotebookDTO, JobDTO } from "../types";
 import { parseMarkdownToHtml } from "../lib/utils";
@@ -266,10 +267,10 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
       {/* Phrases table */}
       <div className="bg-card border border-border rounded-lg">
         <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <h2 className="text-lg font-semibold">Phrases</h2>
-            <div className="flex items-center gap-2">
-              <Button asChild size="sm" variant="default">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button asChild size="sm" variant="default" className="shrink-0">
                 <a href={`/player/${notebookId}`} title="Open Player">
                   Open Player
                 </a>
@@ -280,6 +281,11 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
                 onJobCompleted={handleJobCompleted}
                 onJobUpdated={handleJobUpdated}
                 activeJobId={state.activeJob?.id || null}
+              />
+              <ExportZipButton
+                notebookId={notebookId}
+                disabled={!state.notebook?.current_build_id}
+                disabledReason={!state.notebook?.current_build_id ? "Generate audio first to enable export" : undefined}
               />
             </div>
           </div>

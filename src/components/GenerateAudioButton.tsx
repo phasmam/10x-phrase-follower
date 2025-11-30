@@ -255,13 +255,13 @@ export default function GenerateAudioButton({
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 shrink-0">
       <Button
         onClick={handleGenerateAudio}
         disabled={getButtonDisabled()}
         variant={getButtonVariant()}
         title={getTooltipText()}
-        className="min-w-[140px]"
+        className="min-w-[140px] shrink-0"
       >
         {getButtonText()}
       </Button>
