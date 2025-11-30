@@ -161,26 +161,16 @@ export default function PhraseViewer({
 
           for (const range of formattingRanges) {
             // Check if token overlaps with formatting range
-            // We need to account for the markers themselves (2 chars for **, 2 for __, 1 for _)
+            // The range includes the markers, so we check if token overlaps with the entire range
+            // (including markers, since tokens may include them)
             if (range.type === "bold") {
-              // Bold range: **text**, so actual content starts at range.start + 2, ends at range.end - 2
-              const contentStart = range.start + range.markerLength;
-              const contentEnd = range.end - range.markerLength;
-              if (tokenStart >= contentStart && tokenEnd <= contentEnd) {
-                isBold = true;
-              } else if (tokenStart < contentEnd && tokenEnd > contentStart) {
-                // Partial overlap
+              // Bold range: **text**, range includes the ** markers
+              if (tokenStart < range.end && tokenEnd > range.start) {
                 isBold = true;
               }
             } else if (range.type === "italic") {
-              // Italic range: __text__ or _text_
-              // markerLength tells us if it's 1 or 2 characters
-              const contentStart = range.start + range.markerLength;
-              const contentEnd = range.end - range.markerLength;
-              if (tokenStart >= contentStart && tokenEnd <= contentEnd) {
-                isItalic = true;
-              } else if (tokenStart < contentEnd && tokenEnd > contentStart) {
-                // Partial overlap
+              // Italic range: __text__ or _text_, range includes the markers
+              if (tokenStart < range.end && tokenEnd > range.start) {
                 isItalic = true;
               }
             }
@@ -190,11 +180,14 @@ export default function PhraseViewer({
           let tokenText = token.text;
           // Remove bold markers (**)
           tokenText = tokenText.replace(/\*\*/g, "");
-          // Remove double underline markers (__)
+          // Remove double italic markers (__)
           tokenText = tokenText.replace(/__/g, "");
-          // Remove single underline markers (_) but not if part of word
-          // We'll remove standalone _ characters that are formatting markers
-          tokenText = tokenText.replace(/(^|\s)_(\s|$)/g, "$1$2");
+          // Remove single italic markers (_) if this token is part of italic formatting
+          // If the token is in an italic range, any _ in it are formatting markers, not part of words
+          if (isItalic) {
+            // Remove all _ from the token since they are formatting markers
+            tokenText = tokenText.replace(/_/g, "");
+          }
 
           return (
             <button

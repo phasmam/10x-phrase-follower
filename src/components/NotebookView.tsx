@@ -256,10 +256,16 @@ function NotebookViewContent({ notebookId }: NotebookViewProps) {
         <div className="p-3 rounded-md bg-blue-50 border border-blue-200 dark:bg-blue-950 dark:border-blue-800">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-            <p className="text-sm text-blue-700 dark:text-blue-300">
-              Audio generation {state.activeJob.state === "queued" ? "queued" : "in progress"}... This may take a few
-              minutes.
-            </p>
+            <div className="flex flex-col">
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                Audio generation {state.activeJob.state === "queued" ? "queued" : "in progress"}... This may take a few
+                minutes.
+              </p>
+              <p className="text-xs text-blue-800/80 dark:text-blue-200/80">
+                Job state: <span className="font-mono">{state.activeJob.state}</span>{" "}
+                <span className="opacity-80">(id: {state.activeJob.id})</span>
+              </p>
+            </div>
           </div>
         </div>
       )}
