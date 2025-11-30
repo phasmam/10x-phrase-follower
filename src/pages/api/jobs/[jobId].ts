@@ -1,5 +1,6 @@
 import type { APIContext } from "astro";
 import { ApiError, ApiErrors } from "../../../lib/errors";
+import { getSupabaseClient } from "../../../lib/utils";
 import type { JobDTO } from "../../../types";
 
 export const prerender = false;
@@ -16,7 +17,7 @@ function getUserId(context: APIContext): string {
 export async function GET(context: APIContext) {
   try {
     const userId = getUserId(context);
-    const supabase = context.locals.supabase;
+    const supabase = getSupabaseClient(context);
 
     // Parse and validate path parameter
     const jobId = context.params.jobId;
