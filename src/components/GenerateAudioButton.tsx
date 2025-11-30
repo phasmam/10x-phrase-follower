@@ -231,24 +231,29 @@ export default function GenerateAudioButton({
   };
 
   const getButtonText = () => {
-    if (state.isGenerating) return "Generating...";
+    // Treat any active job as "generating" to keep UX consistent
+    if (state.isGenerating || activeJobId) return "Generating...";
     if (!state.ttsConfigured) return "Configure TTS First";
     if (!state.voicesConfigured) return "Configure Voices First";
     return "Generate Audio";
   };
 
   const getButtonVariant = () => {
-    if (state.isGenerating) return "secondary";
+    if (state.isGenerating || activeJobId) return "secondary";
     if (!state.canGenerate) return "outline";
     return "default";
   };
 
   const getButtonDisabled = () => {
-    return state.isGenerating || !state.canGenerate;
+    // Button must be disabled while:
+    // - a generation job is in progress (local state)
+    // - the parent reports an active job for this notebook
+    // - prerequisites are not met
+    return state.isGenerating || !!activeJobId || !state.canGenerate;
   };
 
   const getTooltipText = () => {
-    if (state.isGenerating) return "Audio generation in progress...";
+    if (state.isGenerating || activeJobId) return "Audio generation in progress...";
     if (!state.ttsConfigured) return "Please configure TTS credentials in Settings first";
     if (!state.voicesConfigured) return "Please configure voice slots in Settings first";
     return "Generate audio for all phrases in this notebook";
