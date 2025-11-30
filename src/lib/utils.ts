@@ -209,14 +209,24 @@ export async function ensureUserExists(
 /**
  * Normalizes single underscores to double underscores for formatting.
  * Converts _text_ to __text__ but preserves existing __text__
+ * Only matches if underscore is at word boundary and content is actual words
  */
 function normalizeUnderscores(text: string): string {
   // First, protect existing double underscores by temporarily replacing them
   const placeholder = "___DOUBLE_UNDERSCORE_PLACEHOLDER___";
   let normalized = text.replace(/__/g, placeholder);
 
-  // Now replace single underscores
-  normalized = normalized.replace(/_([^_\s]+?)_/g, "__$1__");
+  // Now replace single underscores that are at word boundaries with actual word content
+  // Pattern: (start of string or non-word char) then _text_ (word content) then (end of string or non-word char)
+  // We need to be careful to preserve the prefix/suffix
+  normalized = normalized.replace(
+    /(?:^|[^\w_])_([a-zA-Z][\w\s]*?[a-zA-Z])_(?=[^\w_]|$)/g,
+    (match, content, offset, string) => {
+      // Get the prefix (non-word char before _)
+      const prefix = offset > 0 && /[\w]/.test(string[offset - 1]) ? "" : match[0] === "_" ? "" : match[0];
+      return prefix + "__" + content + "__";
+    }
+  );
 
   // Restore double underscores
   normalized = normalized.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), "__");
@@ -225,14 +235,14 @@ function normalizeUnderscores(text: string): string {
 }
 
 /**
- * Parses markdown formatting (**bold**, __underline__) and converts to HTML.
+ * Parses markdown formatting (**bold**, __italic__) and converts to HTML.
  * Supports:
  * - **text** for bold
- * - __text__ or _text_ for underline (single _ is treated as __)
- * - Can be nested: **bold __underline__ text**
+ * - __text__ or _text_ for italic (single _ is treated as __, only at word boundaries)
+ * - Can be nested: **bold __italic__ text**
  *
  * @param text - Text with markdown formatting
- * @returns HTML string with <strong> and <u> tags
+ * @returns HTML string with <strong> and <em> tags
  */
 export function parseMarkdownToHtml(text: string): string {
   if (!text) return "";
@@ -240,14 +250,25 @@ export function parseMarkdownToHtml(text: string): string {
   // Escape HTML to prevent XSS
   let html = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  // Normalize single underscores to double underscores
+  // Normalize single underscores to double underscores (only at word boundaries)
   html = normalizeUnderscores(html);
 
   // Process bold (**text**)
   html = html.replace(/\*\*([^*]+?)\*\*/g, "<strong>$1</strong>");
 
-  // Process underline (__text__) - render as <u> tag
-  html = html.replace(/__([^_]+?)__/g, "<u>$1</u>");
+  // Process italic (__text__) - render as <em> tag, only at word boundaries
+  html = html.replace(/(?:^|[^\w_])__([^_]+?)__(?=[^\w_]|$)/g, (match, content, offset, string) => {
+    // Get the prefix (non-word char before __)
+    const prefix = offset > 0 && /[\w]/.test(string[offset - 1]) ? "" : match[0] === "_" ? "" : match[0];
+    // Get the suffix (non-word char after __)
+    const suffix =
+      offset + match.length < string.length && /[\w]/.test(string[offset + match.length])
+        ? ""
+        : match.endsWith("_")
+          ? ""
+          : match[match.length - 1];
+    return prefix + "<em>" + content + "</em>" + suffix;
+  });
 
   return html;
 }
@@ -273,10 +294,16 @@ export function cleanMarkdownForTts(text: string): string {
   // Remove double underline markers (__)
   cleaned = cleaned.replace(/__/g, "");
 
-  // Remove single underline markers (_) but be careful not to remove underscores that are part of words
-  // We'll remove standalone _ characters that are formatting markers
-  // Pattern: _ followed by non-whitespace and non-underscore, then _
-  cleaned = cleaned.replace(/_([^_\s]+?)_/g, "$1");
+  // Remove single italic markers (_) but be careful not to remove underscores that are part of words
+  // Only remove if at word boundaries with actual word content
+  cleaned = cleaned.replace(
+    /(?:^|[^\w_])_([a-zA-Z][\w\s]*?[a-zA-Z])_(?=[^\w_]|$)/g,
+    (match, content, offset, string) => {
+      // Get the prefix (non-word char before _)
+      const prefix = offset > 0 && /[\w]/.test(string[offset - 1]) ? "" : match[0] === "_" ? "" : match[0];
+      return prefix + content;
+    }
+  );
 
   // Trim any extra whitespace that might have been created
   cleaned = cleaned.replace(/\s+/g, " ").trim();

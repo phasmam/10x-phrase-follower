@@ -49,8 +49,8 @@ export default function PhraseViewer({
 
   // Helper function to find formatting ranges in text
   const findFormattingRanges = useMemo(() => {
-    return (text: string): { start: number; end: number; type: "bold" | "underline"; markerLength: number }[] => {
-      const ranges: { start: number; end: number; type: "bold" | "underline"; markerLength: number }[] = [];
+    return (text: string): { start: number; end: number; type: "bold" | "italic"; markerLength: number }[] => {
+      const ranges: { start: number; end: number; type: "bold" | "italic"; markerLength: number }[] = [];
 
       // Find bold ranges (**text**)
       const boldRegex = /\*\*([^*]+?)\*\*/g;
@@ -64,43 +64,54 @@ export default function PhraseViewer({
         });
       }
 
-      // Find underline ranges - prioritize double underscores (__text__)
-      const doubleUnderlineRegex = /__([^_]+?)__/g;
-      while ((match = doubleUnderlineRegex.exec(text)) !== null) {
+      // Find italic ranges - prioritize double underscores (__text__)
+      // Match __text__ where underscores are at word boundaries (not part of words)
+      // Pattern: (start of string or non-word char) then __text__ then (end of string or non-word char)
+      const doubleItalicRegex = /(?:^|[^\w_])__([^_]+?)__(?=[^\w_]|$)/g;
+      while ((match = doubleItalicRegex.exec(text)) !== null) {
+        // Adjust for the leading non-word character if present
+        const actualStart = match.index + (match[0][0] === "_" ? 0 : match[0][0].match(/[\w]/) ? 0 : 1);
+        const actualEnd = actualStart + match[0].length - (match[0][match[0].length - 1].match(/[\w_]/) ? 0 : 1);
         ranges.push({
-          start: match.index,
-          end: match.index + match[0].length,
-          type: "underline",
+          start: actualStart,
+          end: actualEnd,
+          type: "italic",
           markerLength: 2, // __ at start and end
         });
       }
 
-      // Find single underscore ranges (_text_) - treat as underline
-      // Match _text_ but exclude if it's part of __text__ (already matched above)
-      const singleUnderlineRegex = /_([^_\s]+?)_/g;
-      while ((match = singleUnderlineRegex.exec(text)) !== null) {
+      // Find single underscore ranges (_text_) - treat as italic
+      // Only match if underscore is at word boundary and content is actual words (starts/ends with letter)
+      // Pattern: (start of string or non-word char) then _text_ (word content) then (end of string or non-word char)
+      const singleItalicRegex = /(?:^|[^\w_])_([a-zA-Z][\w\s]*?[a-zA-Z])_(?=[^\w_]|$)/g;
+      while ((match = singleItalicRegex.exec(text)) !== null) {
         // Check if this single underscore is part of a double underscore range
-        const beforeChar = match.index > 0 ? text[match.index - 1] : "";
-        const afterIndex = match.index + match[0].length;
+        const matchIndex = match.index;
+        const beforeChar = matchIndex > 0 ? text[matchIndex - 1] : "";
+        const afterIndex = matchIndex + match[0].length;
         const afterChar = afterIndex < text.length ? text[afterIndex] : "";
         const isPartOfDouble = beforeChar === "_" || afterChar === "_";
 
         if (!isPartOfDouble && match) {
-          const matchIndex = match.index;
-          const matchLength = match[0].length;
+          // Adjust for the leading non-word character if present
+          const actualStart = matchIndex + (match[0][0] === "_" ? 0 : match[0][0].match(/[\w]/) ? 0 : 1);
+          const actualEnd = actualStart + match[0].length - (match[0][match[0].length - 1].match(/[\w_]/) ? 0 : 1);
+          const actualMatchIndex = actualStart;
+          const actualMatchLength = actualEnd - actualStart;
+
           // Check if this range overlaps with any existing double underscore range
           const overlaps = ranges.some(
             (r) =>
-              r.type === "underline" &&
-              ((matchIndex >= r.start && matchIndex < r.end) ||
-                (matchIndex + matchLength > r.start && matchIndex + matchLength <= r.end) ||
-                (matchIndex <= r.start && matchIndex + matchLength >= r.end))
+              r.type === "italic" &&
+              ((actualMatchIndex >= r.start && actualMatchIndex < r.end) ||
+                (actualMatchIndex + actualMatchLength > r.start && actualMatchIndex + actualMatchLength <= r.end) ||
+                (actualMatchIndex <= r.start && actualMatchIndex + actualMatchLength >= r.end))
           );
           if (!overlaps) {
             ranges.push({
-              start: matchIndex,
-              end: matchIndex + matchLength,
-              type: "underline",
+              start: actualMatchIndex,
+              end: actualMatchIndex + actualMatchLength,
+              type: "italic",
               markerLength: 1, // _ at start and end
             });
           }
@@ -146,31 +157,31 @@ export default function PhraseViewer({
           // but tokens might not include them. So we check if the token's text content
           // falls within a formatting range.
           let isBold = false;
-          let isUnderline = false;
+          let isItalic = false;
 
           for (const range of formattingRanges) {
             // Check if token overlaps with formatting range
             // We need to account for the markers themselves (2 chars for **, 2 for __, 1 for _)
             if (range.type === "bold") {
               // Bold range: **text**, so actual content starts at range.start + 2, ends at range.end - 2
-              const contentStart = range.start + 2;
-              const contentEnd = range.end - 2;
+              const contentStart = range.start + range.markerLength;
+              const contentEnd = range.end - range.markerLength;
               if (tokenStart >= contentStart && tokenEnd <= contentEnd) {
                 isBold = true;
               } else if (tokenStart < contentEnd && tokenEnd > contentStart) {
                 // Partial overlap
                 isBold = true;
               }
-            } else if (range.type === "underline") {
-              // Underline range: __text__ or _text_
+            } else if (range.type === "italic") {
+              // Italic range: __text__ or _text_
               // markerLength tells us if it's 1 or 2 characters
               const contentStart = range.start + range.markerLength;
               const contentEnd = range.end - range.markerLength;
               if (tokenStart >= contentStart && tokenEnd <= contentEnd) {
-                isUnderline = true;
+                isItalic = true;
               } else if (tokenStart < contentEnd && tokenEnd > contentStart) {
                 // Partial overlap
-                isUnderline = true;
+                isItalic = true;
               }
             }
           }
@@ -203,14 +214,14 @@ export default function PhraseViewer({
               disabled={!isActive}
               aria-label={`Seek to word: ${tokenText}`}
             >
-              {isBold && isUnderline ? (
+              {isBold && isItalic ? (
                 <strong>
-                  <u>{tokenText}</u>
+                  <em>{tokenText}</em>
                 </strong>
               ) : isBold ? (
                 <strong>{tokenText}</strong>
-              ) : isUnderline ? (
-                <u>{tokenText}</u>
+              ) : isItalic ? (
+                <em>{tokenText}</em>
               ) : (
                 tokenText
               )}
