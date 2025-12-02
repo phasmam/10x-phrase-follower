@@ -227,7 +227,7 @@ For detailed migration rationale, see [docs/lessons-learned/digital-ocean-why.md
 - **Platform:** DigitalOcean Droplet
 - **Deployment method:** Automated via GitHub Actions
 - **Container registry:** GitHub Container Registry (GHCR)
-- **Image:** `ghcr.io/phasmam/10x-phrase-follower:latest`
+- **Image:** `ghcr.io/michal-duchnowski/10x-phrase-follower:latest`
 
 For deployment setup instructions, see [docs/guides/droplet-setup.md](./docs/guides/droplet-setup.md).
 

@@ -21,7 +21,7 @@ docker compose ps
 
 ```
 NAME                IMAGE                                          STATUS
-phrase-follower     ghcr.io/phasmam/10x-phrase-follower:latest    Up X seconds/minutes
+phrase-follower     ghcr.io/michal-duchnowski/10x-phrase-follower:latest    Up X seconds/minutes
 ```
 
 **Jeśli kontener nie działa:**
@@ -92,7 +92,7 @@ ls -la
 
 ```bash
 # Skopiuj docker-compose.yml (jeśli brakuje)
-curl -o docker-compose.yml https://raw.githubusercontent.com/phasmam/10x-phrase-follower/master/docker-compose.yml
+curl -o docker-compose.yml https://raw.githubusercontent.com/michal-duchnowski/10x-phrase-follower/master/docker-compose.yml
 
 # Stwórz .env (jeśli brakuje)
 nano .env

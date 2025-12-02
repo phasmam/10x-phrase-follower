@@ -20,7 +20,7 @@
 
 ### 3. docker-compose.yml
 
-- [x] Image: ghcr.io/phasmam/10x-phrase-follower:latest (nie phrase-follower:local!)
+- [x] Image: ghcr.io/michal-duchnowski/10x-phrase-follower:latest (nie phrase-follower:local!)
 - [x] Wszystkie zmienne środowiskowe zdefiniowane
 - [x] Port 3000:3000
 
@@ -56,7 +56,7 @@
 Po commit i push na branch `master` lub `export-zip`:
 
 1. GitHub Actions zbuduje obraz z build args
-2. Wypchnie do GHCR z tagiem odpowiadającym branchowi (np. `ghcr.io/phasmam/10x-phrase-follower:export-zip`)
+2. Wypchnie do GHCR z tagiem odpowiadającym branchowi (np. `ghcr.io/michal-duchnowski/10x-phrase-follower:export-zip`)
 3. Zaktualizuje `.env` na droplecie z odpowiednim tagiem obrazu
 4. Zdeployuje na droplet przez SSH (`docker compose pull && docker compose up -d`)
 

@@ -35,9 +35,9 @@ Możesz to zrobić na kilka sposobów:
 
 ```bash
 cd /opt/phrase-follower
-git clone https://github.com/phasmam/10x-phrase-follower.git .
+git clone https://github.com/michal-duchnowski/10x-phrase-follower.git .
 # lub tylko docker-compose.yml:
-curl -o docker-compose.yml https://raw.githubusercontent.com/phasmam/10x-phrase-follower/master/docker-compose.yml
+curl -o docker-compose.yml https://raw.githubusercontent.com/michal-duchnowski/10x-phrase-follower/master/docker-compose.yml
 ```
 
 **Opcja B: Ręcznie przez WinSCP/SSH**
@@ -55,7 +55,7 @@ Wklej następujące zmienne (wartości z GitHub Secrets lub z Twojego środowisk
 
 ```env
 # Docker image (opcjonalne - fallback w docker-compose.yml działa)
-DOCKER_IMAGE=ghcr.io/phasmam/10x-phrase-follower:latest
+DOCKER_IMAGE=ghcr.io/michal-duchnowski/10x-phrase-follower:latest
 
 # Supabase
 SUPABASE_URL=twoja_supabase_url
@@ -84,7 +84,7 @@ chmod 600 .env
 
 Po pierwszym pushu obrazu przez GitHub Actions:
 
-1. Idź do: `https://github.com/phasmam/10x-phrase-follower/pkgs/container/10x-phrase-follower`
+1. Idź do: `https://github.com/michal-duchnowski/10x-phrase-follower/pkgs/container/10x-phrase-follower`
 2. Kliknij na obraz (np. `latest`)
 3. Kliknij **"Package settings"** (po prawej stronie)
 4. Przewiń w dół do sekcji **"Danger Zone"**
@@ -103,7 +103,7 @@ Jeśli chcesz zostawić obraz prywatny, musisz się zalogować na droplecie:
 #    Scope: read:packages (tylko do odczytu obrazów)
 
 # 2. Zaloguj się na droplecie:
-echo "YOUR_GITHUB_TOKEN" | docker login ghcr.io -u phasmam --password-stdin
+echo "YOUR_GITHUB_TOKEN" | docker login ghcr.io -u michal-duchnowski --password-stdin
 
 # 3. (Opcjonalnie) Zapisz token w pliku, żeby nie wygasał po restarcie:
 #    Możesz użyć docker-credential-helper lub po prostu ponownie się zalogować przy każdym deployu
