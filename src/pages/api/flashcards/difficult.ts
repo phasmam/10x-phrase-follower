@@ -25,13 +25,15 @@ export const GET: APIRoute = withErrorHandling(async (context: APIContext) => {
     .eq("flashcards.status", "active");
   if (error) throw new Error("Failed to load flashcard difficulty");
 
-  const directionIds = (directions ?? []).map((direction: any) => direction.id);
-  const { data: reviews, error: reviewsError } = directionIds.length
+  const directionIds = new Set((directions ?? []).map((direction: any) => direction.id));
+  // Do not pass every active direction ID in an `in(...)` filter. After a large
+  // import that turns into a very long GET URL, which can be rejected by the
+  // proxy before PostgREST receives it.
+  const { data: reviews, error: reviewsError } = directionIds.size
     ? await db
         .from("flashcard_reviews")
         .select("flashcard_direction_id, fsrs_rating, reviewed_at")
         .eq("user_id", userId)
-        .in("flashcard_direction_id", directionIds)
         .order("reviewed_at", { ascending: false })
         .limit(2000)
     : { data: [], error: null };
@@ -39,7 +41,7 @@ export const GET: APIRoute = withErrorHandling(async (context: APIContext) => {
 
   const reviewsByDirection = new Map<string, any[]>();
   for (const review of reviews ?? []) {
-    if (!review.flashcard_direction_id) continue;
+    if (!review.flashcard_direction_id || !directionIds.has(review.flashcard_direction_id)) continue;
     const list = reviewsByDirection.get(review.flashcard_direction_id) ?? [];
     list.push(review);
     reviewsByDirection.set(review.flashcard_direction_id, list);
