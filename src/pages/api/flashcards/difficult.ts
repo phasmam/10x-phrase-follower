@@ -9,6 +9,10 @@ export const prerender = false;
 export const GET: APIRoute = withErrorHandling(async (context: APIContext) => {
   const userId = (context.locals as LocalsWithAuth).userId;
   requireAuth(userId);
+  const pool = new URL(context.request.url).searchParams.get("pool") ?? "most_difficult";
+  if (pool !== "most_difficult" && pool !== "recent_again" && pool !== "frequent_lapses") {
+    return new Response(JSON.stringify({ error: "Invalid difficult-card pool" }), { status: 400 });
+  }
   const db: any = getSupabaseClient(context);
   const { data: settings } = await db
     .from("flashcard_settings")
@@ -51,6 +55,7 @@ export const GET: APIRoute = withErrorHandling(async (context: APIContext) => {
   const scoredItems = (directions ?? [])
     .map((direction: any) => {
       const history = reviewsByDirection.get(direction.id) ?? [];
+      const latestReview = history[0];
       const historyScore = history.reduce((total, review) => {
         const ageDays = Math.max(0, (now - new Date(review.reviewed_at).getTime()) / 86400000);
         const recency = Math.exp(-ageDays / 28);
@@ -77,7 +82,7 @@ export const GET: APIRoute = withErrorHandling(async (context: APIContext) => {
       );
       const flashcard = Array.isArray(direction.flashcards) ? direction.flashcards[0] : direction.flashcards;
       const phrase = Array.isArray(flashcard.phrases) ? flashcard.phrases[0] : flashcard.phrases;
-      return {
+      const item = {
         flashcard_id: flashcard.id,
         phrase_id: flashcard.phrase_id,
         direction_id: direction.id,
@@ -93,9 +98,25 @@ export const GET: APIRoute = withErrorHandling(async (context: APIContext) => {
           (review) => review.fsrs_rating === "Again" || review.fsrs_rating === "Hard"
         ).length,
       };
+      return {
+        ...item,
+        latest_rating: latestReview?.fsrs_rating ?? null,
+      };
     })
-    .filter((item: any) => item.score > 0)
-    .sort((a: any, b: any) => b.score - a.score);
+    .filter((item: any) => {
+      if (pool === "recent_again") return item.latest_rating === "Again";
+      if (pool === "frequent_lapses") return item.lapses > 0;
+      return item.score > 0;
+    })
+    .sort((a: any, b: any) => {
+      if (pool === "recent_again") {
+        const aLatest = reviewsByDirection.get(a.direction_id)?.[0]?.reviewed_at ?? "";
+        const bLatest = reviewsByDirection.get(b.direction_id)?.[0]?.reviewed_at ?? "";
+        return new Date(bLatest).getTime() - new Date(aLatest).getTime();
+      }
+      if (pool === "frequent_lapses") return b.lapses - a.lapses || b.score - a.score;
+      return b.score - a.score;
+    });
   const seenPhraseIds = new Set<string>();
   const items = scoredItems
     .filter((item: any) => {

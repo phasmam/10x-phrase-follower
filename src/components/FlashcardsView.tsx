@@ -45,6 +45,7 @@ interface Overview {
 }
 type Rating = "Again" | "Hard" | "Good" | "Easy";
 type SessionMode = "daily" | "training";
+type DifficultCardPool = "most_difficult" | "recent_again" | "frequent_lapses";
 interface DifficultCard {
   flashcard_id: string;
   phrase_id: string;
@@ -82,6 +83,7 @@ function FlashcardsContent() {
   const [difficultOpen, setDifficultOpen] = useState(false);
   const [difficultCards, setDifficultCards] = useState<DifficultCard[]>([]);
   const [difficultLoading, setDifficultLoading] = useState(false);
+  const [difficultPool, setDifficultPool] = useState<DifficultCardPool>("most_difficult");
   const [storyOpen, setStoryOpen] = useState(false);
   const current = cards[index];
   const loadOverview = async () => {
@@ -91,10 +93,10 @@ function FlashcardsContent() {
       /* AuthGuard presents authentication state. */
     }
   };
-  const loadDifficultCards = async () => {
+  const loadDifficultCards = async (pool = difficultPool) => {
     setDifficultLoading(true);
     try {
-      const data = await apiCall<{ items: DifficultCard[] }>("/api/flashcards/difficult");
+      const data = await apiCall<{ items: DifficultCard[] }>(`/api/flashcards/difficult?pool=${pool}`);
       setDifficultCards(data.items);
       setDifficultOpen(true);
     } catch (error) {
@@ -614,15 +616,28 @@ function FlashcardsContent() {
       )}
       {difficultOpen && (
         <section className="mt-6 border-y border-border py-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-foreground">Most difficult</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Top {overview?.settings.difficult_cards_per_training ?? 10} based on FSRS difficulty, stability, lapses,
-                overdue time and recent ratings.
-              </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center justify-between gap-3 sm:contents">
+              <h2 className="text-base font-semibold text-foreground">Difficult cards</h2>
+              <Button variant="ghost" size="sm" onClick={() => setDifficultOpen(false)} className="sm:order-3">
+                Close
+              </Button>
             </div>
-            <div className="flex gap-2">
+            <select
+              value={difficultPool}
+              onChange={(event) => {
+                const pool = event.target.value as DifficultCardPool;
+                setDifficultPool(pool);
+                void loadDifficultCards(pool);
+              }}
+              aria-label="Difficult card pool"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground sm:w-auto"
+            >
+              <option value="most_difficult">Most difficult</option>
+              <option value="recent_again">Recently incorrect</option>
+              <option value="frequent_lapses">Frequently incorrect</option>
+            </select>
+            <div className="flex flex-wrap gap-2 sm:justify-end">
               {difficultCards.length > 0 && (
                 <>
                   <Button
@@ -637,9 +652,6 @@ function FlashcardsContent() {
                   </Button>
                 </>
               )}
-              <Button variant="ghost" size="sm" onClick={() => setDifficultOpen(false)}>
-                Close
-              </Button>
             </div>
           </div>
           {difficultCards.length === 0 ? (
@@ -649,12 +661,18 @@ function FlashcardsContent() {
               {difficultCards.map((card) => (
                 <div key={card.direction_id} className="flex items-center justify-between gap-4 py-3">
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-foreground">
-                      {card.direction === "en_to_pl" ? card.en_text : card.pl_text}
-                    </p>
-                    <p className="mt-1 truncate text-sm text-muted-foreground">
-                      {card.direction === "en_to_pl" ? card.pl_text : card.en_text}
-                    </p>
+                    <div
+                      className="break-words font-medium text-foreground [&>p]:m-0"
+                      dangerouslySetInnerHTML={{
+                        __html: parseMarkdownToHtml(card.direction === "en_to_pl" ? card.en_text : card.pl_text),
+                      }}
+                    />
+                    <div
+                      className="mt-1 break-words text-sm text-muted-foreground [&>p]:m-0"
+                      dangerouslySetInnerHTML={{
+                        __html: parseMarkdownToHtml(card.direction === "en_to_pl" ? card.pl_text : card.en_text),
+                      }}
+                    />
                     <p className="mt-1 text-xs text-muted-foreground">
                       Score {card.score} · {card.lapses} lapses · stability {card.stability}d ·{" "}
                       {card.recent_again_or_hard} recent Again/Hard
