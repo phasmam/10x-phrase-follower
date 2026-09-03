@@ -5,6 +5,7 @@ import { requireAuth, withErrorHandling } from "../../../lib/errors";
 import { getSupabaseClient } from "../../../lib/utils";
 
 export const prerender = false;
+const RECENT_INCORRECT_WINDOW_DAYS = 30;
 
 export const GET: APIRoute = withErrorHandling(async (context: APIContext) => {
   const userId = (context.locals as LocalsWithAuth).userId;
@@ -52,10 +53,13 @@ export const GET: APIRoute = withErrorHandling(async (context: APIContext) => {
   }
 
   const now = Date.now();
+  const recentIncorrectSince = now - RECENT_INCORRECT_WINDOW_DAYS * 86400000;
   const scoredItems = (directions ?? [])
     .map((direction: any) => {
       const history = reviewsByDirection.get(direction.id) ?? [];
-      const latestReview = history[0];
+      const recentAgainReviews = history.filter(
+        (review) => review.fsrs_rating === "Again" && new Date(review.reviewed_at).getTime() >= recentIncorrectSince
+      );
       const historyScore = history.reduce((total, review) => {
         const ageDays = Math.max(0, (now - new Date(review.reviewed_at).getTime()) / 86400000);
         const recency = Math.exp(-ageDays / 28);
@@ -100,19 +104,21 @@ export const GET: APIRoute = withErrorHandling(async (context: APIContext) => {
       };
       return {
         ...item,
-        latest_rating: latestReview?.fsrs_rating ?? null,
+        recent_again_count: recentAgainReviews.length,
+        last_recent_again_at: recentAgainReviews[0]?.reviewed_at ?? null,
       };
     })
     .filter((item: any) => {
-      if (pool === "recent_again") return item.latest_rating === "Again";
+      if (pool === "recent_again") return item.recent_again_count > 0;
       if (pool === "frequent_lapses") return item.lapses > 0;
       return item.score > 0;
     })
     .sort((a: any, b: any) => {
       if (pool === "recent_again") {
-        const aLatest = reviewsByDirection.get(a.direction_id)?.[0]?.reviewed_at ?? "";
-        const bLatest = reviewsByDirection.get(b.direction_id)?.[0]?.reviewed_at ?? "";
-        return new Date(bLatest).getTime() - new Date(aLatest).getTime();
+        return (
+          new Date(b.last_recent_again_at).getTime() - new Date(a.last_recent_again_at).getTime() ||
+          b.recent_again_count - a.recent_again_count
+        );
       }
       if (pool === "frequent_lapses") return b.lapses - a.lapses || b.score - a.score;
       return b.score - a.score;

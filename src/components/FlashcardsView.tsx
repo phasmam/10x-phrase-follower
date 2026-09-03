@@ -634,7 +634,7 @@ function FlashcardsContent() {
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground sm:w-auto"
             >
               <option value="most_difficult">Most difficult</option>
-              <option value="recent_again">Recently incorrect</option>
+              <option value="recent_again">Incorrect in last 30 days</option>
               <option value="frequent_lapses">Frequently incorrect</option>
             </select>
             <div className="flex flex-wrap gap-2 sm:justify-end">
