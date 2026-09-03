@@ -634,7 +634,7 @@ function FlashcardsContent() {
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground sm:w-auto"
             >
               <option value="most_difficult">Most difficult</option>
-              <option value="recent_again">Incorrect in last 30 days</option>
+              <option value="recent_again">Incorrect in last 90 days</option>
               <option value="frequent_lapses">Frequently incorrect</option>
             </select>
             <div className="flex flex-wrap gap-2 sm:justify-end">
@@ -674,8 +674,16 @@ function FlashcardsContent() {
                       }}
                     />
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Score {card.score} · {card.lapses} lapses · stability {card.stability}d ·{" "}
-                      {card.recent_again_or_hard} recent Again/Hard
+                      {difficultPool === "recent_again" ? (
+                        <>
+                          {card.recent_again_or_hard} Again in 90d · {card.lapses} lapses · stability {card.stability}d
+                        </>
+                      ) : (
+                        <>
+                          Score {card.score} · {card.lapses} lapses · stability {card.stability}d ·{" "}
+                          {card.recent_again_or_hard} recent Again/Hard
+                        </>
+                      )}
                     </p>
                   </div>
                   <Button
