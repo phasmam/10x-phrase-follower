@@ -139,6 +139,11 @@ function FlashcardsContent() {
   }, [current?.direction_id, checked, detailsOpen, drillActive]);
   useEffect(() => {
     const handleRatingShortcut = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && drillActive && !busy && !detailsOpen) {
+        event.preventDefault();
+        setDrillActive(false);
+        return;
+      }
       if (!checked || busy || detailsOpen || drillActive) return;
       if (
         event.target instanceof HTMLInputElement ||
@@ -424,7 +429,12 @@ function FlashcardsContent() {
             <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={check} disabled={busy}>
               Check drill answer
             </Button>
-            <Button variant="secondary" onClick={() => setDrillActive(false)} disabled={busy}>
+            <Button
+              variant="secondary"
+              onClick={() => setDrillActive(false)}
+              disabled={busy}
+              title="Back to rating (shortcut: Esc)"
+            >
               Back to rating
             </Button>
           </div>
