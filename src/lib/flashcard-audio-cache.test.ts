@@ -4,7 +4,7 @@ import { FlashcardAudioCache } from "./flashcard-audio-cache";
 function createCache() {
   const resolveAudioUrl = vi.fn(async (phraseId: string) => `https://audio.test/${phraseId}.mp3`);
   const fetchAudio = vi.fn(async () => new Blob(["audio"]));
-  const createObjectUrl = vi.fn((_: Blob) => `blob:${createObjectUrl.mock.calls.length}`);
+  const createObjectUrl = vi.fn(() => `blob:${createObjectUrl.mock.calls.length}`);
   const revokeObjectUrl = vi.fn();
   const cache = new FlashcardAudioCache({ resolveAudioUrl, fetchAudio, createObjectUrl, revokeObjectUrl });
   return { cache, resolveAudioUrl, fetchAudio, createObjectUrl, revokeObjectUrl };
