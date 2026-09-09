@@ -16,6 +16,7 @@ import { Button } from "./ui/button";
 import { ToastProvider, useToast } from "./ui/toast";
 import { useApi } from "../lib/hooks/useApi";
 import { checkFlashcardAnswer, shouldRequireExactEnglishMatch } from "../lib/fsrs.service";
+import { FlashcardAudioCache } from "../lib/flashcard-audio-cache";
 import PhraseLearningHintModal from "./PhraseLearningHintModal";
 import StoryModal from "./StoryModal";
 import { parseMarkdownToHtml } from "../lib/utils";
@@ -65,6 +66,7 @@ function FlashcardsContent() {
   const { apiCall, isAuthenticated } = useApi();
   const { addToast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioCacheRef = useRef<FlashcardAudioCache | null>(null);
   const answerRef = useRef<HTMLTextAreaElement | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [cards, setCards] = useState<SessionCard[]>([]);
@@ -131,7 +133,29 @@ function FlashcardsContent() {
   useEffect(() => {
     if (isAuthenticated) void loadOverview();
   }, [isAuthenticated]);
-  useEffect(() => () => audioRef.current?.pause(), []);
+  useEffect(() => {
+    const cache = FlashcardAudioCache.forBrowser(async (phraseId) => {
+      const { url } = await apiCall<{ url: string | null }>(
+        `/api/flashcards/audio?phrase_id=${encodeURIComponent(phraseId)}`
+      );
+      return url;
+    });
+    audioCacheRef.current = cache;
+    return () => {
+      cache.dispose();
+      if (audioCacheRef.current === cache) audioCacheRef.current = null;
+    };
+  }, [apiCall]);
+  useEffect(
+    () => () => {
+      audioRef.current?.pause();
+    },
+    []
+  );
+  useEffect(() => {
+    const phraseIds = cards.slice(index, index + 3).map((card) => card.phrase_id);
+    if (phraseIds.length > 0) void audioCacheRef.current?.prefetchWindow(phraseIds);
+  }, [cards, index]);
   useEffect(() => {
     if (!current || detailsOpen || (checked && !drillActive)) return;
     const frame = window.requestAnimationFrame(() => answerRef.current?.focus());
@@ -241,9 +265,7 @@ function FlashcardsContent() {
   const playEnglish = async () => {
     if (!current) return;
     try {
-      const { url } = await apiCall<{ url: string | null }>(
-        `/api/flashcards/audio?phrase_id=${encodeURIComponent(current.phrase_id)}`
-      );
+      const url = await audioCacheRef.current?.get(current.phrase_id);
       if (!url) return;
       audioRef.current?.pause();
       const audio = new Audio(url);
@@ -314,6 +336,7 @@ function FlashcardsContent() {
   };
   const rate = (rating: Rating) => {
     if (!current || !checked) return;
+    audioRef.current?.pause();
     if (sessionMode === "training") {
       setCards((previous) => (rating === "Again" ? [...previous.slice(1), previous[0]] : previous.slice(1)));
       setIndex(0);
